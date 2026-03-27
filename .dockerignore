@@ -4,6 +4,7 @@
 .git
 .vscode
 .idea
+.jbeval
 *.pyc
 .pytest_cache
 web/node_modules
