@@ -1,4 +1,4 @@
-# MetaWeave(元织) - 缝合碎片，编织智慧  
+﻿# MetaWeave(元织) - 缝合碎片，编织智慧  
 ## 项目概览  
 ### 项目介绍  
 **MetaWeave** 是一款从底层文件管理进化而来的个人知识中枢。它不仅继承了传统文件系统的稳定  
@@ -109,35 +109,18 @@ MetaWeave/
 ├── app/                        # 后端核心 (FastAPI)
 │   ├── main.py                 # 【入口】FastAPI 初始化、中间件配置与路由挂载
 │   ├── ai/                     # 智能中枢层
-│   │   ├── agent.py            # 【核心】Agent 智能体：含 ReAct 逻辑与 Function Calling
-│   │   ├── prompt.py           # 【指令】系统级提示词模板管理
-│   │   ├── request_llm.py      # 【接口】LLM 适配层：统一封装 API 请求
-│   │   └── tools.py            # 【工具】供 Agent 调用的函数集（如搜索、抓取）
 │   ├── api/                    # 接口定义层
 │   │   ├── deps.py             # 【依赖】JWT 校验、DB Session 获取
-│   │   └── router/                 # 接口版本控制
-│   │       ├── auth.py         # 登录、注册、鉴权
-│   │       ├── files.py        # 文件上传、下载、CRUD
-│   │       ├── knowledge.py    # 图谱数据、语义搜索、双链逻辑
-│   │       └── analysis.py     # 智能体对话、文档总结接口
+│   │   └── router/             # 接口层
 │   ├── core/                   # 核心配置
-│   │   ├── config.py           # 【配置】环境变量读取、安全算法参数
+│   │   ├── config.py           # 【配置】环境变量读取、全局常量
+│   │   ├── cors.py             # 跨域请求(CORS)中间件管理
+│   │   ├── database.py         # 数据库连接配置与Session管理
+│   │   ├── logger.py           # 日志记录器配置
 │   │   └── security.py         # 密码哈希、Token 生成逻辑
-│   ├── db/                     # 数据库引擎
-│   │   ├── session.py          # SQLAlchemy/SQLModel 连接池管理
-│   │   └── base.py             # 数据库模型统一注册入口
+│   ├── db/                     # 数据库业务逻辑
 │   ├── models/                 # 数据模型 (SQLModel/Pydantic)
-│   │   ├── user.py             # 用户实体
-│   │   ├── document.py         # 文档元数据、Hash、路径
-│   │   └── relation.py         # 语义关联、双向链接实体
 │   ├── services/               # 业务逻辑层
-│   │   ├── file_service.py     # 分片上传、版本控制、本地同步逻辑
-│   │   └── vector_service.py   # ChromaDB 操作：向量入库与相似度检索
-│   ├── processors/             # 底层感知引擎 (计算密集型)
-│   │   ├── ocr_engine.py       # PaddleOCR/Tesseract 调度
-│   │   ├── embedder.py         # 文本向量化 (Embedding) 处理
-│   │   └── web_scraper.py      # Playwright 网页抓取与清洗
-│   ├── storage/                # 【本地存放】上传的原始文件与临时附件 (建议 .gitignore)
 │   ├── requirements.txt        # Python 依赖清单
 │   └── Dockerfile              # 后端容器化配置
 ├── web/                        # 前端核心 (Vue 3 + Vite)
@@ -146,28 +129,25 @@ MetaWeave/
 │   │   ├── api/                # Axios 请求封装
 │   │   ├── assets/             # 静态资源、全局 SCSS 变量
 │   │   ├── components/         # 模块化组件
-│   │   │   ├── graph/          # 【核心】星空关系图谱组件 (Echarts/D3)
-│   │   │   ├── chat/           # 【核心】AI 智能体对话窗口
-│   │   │   └── common/         # 文件列表、上传进度条等公共件
-│   │   ├── layout/             # 侧边栏、顶栏布局管理
-│   │   ├── views/              # 页面视图
-│   │   │   ├── Dashboard.vue   # 知识概览与热度管理
-│   │   │   ├── Knowledge.vue   # 全量图谱交互页
-│   │   │   ├── Library.vue     # 文件管理与搜索页
-│   │   │   └── Analysis.vue    # AI 深度分析与审计页
-│   │   ├── store/              # Pinia 状态管理 (auth, settings, knowledge)
-│   │   └── utils/              # 工具函数 (格式化、语音播报 tts.js)
+│   │   ├── views/              # 页面视图组件
+│   │   ├── store/              # Pinia 状态管理
+│   │   └── utils/              # 工具函数 
 │   ├── index.html              # SPA 入口模板
-│   ├── vite.config.js          # 构建与代理配置
-│   └── Dockerfile              # 前端 Nginx 部署配置
+│   ├── vite.config.js          # 构建与代理转发配置
+│   ├── nginx.conf              # Nginx 反向代理配置 (生产环境)
+│   └── Dockerfile              # 前端容器化配置
 ├── data/                       # 数据持久化目录
 │   ├── vector_db/              # 【存储】ChromaDB 向量索引文件
 │   └── metaweave.db            # 【存储】SQLite 关系型数据库文件
-├── .env                        # 环境变量 (API Keys, DB URL)
+├── .env                        # 环境变量
 ├── .gitignore                  # Git 忽略配置
+├── .dockerignore               # Docker 忽略配置
 ├── docker-compose.yml          # 【编排】一键启动后端、前端、Redis
 ├── README.md                   # 项目说明文档
-└── TODO.md                     # 开发路线图
+├── AGENTS.md                   # Agent代码规范
+├── DEVELOPMENT.md              # 项目运行与部署方法
+├── ChangeHistory.md            # 变更历史记录
+└── TODO.md                     # 开发待办
 ```  
   
 ---   
@@ -202,3 +182,11 @@ MetaWeave/
 #### 高内聚、低耦合的工程化实践 (Engineering Excellence)：  
    * **状态与安全中枢**：前端利用 **Pinia** 实现了复杂的跨页面状态同步（如鉴权状态、UI主题、持久化设置）；后端则通过 **JWT (JSON Web Token)** 与自定义装饰器构建了严密的安全闸口，实现了SaaS级别的多租户数据隔离。  
    * **自动化运维链路**：项目支持 **Docker** 容器化一键编排，集成了 **Redis + Celery** 异步任务队列用于处理大规模的OCR推理，确保在高并发场景下系统的极高稳健性。
+
+
+---
+## 开发规范
+1. 开发规范写在`开发规范.md`文件中,请务必遵守,以便于团队协作和项目维护.
+2. 运行项目的方法写在`DEVELOPMENT.md`文件中.
+3. `AGENTS.md`文件详细说明了运用Code Assist Agent开发(如Claude Code,Codex等)时需要注意的点.
+4. 项目成员在开发过程中,若有需要修改但是经历不足的地方,则应该写入`TODO.md`;若进行了大幅的修改,则应该在`ChangeHistory.md`文件中记录修改内容和原因,以便于团队成员了解和维护.
