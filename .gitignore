@@ -1,0 +1,9 @@
+database.db
+.env
+.venv
+.idea
+.vscode
+web/node_modules
+build
+dist
+**/__pycache__

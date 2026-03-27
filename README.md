@@ -115,7 +115,7 @@ MetaWeave/
 │   │   └── tools.py            # 【工具】供 Agent 调用的函数集（如搜索、抓取）
 │   ├── api/                    # 接口定义层
 │   │   ├── deps.py             # 【依赖】JWT 校验、DB Session 获取
-│   │   └── v1/                 # 接口版本控制
+│   │   └── router/                 # 接口版本控制
 │   │       ├── auth.py         # 登录、注册、鉴权
 │   │       ├── files.py        # 文件上传、下载、CRUD
 │   │       ├── knowledge.py    # 图谱数据、语义搜索、双链逻辑

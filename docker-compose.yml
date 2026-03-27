@@ -1,0 +1,45 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: ./app/Dockerfile
+    working_dir: /server
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload
+    container_name: App
+    ports:
+      - "${PORT:-8080}:8080"
+    environment:
+      DOCKER_DEPLOYMENT: true
+      DEBUG: false
+      HOST: 0.0.0.0
+      PORT: ${PORT}
+      SECRET_KEY: ${SECRET_KEY}
+      ALGORITHM: ${ALGORITHM}
+      ACCESS_TOKEN_EXPIRE_DAYS: ${ACCESS_TOKEN_EXPIRE_DAYS}
+      ADMIN_USERNAME: ${ADMIN_USERNAME}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD}
+      ADMIN_EMAIL: ${ADMIN_EMAIL}
+      ADMIN_PHONE: ${ADMIN_PHONE}
+      PUBLIC_BASE_URL: http://10.133.130.115:8080 # 部署环境写本机局域网IP, 生产环境这个必须是真实域名/公网IP
+      FRONTEND_BASE_URL: http://10.133.130.115:5173 # 部署环境写本机局域网IP
+    volumes:
+      - ./app:/server/app/
+      - ./database.db:/server/database.db
+      - ./.env:/server/.env
+    depends_on:
+      - redis
+    restart: always
+
+  web:
+    build: ./web
+    container_name: Web
+    ports:
+      - "80:80"
+    depends_on:
+      - app
+    restart: always
+    volumes:
+      - ./web:/app
+      - /app/node_modules      # 不要让宿主机的 node_modules 覆盖容器内的
+volumes:
+  redis_data:
