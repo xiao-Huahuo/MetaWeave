@@ -34,7 +34,7 @@
     ```bash
     cd web
     npm install --verbose
-    npm run dev
+    npm run electron:dev
     ```
     前端服务默认监听在 http://localhost:5173。
 

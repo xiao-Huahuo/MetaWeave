@@ -4,7 +4,7 @@ services:
       context: .
       dockerfile: ./app/Dockerfile
     working_dir: /server
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8080 --reload
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8080
     container_name: App
     ports:
       - "${PORT:-8080}:8080"
@@ -31,7 +31,9 @@ services:
     restart: always
 
   web:
-    build: ./web
+    build:
+      context: ./web
+      dockerfile: Dockerfile
     container_name: Web
     ports:
       - "80:80"
