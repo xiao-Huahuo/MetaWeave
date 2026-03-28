@@ -26,8 +26,6 @@ services:
       - ./app:/server/app/
       - ./database.db:/server/database.db
       - ./.env:/server/.env
-    depends_on:
-      - redis
     restart: always
 
   web:

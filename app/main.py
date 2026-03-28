@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi import Request
 from app.core.config import GlobalConfig
-from app.api.routes import user, login,admin
+from app.api.routes import user, login, admin, file, knowledge_base
 from app.core.cors import CorsMiddleWare
 from app.db.db_init import init_db
 # 定义生命周期管理器
@@ -36,6 +36,8 @@ async def log_request_middleware(request: Request, call_next):
 app.include_router(user.router, prefix="/user", tags=["user"])
 app.include_router(login.router, prefix="/login", tags=["login"])
 app.include_router(admin.router, prefix="/admin", tags=["admin"])
+app.include_router(knowledge_base.router, prefix="/kb", tags=["knowledge_base"])
+app.include_router(file.router, prefix="/file", tags=["file"])
 
 if __name__ == "__main__":
     import uvicorn

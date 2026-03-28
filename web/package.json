@@ -10,6 +10,7 @@
     "preview": "vite preview",
     "electron:start": "cross-env NODE_ENV=development electron .",
     "electron:dev": "concurrently \"npm run dev\" \"wait-on http://localhost:5173 && npm run electron:start\"",
+    "electron:build": "vite build && electron-builder",
     "test:unit": "vitest",
     "lint": "run-s lint:*",
     "lint:oxlint": "oxlint . --fix",
@@ -31,6 +32,7 @@
     "concurrently": "^9.2.1",
     "cross-env": "^10.1.0",
     "electron": "^41.1.0",
+    "electron-builder": "^26.8.1",
     "electron-is-dev": "^3.0.1",
     "eslint": "^10.0.3",
     "eslint-config-prettier": "^10.1.8",
@@ -45,6 +47,20 @@
     "vite-plugin-vue-devtools": "^8.0.7",
     "vitest": "^4.0.18",
     "wait-on": "^9.0.4"
+  },
+  "build": {
+    "appId": "com.metaweave.app",
+    "productName": "MetaWeave",
+    "directories": {
+      "output": "dist-electron"
+    },
+    "files": [
+      "dist/**/*",
+      "electron/**/*"
+    ],
+    "win": {
+      "target": "nsis"
+    }
   },
   "engines": {
     "node": "^20.19.0 || >=22.12.0"

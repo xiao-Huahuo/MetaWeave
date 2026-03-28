@@ -30,15 +30,17 @@
     ```
     后端服务默认监听在 http://localhost:8080。
 2. 开启前端服务:
-    在项目根目录中,执行以下命令启动前端:
+    在项目根目录中,执行以下命令启动桌面端:
     ```bash
     cd web
     npm install --verbose
     npm run electron:dev
     ```
     前端服务默认监听在 http://localhost:5173。
+    或者可以使用`npm run dev`命令启动网页端,默认监听在 http://localhost:5173。
 
 ## 生产环境部署方法
+### 网页部署
 在项目根目录中,执行以下命令使用 Docker Compose 启动生产环境:
 ```bash
 docker-compose up -d --build
@@ -49,3 +51,12 @@ docker-compose up -d --build
 PUBLIC_BASE_URL: http://10.133.130.115:8080 # 部署环境写本机局域网IP, 生产环境这个必须是真实域名/公网IP
 FRONTEND_BASE_URL: http://10.133.130.115:5173 # 部署环境写本机局域网IP
 ```
+### 打包成Windows exe
+#### 前端打包
+1. 执行打包:
+   ```bash
+   npm run electron:build
+   ```
+2. 打包完成后,exe安装包在`web/dist-electron`目录中。
+#### 后端打包
+暂未完成.让electron前端来打包后端exe.

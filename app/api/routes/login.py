@@ -9,9 +9,14 @@ from app.core.config import GlobalConfig
 from app.core.database import get_session
 from app.core.security import create_access_token, verify_password
 from app.models.user import User
+from app.models.knowledge_base import KnowledgeBase
 from app.schemas.token import Token
+from app.services.file_watcher import start_file_watcher
+from app.core.logger import global_logger as logger
 
 router = APIRouter()
+
+watchers = {}
 
 
 # 用户登录
@@ -37,5 +42,21 @@ def login_access_token(
     access_token = create_access_token(
         subject=user.uid, expires_delta=access_token_expires
     )
+
+    # 启动文件监听
+    statement = select(KnowledgeBase).where(
+        KnowledgeBase.user_id == user.uid,
+        KnowledgeBase.is_active == True
+    )
+    kbs = session.exec(statement).all()
+
+    for kb in kbs:
+        if kb.kb_id not in watchers:
+            try:
+                observer = start_file_watcher(kb.kb_id, kb.kb_path, user.uid)
+                watchers[kb.kb_id] = observer
+                logger.info(f"登录启动监听: {kb.kb_name}")
+            except Exception as e:
+                logger.error(f"启动监听失败 {kb.kb_name}: {e}")
 
     return Token(access_token=access_token, token_type="bearer")
