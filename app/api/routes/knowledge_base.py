@@ -7,6 +7,7 @@ from app.schemas.knowledge_base import KnowledgeBaseCreate, KnowledgeBaseRead, K
 from app.api.deps import get_current_user
 from app.models.user import User
 from app.services.file_watcher import start_file_watcher
+from app.services.file_scanner import scan_directory
 from app.core.logger import global_logger as logger
 
 router = APIRouter()
@@ -20,12 +21,22 @@ def create_knowledge_base(
     session: Session = Depends(get_session),
     current_user: User = Depends(get_current_user)
 ):
-    """创建知识库"""
+    """创建知识库并立即扫描和监听"""
     kb.user_id = current_user.uid
     db_kb = KnowledgeBase.model_validate(kb)
     session.add(db_kb)
     session.commit()
     session.refresh(db_kb)
+
+    try:
+        scan_directory(db_kb.kb_id, db_kb.kb_path, current_user.uid, session)
+        observer = start_file_watcher(db_kb.kb_id, db_kb.kb_path, current_user.uid)
+        watchers[db_kb.kb_id] = observer
+        logger.info(f"知识库创建成功并启动监听: {db_kb.kb_name}")
+    except Exception as e:
+        logger.error(f"扫描或监听失败: {e}")
+        raise HTTPException(status_code=400, detail=f"创建失败: {str(e)}")
+
     return db_kb
 
 

@@ -8,6 +8,11 @@ export const API_ROUTES = {
   UPDATE_ME: '/user/me',
   ADMIN_USERS: '/admin/users',
   ADMIN_USER: (uid) => `/admin/users/${uid}`,
+  KB_LIST: '/kb/list',
+  KB_CREATE: '/kb/',
+  KB_UPDATE: (id) => `/kb/${id}`,
+  KB_DELETE: (id) => `/kb/${id}`,
+  FILE_LIST: '/file/list',
 };
 
 // 统一API Client

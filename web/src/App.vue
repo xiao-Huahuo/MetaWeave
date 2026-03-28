@@ -21,20 +21,31 @@ const isAuthPage = computed(() => ['/login', '/register'].includes(route.path))
 </template>
 
 <style>
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
 #app {
-  font-family: Avenir, Helvetica, Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Noto Sans', Helvetica, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  color: #2c3e50;
+  color: #24292f;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
 .main {
   display: flex;
+  flex: 1;
+  overflow: hidden;
 }
 
 .content {
   flex: 1;
-  padding: 20px;
+  overflow: hidden;
 }
 
 .content.full {
