@@ -1,6 +1,9 @@
 from datetime import datetime
-from sqlmodel import SQLModel, Field
-from typing import Optional
+from sqlmodel import SQLModel, Field, Relationship
+from typing import Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from app.models.knowledge_base import KnowledgeBase
 
 
 class FileMetaBase(SQLModel):
@@ -23,3 +26,6 @@ class FileMeta(FileMetaBase, table=True):
     modified_at: datetime = Field(default_factory=datetime.now)
     last_indexed_at: datetime = Field(default_factory=datetime.now)
     is_deleted: bool = Field(default=False)
+
+    # 关联知识库
+    knowledge_base: Optional["KnowledgeBase"] = Relationship(back_populates="files")

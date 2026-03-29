@@ -31,6 +31,12 @@ const switchMode = (nextMode) => {
 
 <template>
   <div class="auth-page">
+    <router-link to="/" class="back-home">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+        <path d="M19 12H5M12 19l-7-7 7-7"/>
+      </svg>
+      返回主页
+    </router-link>
     <div class="panel">
       <div class="switch">
         <button
@@ -58,12 +64,35 @@ const switchMode = (nextMode) => {
 
 <style scoped>
 .auth-page {
-  min-height: calc(100vh - 40px);
+  height: 100vh;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 20px;
   background: #f7f7f7;
+  position: relative;
+}
+
+.back-home {
+  position: absolute;
+  top: 20px;
+  left: 20px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  text-decoration: none;
+  color: #57606a;
+  font-size: 14px;
+  transition: color 0.2s;
+}
+
+.back-home:hover {
+  color: #24292f;
+}
+
+.back-home svg {
+  width: 16px;
+  height: 16px;
 }
 
 .panel {
@@ -74,6 +103,7 @@ const switchMode = (nextMode) => {
   border-radius: 12px;
   padding: 24px;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.06);
+  z-index: 1;
 }
 
 .switch {

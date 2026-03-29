@@ -22,7 +22,6 @@ def calculate_file_hash(file_path: str) -> str:
         logger.error(f"计算文件哈希失败 {file_path}: {e}")
         return ""
 
-
 class FileChangeHandler(FileSystemEventHandler):
     def __init__(self, user_id: int, kb_id: int, kb_path: str):
         self.user_id = user_id

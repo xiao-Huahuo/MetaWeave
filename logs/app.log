@@ -1,0 +1,10 @@
+2026-03-29 10:44:49,614 | MetaWeave | ERROR | [knowledge_base.py:36] | 扫描或监听失败: 路径不存在: 123
+2026-03-29 11:01:01,531 | MetaWeave | ERROR | [knowledge_base.py:36] | 扫描或监听失败，清理已创建的知识库记录: 路径不存在: D:\Projects\111
+2026-03-29 11:01:07,751 | MetaWeave | ERROR | [knowledge_base.py:36] | 扫描或监听失败，清理已创建的知识库记录: 路径不存在: D:\Projects\111
+2026-03-29 11:05:11,984 | MetaWeave | ERROR | [knowledge_base.py:36] | 扫描或监听失败，清理已创建的知识库记录: 路径不存在: D:\Projects\111
+2026-03-29 11:05:15,100 | MetaWeave | ERROR | [knowledge_base.py:36] | 扫描或监听失败，清理已创建的知识库记录: 路径不存在: D:\Projects\111
+2026-03-29 11:07:31,614 | MetaWeave | INFO | [file_scanner.py:39] | 扫描完成,共索引 2 个文件
+2026-03-29 11:07:31,617 | MetaWeave | INFO | [file_watcher.py:131] | 文件监听已启动: C:\Users\slump\Desktop\111
+2026-03-29 11:07:31,617 | MetaWeave | INFO | [knowledge_base.py:34] | 知识库创建成功并启动监听: 11111
+2026-03-29 11:13:06,950 | MetaWeave | INFO | [file_scanner.py:42] | 扫描完成,共索引 3 个文件
+2026-03-29 11:13:25,416 | MetaWeave | INFO | [file_scanner.py:42] | 扫描完成,共索引 4 个文件

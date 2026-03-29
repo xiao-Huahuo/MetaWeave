@@ -8,14 +8,14 @@ from app.core.logger import global_logger as logger
 
 def scan_directory(kb_id: int, kb_path: str, user_id: int, session: Session):
     """扫描目录并索引所有文件"""
+    # 标准化路径，处理 Windows 的反斜杠问题
+    kb_path = os.path.normpath(kb_path)
+    
     if not os.path.exists(kb_path):
         raise FileNotFoundError(f"路径不存在: {kb_path}")
-
     if not os.path.isdir(kb_path):
         raise NotADirectoryError(f"不是文件夹: {kb_path}")
-
     indexed_count = 0
-
     for root, dirs, files in os.walk(kb_path):
         for filename in files:
             file_path = os.path.join(root, filename)

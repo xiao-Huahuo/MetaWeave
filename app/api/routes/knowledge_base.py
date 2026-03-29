@@ -1,4 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException
+import os
 from sqlmodel import Session, select
 from typing import List, Dict
 from app.core.database import get_session
@@ -22,8 +23,8 @@ def create_knowledge_base(
     current_user: User = Depends(get_current_user)
 ):
     """创建知识库并立即扫描和监听"""
-    kb.user_id = current_user.uid
-    db_kb = KnowledgeBase.model_validate(kb)
+    kb.kb_path = os.path.normpath(kb.kb_path)
+    db_kb = KnowledgeBase.model_validate(kb, update={"user_id": current_user.uid})
     session.add(db_kb)
     session.commit()
     session.refresh(db_kb)
@@ -34,7 +35,9 @@ def create_knowledge_base(
         watchers[db_kb.kb_id] = observer
         logger.info(f"知识库创建成功并启动监听: {db_kb.kb_name}")
     except Exception as e:
-        logger.error(f"扫描或监听失败: {e}")
+        logger.error(f"扫描或监听失败，清理已创建的知识库记录: {e}")
+        session.delete(db_kb)
+        session.commit()
         raise HTTPException(status_code=400, detail=f"创建失败: {str(e)}")
 
     return db_kb

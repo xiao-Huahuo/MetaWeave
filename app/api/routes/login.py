@@ -18,7 +18,6 @@ router = APIRouter()
 
 watchers = {}
 
-
 # 用户登录
 @router.post("/", response_model=Token)
 def login_access_token(

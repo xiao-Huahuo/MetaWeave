@@ -24,7 +24,6 @@ class UserCreate(UserBase):
     def _email_strip(cls, value: EmailStr) -> EmailStr:
         return str(value).strip()
 
-
 class UserRead(UserBase):
     uid: int
     created_time: datetime
