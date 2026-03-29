@@ -1,6 +1,6 @@
-from typing import Generator, Annotated
+from typing import Generator, Annotated, Optional
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Header, Query
 from fastapi.security import OAuth2PasswordBearer
 from jose import jwt, JWTError
 from pydantic import ValidationError
@@ -77,3 +77,22 @@ def get_current_user_from_token_value(session: Session, token: str) -> User:
         raise HTTPException(status_code=404, detail="User not found")
 
     return user
+
+
+def get_current_user_optional(
+        session: Session = Depends(get_session),
+        token: Optional[str] = Query(default=None),
+        authorization: Optional[str] = Header(default=None)
+) -> User:
+    if token:
+        return get_current_user_from_token_value(session, token)
+
+    if authorization:
+        parts = authorization.split(" ")
+        if len(parts) == 2 and parts[0].lower() == "bearer":
+            return get_current_user_from_token_value(session, parts[1])
+
+    raise HTTPException(
+        status_code=status.HTTP_403_FORBIDDEN,
+        detail="Could not validate credentials",
+    )

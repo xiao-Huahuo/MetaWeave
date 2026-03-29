@@ -12,6 +12,11 @@ class FileMetaUpdate(SQLModel):
     file_name: Optional[str] = None
     file_path: Optional[str] = None
     parent_folder: Optional[str] = None
+    file_content: Optional[str] = None
+    file_mtime: Optional[float] = None
+    content_status: Optional[str] = None
+    content_error: Optional[str] = None
+    content_extracted_at: Optional[datetime] = None
     tags: Optional[str] = None
     summary: Optional[str] = None
     category: Optional[str] = None

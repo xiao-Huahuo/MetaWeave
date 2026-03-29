@@ -12,7 +12,11 @@ export const API_ROUTES = {
   KB_CREATE: '/kb/',
   KB_UPDATE: (id) => `/kb/${id}`,
   KB_DELETE: (id) => `/kb/${id}`,
+  KB_VERIFY_PATH: (id) => `/kb/verify-path/${id}`,
   FILE_LIST: '/file/list',
+  FILE_SCAN_STATUS: (id) => `/file/scan-status/${id}`,
+  FILE_DETAIL: (id) => `/file/detail/${id}`,
+  FILE_RAW: (id) => `/file/raw/${id}`,
 };
 
 // 统一API Client
@@ -28,5 +32,3 @@ apiClient.interceptors.request.use(config => {
   if (token) config.headers.Authorization = `Bearer ${token}`;
   return config;
 }, error => Promise.reject(error));
-
-

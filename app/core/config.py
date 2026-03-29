@@ -37,6 +37,7 @@ class GlobalConfig:
     ADMIN_EMAIL = os.getenv("ADMIN_EMAIL")
     ADMIN_PHONE = os.getenv("ADMIN_PHONE")
 
+
     @staticmethod
     def _show_config():
         """
@@ -65,9 +66,6 @@ class GlobalConfig:
 
 # ===== DEBUG: 展示所有环境变量 =====
 GlobalConfig._show_config()
-
-
-
 
 
 

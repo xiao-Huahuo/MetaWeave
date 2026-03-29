@@ -13,6 +13,11 @@ class FileMetaBase(SQLModel):
     file_size: int
     parent_folder: str
     file_hash: str = Field(index=True)
+    file_content: Optional[str] = Field(default=None)
+    file_mtime: Optional[float] = Field(default=None)
+    content_status: Optional[str] = Field(default=None)
+    content_error: Optional[str] = Field(default=None)
+    content_extracted_at: Optional[datetime] = Field(default=None)
     tags: Optional[str] = Field(default=None)
     summary: Optional[str] = Field(default=None)
     category: Optional[str] = Field(default=None)

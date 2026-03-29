@@ -2,12 +2,14 @@ import hashlib
 import os
 from datetime import datetime
 from pathlib import Path
+from typing import Optional
 from watchdog.observers import Observer
 from watchdog.events import FileSystemEventHandler
 from sqlmodel import Session, select
 from app.models.file_meta import FileMeta
 from app.core.database import engine
 from app.core.logger import global_logger as logger
+from app.services.file_content_extractor import FileContentExtractor
 
 
 def calculate_file_hash(file_path: str) -> str:
@@ -21,6 +23,19 @@ def calculate_file_hash(file_path: str) -> str:
     except Exception as e:
         logger.error(f"计算文件哈希失败 {file_path}: {e}")
         return ""
+
+
+def _update_content_status(file_meta: FileMeta, file_path: str, content: Optional[str]):
+    if not FileContentExtractor.is_supported(file_path):
+        file_meta.content_status = "skipped"
+        file_meta.content_error = None
+    elif content:
+        file_meta.content_status = "done"
+        file_meta.content_error = None
+    else:
+        file_meta.content_status = "failed"
+        file_meta.content_error = "解析失败或无有效内容"
+    file_meta.content_extracted_at = datetime.now()
 
 class FileChangeHandler(FileSystemEventHandler):
     def __init__(self, user_id: int, kb_id: int, kb_path: str):
@@ -52,6 +67,8 @@ class FileChangeHandler(FileSystemEventHandler):
         try:
             path = Path(file_path)
             file_hash = calculate_file_hash(file_path)
+            file_mtime = os.path.getmtime(file_path)
+            file_content = FileContentExtractor.extract(file_path)
 
             with Session(engine) as session:
                 file_meta = FileMeta(
@@ -62,8 +79,11 @@ class FileChangeHandler(FileSystemEventHandler):
                     file_type=path.suffix.lstrip('.'),
                     file_size=os.path.getsize(file_path),
                     parent_folder=str(path.parent.absolute()),
-                    file_hash=file_hash
+                    file_hash=file_hash,
+                    file_mtime=file_mtime,
+                    file_content=file_content
                 )
+                _update_content_status(file_meta, file_path, file_content)
                 session.add(file_meta)
                 session.commit()
                 logger.info(f"文件已索引: {file_path}")
@@ -74,6 +94,7 @@ class FileChangeHandler(FileSystemEventHandler):
         """更新文件索引"""
         try:
             file_hash = calculate_file_hash(file_path)
+            file_mtime = os.path.getmtime(file_path)
 
             with Session(engine) as session:
                 statement = select(FileMeta).where(
@@ -83,11 +104,16 @@ class FileChangeHandler(FileSystemEventHandler):
                 file_meta = session.exec(statement).first()
 
                 if file_meta:
-                    if file_meta.file_hash != file_hash:
+                    mtime_changed = file_meta.file_mtime != file_mtime
+                    need_reparse = file_meta.file_hash != file_hash or mtime_changed or not file_meta.file_content
+                    if need_reparse:
                         file_meta.file_hash = file_hash
+                        file_meta.file_mtime = file_mtime
                         file_meta.file_size = os.path.getsize(file_path)
                         file_meta.modified_at = datetime.now()
                         file_meta.last_indexed_at = datetime.now()
+                        file_meta.file_content = FileContentExtractor.extract(file_path)
+                        _update_content_status(file_meta, file_path, file_meta.file_content)
                         session.add(file_meta)
                         session.commit()
                         logger.info(f"文件已更新: {file_path}")
@@ -130,4 +156,3 @@ def start_file_watcher(kb_id: int, kb_path: str, user_id: int) -> Observer:
     observer.start()
     logger.info(f"文件监听已启动: {kb_path}")
     return observer
-

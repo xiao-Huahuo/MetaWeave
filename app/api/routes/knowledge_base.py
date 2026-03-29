@@ -8,7 +8,7 @@ from app.schemas.knowledge_base import KnowledgeBaseCreate, KnowledgeBaseRead, K
 from app.api.deps import get_current_user
 from app.models.user import User
 from app.services.file_watcher import start_file_watcher
-from app.services.file_scanner import scan_directory
+from app.services.file_scan_job import start_scan_job
 from app.core.logger import global_logger as logger
 
 router = APIRouter()
@@ -30,7 +30,7 @@ def create_knowledge_base(
     session.refresh(db_kb)
 
     try:
-        scan_directory(db_kb.kb_id, db_kb.kb_path, current_user.uid, session)
+        start_scan_job(db_kb.kb_id, db_kb.kb_path, current_user.uid)
         observer = start_file_watcher(db_kb.kb_id, db_kb.kb_path, current_user.uid)
         watchers[db_kb.kb_id] = observer
         logger.info(f"知识库创建成功并启动监听: {db_kb.kb_name}")
@@ -78,6 +78,25 @@ def update_knowledge_base(
     session.commit()
     session.refresh(db_kb)
     return db_kb
+
+
+@router.get("/verify-path/{kb_id}")
+def verify_knowledge_base_path(
+    kb_id: int,
+    session: Session = Depends(get_session),
+    current_user: User = Depends(get_current_user)
+):
+    """验证知识库的本地路径是否存在"""
+    statement = select(KnowledgeBase).where(
+        KnowledgeBase.kb_id == kb_id,
+        KnowledgeBase.user_id == current_user.uid
+    )
+    db_kb = session.exec(statement).first()
+    if not db_kb:
+        raise HTTPException(status_code=404, detail="知识库不存在")
+    
+    path_exists = os.path.exists(db_kb.kb_path)
+    return {"kb_id": kb_id, "path": db_kb.kb_path, "exists": path_exists}
 
 
 @router.delete("/{kb_id}")

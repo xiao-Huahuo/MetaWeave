@@ -3,6 +3,7 @@ from pathlib import Path
 from sqlmodel import Session
 from app.models.file_meta import FileMeta
 from app.services.file_watcher import calculate_file_hash
+from app.services.file_content_extractor import FileContentExtractor
 from app.core.logger import global_logger as logger
 
 
@@ -22,6 +23,7 @@ def scan_directory(kb_id: int, kb_path: str, user_id: int, session: Session):
             try:
                 path = Path(file_path)
                 file_hash = calculate_file_hash(file_path)
+                file_content = FileContentExtractor.extract(file_path)
 
                 file_meta = FileMeta(
                     user_id=user_id,
@@ -31,7 +33,8 @@ def scan_directory(kb_id: int, kb_path: str, user_id: int, session: Session):
                     file_type=path.suffix.lstrip('.'),
                     file_size=os.path.getsize(file_path),
                     parent_folder=str(path.parent.absolute()),
-                    file_hash=file_hash
+                    file_hash=file_hash,
+                    file_content=file_content
                 )
                 session.add(file_meta)
                 indexed_count += 1

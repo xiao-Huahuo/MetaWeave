@@ -8,3 +8,14 @@
 2026-03-29 11:07:31,617 | MetaWeave | INFO | [knowledge_base.py:34] | 知识库创建成功并启动监听: 11111
 2026-03-29 11:13:06,950 | MetaWeave | INFO | [file_scanner.py:42] | 扫描完成,共索引 3 个文件
 2026-03-29 11:13:25,416 | MetaWeave | INFO | [file_scanner.py:42] | 扫描完成,共索引 4 个文件
+2026-03-29 20:29:11,621 | MetaWeave | INFO | [file_scanner.py:42] | 扫描完成,共索引 4 个文件
+2026-03-29 22:07:37,175 | MetaWeave | INFO | [file_watcher.py:152] | 文件监听已启动: C:\Users\slump\Desktop\111
+2026-03-29 22:07:37,175 | MetaWeave | INFO | [knowledge_base.py:36] | 知识库创建成功并启动监听: 1111
+2026-03-29 22:08:04,939 | MetaWeave | INFO | [file_watcher.py:56] | 文件修改: C:\Users\slump\Desktop\111\111.txt
+2026-03-29 22:08:04,950 | MetaWeave | INFO | [file_watcher.py:114] | 文件已更新: C:\Users\slump\Desktop\111\111.txt
+2026-03-29 22:08:12,386 | MetaWeave | INFO | [file_watcher.py:56] | 文件修改: C:\Users\slump\Desktop\111\111\222.txt
+2026-03-29 22:08:12,406 | MetaWeave | INFO | [file_watcher.py:114] | 文件已更新: C:\Users\slump\Desktop\111\111\222.txt
+2026-03-29 23:12:14,931 | MetaWeave | INFO | [file_watcher.py:157] | 文件监听已启动: C:\Users\slump\Desktop\111
+2026-03-29 23:12:14,932 | MetaWeave | INFO | [knowledge_base.py:36] | 知识库创建成功并启动监听: 111
+2026-03-29 23:12:14,940 | MetaWeave | INFO | [file_watcher.py:56] | 文件修改: C:\Users\slump\Desktop\111\111\222.txt
+2026-03-29 23:12:14,966 | MetaWeave | INFO | [file_watcher.py:89] | 文件已索引: C:\Users\slump\Desktop\111\111\222.txt

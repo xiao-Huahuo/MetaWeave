@@ -8,6 +8,14 @@ export const updateKB = (id, data) => apiClient.put(API_ROUTES.KB_UPDATE(id), da
 
 export const deleteKB = (id) => apiClient.delete(API_ROUTES.KB_DELETE(id));
 
+export const verifyKBPath = (id) => apiClient.get(API_ROUTES.KB_VERIFY_PATH(id));
+
 export const getFileList = (kb_id) => apiClient.get(API_ROUTES.FILE_LIST, { params: { kb_id } });
 
 export const syncKBFiles = (kb_id) => apiClient.post(`/file/sync/${kb_id}`);
+
+export const getScanStatus = (kb_id) => apiClient.get(API_ROUTES.FILE_SCAN_STATUS(kb_id));
+
+export const getFileDetail = (fid) => apiClient.get(API_ROUTES.FILE_DETAIL(fid));
+
+export const getFileRaw = (fid) => apiClient.get(API_ROUTES.FILE_RAW(fid), { responseType: 'arraybuffer' });
