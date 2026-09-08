@@ -21,4 +21,14 @@ async function loadWindowContent(window, load, showError, logError = console.err
   }
 }
 
-module.exports = { isAbortedNavigation, loadWindowContent }
+/** Show an existing single-instance window and optionally reload recovered development content. */
+async function restoreExistingWindow(window, reload) {
+  if (!window || window.isDestroyed()) return false
+  if (window.isMinimized()) window.restore()
+  window.show()
+  window.focus()
+  await reload()
+  return true
+}
+
+module.exports = { isAbortedNavigation, loadWindowContent, restoreExistingWindow }

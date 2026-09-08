@@ -30,15 +30,32 @@ echo ==========================================
 echo.
 
 call :kill_port "%AGENT_HTTP_PORT%" "backend-http"
+if errorlevel 1 goto :startup_failed
 call :kill_port "%AGENT_GRPC_PORT%" "backend-grpc"
+if errorlevel 1 goto :startup_failed
 call :kill_port "%FRONTEND_PORT%" "frontend-vite"
+if errorlevel 1 goto :startup_failed
+
+set "BACKEND_URL=http://127.0.0.1:%AGENT_HTTP_PORT%"
+set "FRONTEND_URL=http://127.0.0.1:%FRONTEND_PORT%"
+set "METAWEAVE_BACKEND_URL=%BACKEND_URL%"
+set "VITE_DEV_PROXY_TARGET=%BACKEND_URL%"
+set "ELECTRON_RENDERER_URL=%FRONTEND_URL%"
+set "VITE_PORT=%FRONTEND_PORT%"
 
 echo.
 echo Starting backend...
 start "MetaWeave Backend" cmd /k "cd /d ""%PROJECT_ROOT%"" && python main.py"
 
+echo Waiting for backend health...
+node "%PROJECT_ROOT%\editor\electron\server-readiness.cjs" "%BACKEND_URL%/health" 120000 metaweave
+if errorlevel 1 (
+  echo Backend failed to become healthy: %BACKEND_URL%/health
+  goto :startup_failed
+)
+
 echo Starting frontend electron...
-start "MetaWeave Frontend Electron" cmd /k "cd /d ""%PROJECT_ROOT%\editor"" && set VITE_PORT=%FRONTEND_PORT% && npm run dev:electron"
+start "MetaWeave Frontend Electron" cmd /k "cd /d ""%PROJECT_ROOT%\editor"" && npm run dev:electron"
 
 echo.
 echo Restart commands have been issued.
@@ -48,6 +65,12 @@ echo.
 pause
 exit /b 0
 
+:startup_failed
+echo.
+echo MetaWeave startup aborted. Review the error above and the service window output.
+pause
+exit /b 1
+
 :kill_port
 set "TARGET_PORT=%~1"
 set "TARGET_NAME=%~2"
@@ -56,6 +79,10 @@ for /f "tokens=5" %%P in ('netstat -ano ^| findstr /R /C:":%TARGET_PORT% .*LISTE
   if not "%%P"=="0" (
     echo Closing %TARGET_NAME% on port %TARGET_PORT% ^(PID %%P^)...
     taskkill /F /PID %%P >nul 2>nul
+    if errorlevel 1 (
+      echo Failed to stop %TARGET_NAME% process PID %%P.
+      exit /b 1
+    )
     set "KILLED_ANY=1"
   )
 )

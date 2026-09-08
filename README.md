@@ -58,8 +58,20 @@ Agent 框架不能消除模型幻觉。MetaWeave 因此优先提供检索、引�
 - MCP 接入: [MCP.md](docs/MCP.md)
 - gRPC: [agent_service.proto](protos/agent_service.proto)
 
-## 技术栈
+## 技术与环境
+### 环境要求
 
+当前正式发行版支持 **Windows 10/11 64 位（x86-64）**，不支持 macOS、Linux 或 Windows ARM。
+
+| 项目 | 支持范围 |
+|---|---|
+| 操作系统 | Windows 10/11 64 位 |
+| 处理器 | x86-64 处理器；建议 4 核或以上 |
+| 内存 | 基础功能至少 8 GB；使用本地 Qwen、Embedding、ReRank 或 OCR 时建议 16 GB 或以上 |
+| 存储 | 安装与基础运行至少预留 2 GB；下载并使用全部本地模型时建议预留 10 GB 或以上 |
+| 图形硬件 | 不要求独立显卡或 CUDA；当前正式发行版使用 CPU 推理 |
+
+### 技术栈
 * 版本：Python 3.12
 * 微服务框架：FastAPI
 * 通信与工具协议: gRPC + REST/HTTP + MCP

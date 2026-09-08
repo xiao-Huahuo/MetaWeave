@@ -13,21 +13,22 @@
 const { app, BrowserWindow, clipboard, dialog, ipcMain, Menu, shell, Tray, nativeImage } = require('electron')
 const childProcess = require('node:child_process')
 const fs = require('node:fs')
-const net = require('node:net')
 const path = require('node:path')
 const { handleEditShortcut } = require('./edit-shortcuts.cjs')
 const { boundsForMainDragRestore, finishMainWindowRestore } = require('./main-window-state.cjs')
-const { isAbortedNavigation, loadWindowContent } = require('./window-content-loader.cjs')
+const { isMetaWeaveHealthResponse, waitForHttpReady, waitForManagedProcessReady } = require('./server-readiness.cjs')
+const { isAbortedNavigation, loadWindowContent, restoreExistingWindow } = require('./window-content-loader.cjs')
 const { registerBrowserViewIpc } = require('./browser-view.cjs')
 
 const DEV_SERVER_URL = process.env.ELECTRON_RENDERER_URL || 'http://127.0.0.1:5173'
 const BACKEND_SERVER_URL = process.env.METAWEAVE_BACKEND_URL || 'http://127.0.0.1:8002'
+const BACKEND_HEALTH_URL = new URL('/health', BACKEND_SERVER_URL).toString()
 const APP_ICON_FILENAME = process.platform === 'darwin' ? 'app.icns' : 'app.ico'
 const APP_ICON_PATH = path.join(__dirname, '..', 'src', 'assets', 'icons', APP_ICON_FILENAME)
 
 app.setName('MetaWeave')
 
-const hasSingleInstanceLock = app.requestSingleInstanceLock()
+const hasSingleInstanceLock = app.requestSingleInstanceLock({ rendererUrl: DEV_SERVER_URL })
 if (!hasSingleInstanceLock) {
   app.quit()
   process.exit(0)
@@ -242,44 +243,13 @@ function shouldOpenDevTools() {
   return process.env.ELECTRON_OPEN_DEVTOOLS === 'true'
 }
 
-function waitForServerUrl(serverUrl, attempts = 80, intervalMs = 250) {
-  // 轮询 TCP 端口而不是拿 loadURL 失败当探测手段:连接被拒时 Chromium 会
-  // 向终端刷 ERR_CONNECTION_REFUSED,且不受 catch 控制。端口探测成功后才真正加载。
-  const url = new URL(serverUrl)
-  const port = Number(url.port || 80)
-  return new Promise((resolve) => {
-    let count = 0
-    const tryConnect = () => {
-      const socket = net.connect(port, url.hostname)
-      socket.once('connect', () => {
-        socket.destroy()
-        resolve(true)
-      })
-      socket.once('error', () => {
-        socket.destroy()
-        count += 1
-        if (count >= attempts) {
-          resolve(false)
-        } else {
-          setTimeout(tryConnect, intervalMs)
-        }
-      })
-    }
-    tryConnect()
-  })
-}
-
-function waitForDevServer(attempts = 80, intervalMs = 250) {
-  return waitForServerUrl(DEV_SERVER_URL, attempts, intervalMs)
-}
-
-async function loadDevServer(window, query) {
-  if (!await waitForDevServer()) {
-    throw new Error(`Vite development server is unavailable: ${DEV_SERVER_URL}`)
+async function loadDevServer(window, query, serverUrl = DEV_SERVER_URL) {
+  if (!await waitForHttpReady(serverUrl, { timeoutMs: 120_000 })) {
+    throw new Error(`Vite development server is unavailable: ${serverUrl}`)
   }
   const url = query
-    ? `${DEV_SERVER_URL}?${new URLSearchParams(query).toString()}`
-    : DEV_SERVER_URL
+    ? `${serverUrl}?${new URLSearchParams(query).toString()}`
+    : serverUrl
   await window.loadURL(url)
 }
 
@@ -318,10 +288,10 @@ async function showStartupError(window, error) {
   window.focus()
 }
 
-function loadRenderer(window, query, displayError = false) {
+function loadRenderer(window, query, displayError = false, developmentServerUrl = DEV_SERVER_URL) {
   return loadWindowContent(
     window,
-    () => isDevelopment() ? loadDevServer(window, query) : loadPackagedBackend(window, query),
+    () => isDevelopment() ? loadDevServer(window, query, developmentServerUrl) : loadPackagedBackend(window, query),
     (error) => {
       if (displayError) {
         return showStartupError(window, error)
@@ -364,17 +334,18 @@ async function startPackagedBackend() {
   if (!app.isPackaged || process.platform !== 'win32') {
     return
   }
-  if (await isTcpServerReady(BACKEND_SERVER_URL)) {
+  if (await waitForHttpReady(BACKEND_HEALTH_URL, {
+    timeoutMs: 1_000,
+    validateResponse: isMetaWeaveHealthResponse,
+  })) {
     return
   }
   const backendExe = packagedBackendPath()
   if (!fs.existsSync(backendExe)) {
-    dialog.showErrorBox('MetaWeave 后端缺失', `未找到内置后端: ${backendExe}`)
-    app.quit()
-    return
+    throw new Error(`未找到内置后端: ${backendExe}`)
   }
   const projectRoot = ensurePackagedUserResources()
-  backendProcess = childProcess.spawn(backendExe, [], {
+  const spawnedProcess = childProcess.spawn(backendExe, [], {
     cwd: projectRoot,
     detached: false,
     env: {
@@ -385,12 +356,17 @@ async function startPackagedBackend() {
     stdio: 'ignore',
     windowsHide: true,
   })
-  backendProcess.once('error', (error) => {
-    dialog.showErrorBox('MetaWeave 后端启动失败', String(error))
-    app.quit()
+  backendProcess = spawnedProcess
+  spawnedProcess.once('error', () => {
+    if (backendProcess === spawnedProcess) backendProcess = null
   })
-  backendProcess.once('exit', () => {
-    backendProcess = null
+  spawnedProcess.once('exit', () => {
+    if (backendProcess === spawnedProcess) backendProcess = null
+  })
+  await waitForManagedProcessReady(spawnedProcess, BACKEND_HEALTH_URL, {
+    timeoutMs: 120_000,
+    validateResponse: isMetaWeaveHealthResponse,
+    timeoutMessage: `内置 Agent 服务未能在规定时间内启动: ${BACKEND_SERVER_URL}`,
   })
 }
 
@@ -412,24 +388,11 @@ function stopPackagedBackend() {
   processToStop.kill()
 }
 
-function isTcpServerReady(serverUrl) {
-  const url = new URL(serverUrl)
-  const port = Number(url.port || 80)
-  return new Promise((resolve) => {
-    const socket = net.connect(port, url.hostname)
-    socket.once('connect', () => {
-      socket.destroy()
-      resolve(true)
-    })
-    socket.once('error', () => {
-      socket.destroy()
-      resolve(false)
-    })
-  })
-}
-
 async function loadPackagedBackend(window, query) {
-  if (!await waitForServerUrl(BACKEND_SERVER_URL, 240, 500)) {
+  if (!await waitForHttpReady(BACKEND_HEALTH_URL, {
+    timeoutMs: 5_000,
+    validateResponse: isMetaWeaveHealthResponse,
+  })) {
     throw new Error(`内置 Agent 服务未能在规定时间内启动: ${BACKEND_SERVER_URL}`)
   }
   const url = query
@@ -715,15 +678,14 @@ function toggleFloatingWindow() {
 }
 
 if (hasSingleInstanceLock) {
-  app.on('second-instance', () => {
-    if (!mainWindow || mainWindow.isDestroyed()) {
-      return
-    }
-    if (mainWindow.isMinimized()) {
-      mainWindow.restore()
-    }
-    mainWindow.show()
-    mainWindow.focus()
+  app.on('second-instance', (_event, _commandLine, _workingDirectory, additionalData) => {
+    const rendererUrl = typeof additionalData?.rendererUrl === 'string'
+      ? additionalData.rendererUrl
+      : DEV_SERVER_URL
+    void restoreExistingWindow(
+      mainWindow,
+      () => isDevelopment() ? loadRenderer(mainWindow, undefined, true, rendererUrl) : Promise.resolve(),
+    )
   })
 }
 

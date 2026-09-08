@@ -18,6 +18,11 @@ const EDITOR_CSP = [
   "base-uri 'self'",
 ].join('; ')
 const DEV_PROXY_TARGET = process.env.VITE_DEV_PROXY_TARGET || 'http://127.0.0.1:8002'
+const DEV_SERVER_PORT = Number.parseInt(process.env.VITE_PORT || '5173', 10)
+
+if (!Number.isInteger(DEV_SERVER_PORT) || DEV_SERVER_PORT < 1 || DEV_SERVER_PORT > 65_535) {
+  throw new Error(`VITE_PORT must be a valid TCP port, received: ${process.env.VITE_PORT}`)
+}
 
 function productionCspPlugin(): PluginOption {
   return {
@@ -37,7 +42,7 @@ export default defineConfig({
   plugins: [vue(), vueJsx(), vueDevTools(), productionCspPlugin()],
   server: {
     host: '127.0.0.1',
-    port: 5173,
+    port: DEV_SERVER_PORT,
     strictPort: true,
     proxy: {
       '/agent': {

@@ -39,7 +39,7 @@ npm run dev:electron
 
 `dev:electron` 只会并行启动 Vite 和 Electron，不会启动 Python 后端。Vite 默认监听 `http://127.0.0.1:5173`，开发代理将 API 转发到 `http://127.0.0.1:8002`，因此应在另一个终端先启动后端。
 
-`启动.bat` 只负责重启后端、gRPC和 Electron开发进程。DSH默认关闭且不会在启动脚本中解压；用户在基础设置开启 DSH后，前端壳层确认后端就绪并读取用户档案，再与模型初始化并行触发 DSH Runtime后台安装。
+`启动.bat` 会先按端口停止旧服务，等待后端 `/health` 返回 MetaWeave 的健康标识后再启动前端。Vite、开发代理与 Electron 共用 `FRONTEND_PORT`、`AGENT_HTTP_PORT` 派生出的地址；Electron 会等待 Vite 真正返回 HTTP 响应，旧的托盘实例收到二次启动事件时也会重新加载已经恢复的开发服务。DSH默认关闭且不会在启动脚本中解压；用户在基础设置开启 DSH后，前端壳层确认后端就绪并读取用户档案，再与模型初始化并行触发 DSH Runtime后台安装。
 
 `npm ci` 会先替换整个 `node_modules`。Windows 下执行前必须在原终端用 `Ctrl+C` 停止 `dev:electron`，并从托盘退出 Electron；否则 Rolldown 等已加载的 `.node` 原生文件会因占用而报 `EPERM unlink`。不要用 `taskkill /IM node.exe /F`，它会误杀同机上的其他 Node 服务。
 
@@ -145,6 +145,7 @@ resources/dsh/sdk/
 - `AgentService.exe` 作为内置后端放入安装包的 `resources/backend/`。
 - 默认资源模板放入安装包的 `resources/default-resources/`。
 - 运行时由 Electron 拉起后端,窗口加载 `http://127.0.0.1:8002`。
+- Electron 只接受 `/health` 返回 MetaWeave 固定健康标识的后端；监听端口的其他进程不会被误判为就绪，内置后端在启动期间退出时会立即显示退出原因。
 - 安装器允许用户选择安装目录。
 - `runtime/` 不进入安装包。数据库、模型缓存、日志和上传文件在用户数据目录首次运行时自动生成；知识库 Markdown 与 frontmatter 则保存在各知识库自己的 `.mw/` 中。
 

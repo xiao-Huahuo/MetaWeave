@@ -2,12 +2,16 @@ import { createRequire } from 'node:module'
 import { describe, expect, it, vi } from 'vitest'
 
 const require = createRequire(import.meta.url)
-const { loadWindowContent } = require('../../electron/window-content-loader.cjs') as {
+const { loadWindowContent, restoreExistingWindow } = require('../../electron/window-content-loader.cjs') as {
   loadWindowContent: (
     window: { isDestroyed: () => boolean },
     load: () => Promise<void>,
     showError: (error: unknown) => Promise<void>,
     logError?: (message: string, error: unknown) => void,
+  ) => Promise<boolean>
+  restoreExistingWindow: (
+    window: { focus: () => void; isDestroyed: () => boolean; isMinimized: () => boolean; restore: () => void; show: () => void },
+    reload: () => Promise<void>,
   ) => Promise<boolean>
 }
 
@@ -74,5 +78,23 @@ describe('Electron window content loading', () => {
     )).resolves.toBe(true)
 
     expect(showError).not.toHaveBeenCalled()
+  })
+
+  it('reloads an existing development window after a second launch', async () => {
+    const window = {
+      focus: vi.fn(),
+      isDestroyed: () => false,
+      isMinimized: () => true,
+      restore: vi.fn(),
+      show: vi.fn(),
+    }
+    const reload = vi.fn<() => Promise<void>>().mockResolvedValue(undefined)
+
+    await expect(restoreExistingWindow(window, reload)).resolves.toBe(true)
+
+    expect(window.restore).toHaveBeenCalledOnce()
+    expect(window.show).toHaveBeenCalledOnce()
+    expect(window.focus).toHaveBeenCalledOnce()
+    expect(reload).toHaveBeenCalledOnce()
   })
 })
