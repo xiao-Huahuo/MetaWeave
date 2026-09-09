@@ -35,7 +35,7 @@ STORAGE_PATH_DEFINITIONS: dict[str, dict[str, Any]] = {
     "models_dir": {"label": "模型路径", "parent": "base_data_dir", "can_clear": False, "requires_restart": False},
     "embedding_model_dir": {"label": "Embedding 模型", "parent": "models_dir", "can_clear": False, "requires_restart": False},
     "local_model_dir": {"label": "本地 Qwen 大语言模型", "parent": "models_dir", "can_clear": False, "requires_restart": False},
-    "paddleocr_model_dir": {"label": "OCR 模型", "parent": "models_dir", "can_clear": False, "requires_restart": False},
+    "paddleocr_model_dir": {"label": "结构化 OCR 流水线", "parent": "models_dir", "can_clear": False, "requires_restart": False},
     "rerank_model_dir": {"label": "CrossEncoder 模型", "parent": "models_dir", "can_clear": False, "requires_restart": False},
     "latex_runtime_dir": {"label": "LaTeX 运行环境", "parent": "base_data_dir", "can_clear": False, "requires_restart": False},
     "latex_distribution_dir": {"label": "MiKTeX 核心与宏包", "parent": "latex_runtime_dir", "can_clear": False, "requires_restart": False},

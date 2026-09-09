@@ -36,6 +36,7 @@ import {
   writeKnowledgeFile,
 } from '@/api/knowledge'
 import type { KnowledgeIngestionProgressEvent } from '@/api/settings'
+import { normalizeProgress } from '@/utils/progress'
 import { useSettingsStore } from '@/stores/settings'
 import type {
   ChatMessage,
@@ -848,7 +849,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   let currentDocumentContextTimer: number | null = null
 
   function setIngestionProgress(value: number) {
-    ingestionProgress.value = Math.max(0, Math.min(100, Math.round(value)))
+    ingestionProgress.value = normalizeProgress(value)
   }
 
   function persistIngestionHistory() {
@@ -1003,7 +1004,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
       .map((item, index) => ({
         ...item,
         status: index === 0 ? 'running' : 'queued',
-        progress: index === 0 ? Math.max(0, Math.min(96, Math.round(((processed % Math.max(1, total)) / Math.max(1, total)) * 100))) : 0,
+        progress: index === 0 ? normalizeProgress(Math.min(96, ((processed % Math.max(1, total)) / Math.max(1, total)) * 100)) : 0,
       }))
     setIngestionProgressFromQueue()
   }

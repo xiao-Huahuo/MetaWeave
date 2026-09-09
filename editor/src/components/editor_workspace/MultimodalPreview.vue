@@ -16,9 +16,18 @@ import type { ImagePreviewItem } from '@/components/common/useImagePreviewer'
 import PdfPreview from '@/components/editor_workspace/PdfPreview.vue'
 import { buildApiUrl } from '@/api/client'
 import type { FilePreviewPayload } from '@/types/knowledge'
+import type { ScannerOcrBlock } from '@/api/scanner'
 
 const props = defineProps<{
   preview: FilePreviewPayload | null
+  blocks?: ScannerOcrBlock[]
+  activeBlockId?: string
+  lockedBlockId?: string
+}>()
+const emit = defineEmits<{
+  blockHover: [blockId: string]
+  blockLeave: []
+  blockSelect: [blockId: string]
 }>()
 
 const imagePreviewer = useImagePreviewer()
@@ -113,12 +122,24 @@ function handleDocumentClick(event: MouseEvent) {
       v-else-if="preview.kind === 'image'"
       mode="embedded"
       :files="imageFiles"
+      :blocks="blocks"
+      :active-block-id="activeBlockId"
+      :locked-block-id="lockedBlockId"
+      @block-hover="emit('blockHover', $event)"
+      @block-leave="emit('blockLeave')"
+      @block-select="emit('blockSelect', $event)"
     />
 
     <PdfPreview
       v-else-if="preview.kind === 'pdf'"
       :preview="preview"
       :source="previewSource"
+      :blocks="blocks"
+      :active-block-id="activeBlockId"
+      :locked-block-id="lockedBlockId"
+      @block-hover="emit('blockHover', $event)"
+      @block-leave="emit('blockLeave')"
+      @block-select="emit('blockSelect', $event)"
     />
 
     <video

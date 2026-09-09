@@ -105,7 +105,7 @@ watch(() => settingsStore.profile.userId, (userId) => {
 <style scoped>
 .scanner-history-list { display: grid; align-content: start; gap: 8px; min-height: 0; overflow: auto; padding: 4px 8px 16px; }
 .scanner-history-list.is-empty { place-items: center; align-content: center; }
-.scanner-history-card { display: grid; grid-template-columns: 38px minmax(0, 1fr); gap: 8px; width: 100%; min-width: 0; padding: 9px; border: 1px solid var(--color-border); border-radius: var(--workspace-card-radius); outline: 0; background: var(--color-canvas); color: var(--color-text); font: inherit; text-align: left; cursor: pointer; animation: scanner-history-enter 240ms cubic-bezier(.23,1,.32,1) both; animation-delay: calc(var(--history-index) * 55ms); transition: border-color 180ms ease, background 180ms ease, transform 140ms ease; }
+.scanner-history-card { display: grid; grid-template-columns: 38px minmax(0, 1fr); gap: 8px; width: 100%; min-width: 0; padding: 9px; border: 1px solid var(--color-border); border-radius: 17px; outline: 0; background: var(--color-canvas); color: var(--color-text); font: inherit; text-align: left; cursor: pointer; animation: scanner-history-enter 240ms cubic-bezier(.23,1,.32,1) both; animation-delay: calc(var(--history-index) * 55ms); transition: border-color 180ms ease, background 180ms ease, transform 140ms ease; }
 .scanner-history-card:hover { border-color: var(--color-border-strong); background: var(--color-bg-hover); }
 .scanner-history-card:active { transform: scale(.985); }
 .scanner-history-card.active { border-color: var(--color-primary); background: var(--color-primary-soft); }

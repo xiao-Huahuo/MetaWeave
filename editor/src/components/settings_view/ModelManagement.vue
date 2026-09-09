@@ -175,6 +175,13 @@ function detailLabel(key: string): string {
     device: '运行设备',
     detection_model: '检测模型',
     recognition_model: '识别模型',
+    layout_model: '版面模型',
+    ocr_models: '文字模型',
+    table_models: '表格模型',
+    formula_model: '公式模型',
+    supporting_models: '辅助模型',
+    preprocessing: '文档预处理',
+    disabled_modules: '关闭模块',
     capabilities: '能力',
     fallback: '回退规则',
   }

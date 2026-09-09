@@ -99,6 +99,31 @@ def test_status_prefers_managed_toolchain_then_system(tmp_path: Path, monkeypatc
     assert system["default_engine"] == "pdflatex"
 
 
+def test_system_miktex_is_discovered_outside_process_path(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """正式 EXE 的 PATH 缺少 MiKTeX 时，仍应从 Windows 安装根目录发现编译器。"""
+
+    service, _, _ = _service(tmp_path)
+    install_root = tmp_path / "MiKTeX"
+    bin_dir = install_root / "miktex" / "bin" / "x64"
+    bin_dir.mkdir(parents=True)
+    for filename in ("pdflatex.exe", "xelatex.exe", "latexmk.exe"):
+        (bin_dir / filename).write_bytes(b"exe")
+    monkeypatch.setattr(latex_module.shutil, "which", lambda name: None)
+    monkeypatch.setattr(service, "_system_install_roots", lambda: [install_root])
+
+    toolchain = service._discover_toolchain()
+
+    assert toolchain is not None
+    assert toolchain["source"] == "system"
+    assert toolchain["pdflatex"] == str(bin_dir / "pdflatex.exe")
+    assert toolchain["xelatex"] == str(bin_dir / "xelatex.exe")
+    assert toolchain["latexmk"] == str(bin_dir / "latexmk.exe")
+    assert toolchain["bin_dir"] == str(bin_dir)
+
+
 def test_compile_defaults_to_safe_pdflatex_recipe_and_forces_real_rebuild(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,

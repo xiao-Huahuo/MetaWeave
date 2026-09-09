@@ -8,16 +8,20 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 import sys
 import time
 from types import ModuleType
 from types import SimpleNamespace
 
+import pytest
+
 from agent_service.core.model_status import ModelState, get_model_status, set_model_state
 from agent_service.scripts.download_model import (
     MODEL_MARKER_FILE,
     PADDLEOCR_MARKER_FILE,
+    PADDLEOCR_PIPELINE_VERSION,
     get_all_download_progress,
     is_model_available,
     has_partial_model_download,
@@ -67,8 +71,22 @@ def test_management_reports_real_model_details_and_enabled_state(tmp_path: Path)
     embedding_target = model_target_dir(embedding_name, embedding_root)
     _complete_hf_model(embedding_target, embedding_name)
     ocr_root.mkdir(parents=True)
-    (ocr_root / PADDLEOCR_MARKER_FILE).write_text("language=ch", encoding="utf-8")
-    (ocr_root / "det.bin").write_bytes(b"ocr-data")
+    pipeline_model_names = {
+        "layout_detection": "PP-DocLayout-L",
+        "text_detection": "PP-OCRv5_server_det",
+        "text_recognition": "PP-OCRv5_server_rec",
+        "wired_table_structure": "SLANeXt_wired",
+        "wireless_table_structure": "SLANeXt_wireless",
+        "formula_recognition": "PP-FormulaNet_plus-M",
+    }
+    for model_name in pipeline_model_names.values():
+        component_dir = ocr_root / model_name
+        component_dir.mkdir()
+        (component_dir / "inference.yml").write_text(f"model: {model_name}", encoding="utf-8")
+    (ocr_root / PADDLEOCR_MARKER_FILE).write_text(json.dumps({
+        "pipeline_version": PADDLEOCR_PIPELINE_VERSION,
+        "models": pipeline_model_names,
+    }), encoding="utf-8")
     config = SimpleNamespace(
         model=SimpleNamespace(
             embedding_model_name=embedding_name,
@@ -84,8 +102,13 @@ def test_management_reports_real_model_details_and_enabled_state(tmp_path: Path)
         ocr=SimpleNamespace(
             language="ch",
             device="cpu",
-            text_detection_model_name="PP-OCRv5_mobile_det",
-            text_recognition_model_name="PP-OCRv5_mobile_rec",
+            pipeline_model_names=pipeline_model_names,
+            pipeline_feature_flags={
+                "use_table_recognition": True,
+                "use_formula_recognition": True,
+                "use_chart_recognition": False,
+                "use_seal_recognition": False,
+            },
         ),
     )
     set_model_state("embedding", ModelState.READY)
@@ -108,6 +131,14 @@ def test_management_reports_real_model_details_and_enabled_state(tmp_path: Path)
     assert models["local_qwen"]["role"] == "本地主 Agent、小模型回退与图片理解"
     assert models["local_qwen"]["details"]["device"] == "CPU"
     assert models["paddleocr"]["enabled"] is True
+    assert models["paddleocr"]["downloaded"] is True
+    assert models["paddleocr"]["label"] == "PaddleOCR 结构化流水线"
+    assert models["paddleocr"]["role"] == "扫描文档版面、文字、表格、公式与阅读顺序解析"
+    assert models["paddleocr"]["details"]["layout_model"] == "PP-DocLayout-L"
+    assert models["paddleocr"]["details"]["table_models"] == "SLANeXt_wired / SLANeXt_wireless"
+    assert models["paddleocr"]["details"]["formula_model"] == "PP-FormulaNet_plus-M"
+    assert models["paddleocr"]["details"]["supporting_models"] == ""
+    assert models["paddleocr"]["details"]["disabled_modules"] == "图表解析 / 印章识别"
     assert models["paddleocr"]["details"]["language"] == "ch"
 
 
@@ -145,6 +176,40 @@ def test_download_progress_uses_real_bytes_and_honest_unknown_total() -> None:
     assert progress["paddleocr"]["downloaded_bytes"] == 75
     assert progress["paddleocr"]["percent"] is None
     assert progress["paddleocr"]["indeterminate"] is True
+
+
+def test_paddleocr_download_failure_preserves_real_error_for_management_ui(
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """结构化流水线失败后必须保留原始原因，不能只留下通用“处理失败”。"""
+
+    ocr_root = tmp_path / "paddleocr"
+    ocr_root.mkdir()
+    (ocr_root / "partial.bin").write_bytes(b"partial")
+    config = SimpleNamespace(
+        storage=SimpleNamespace(paddleocr_model_dir=ocr_root),
+        ocr=SimpleNamespace(
+            language="ch",
+            device="cpu",
+            pipeline_model_names={"layout_detection": "PP-DocLayout-L"},
+            pipeline_feature_flags={},
+        ),
+    )
+    monkeypatch.setattr(download_module, "ensure_paddleocr_models", lambda **kwargs: (_ for _ in ()).throw(
+        RuntimeError("PP-StructureV3 requires paddlex[ocr]")
+    ))
+    reset_download_progress("paddleocr")
+    service = ModelManagementService(config=config, settings_service=_SettingsStub())
+
+    with pytest.raises(RuntimeError, match=r"paddlex\[ocr\]"):
+        service._download_model("paddleocr")
+
+    progress = get_all_download_progress()["paddleocr"]
+    assert progress["status"] == "error"
+    assert progress["stage"] == "failed"
+    assert progress["downloaded_bytes"] == len(b"partial")
+    assert progress["message"] == "PP-StructureV3 requires paddlex[ocr]"
 
 
 def test_model_completeness_accepts_sharded_qwen_safetensors(tmp_path: Path) -> None:

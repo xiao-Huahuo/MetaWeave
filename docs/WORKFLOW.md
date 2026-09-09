@@ -426,10 +426,42 @@ flowchart TD
 - `.docx`：将文件作为 ZIP 包读取，解析 `word/document.xml` 及图片关系引用。段落按标题样式或段落结构生成文本块；表格保留结构并生成检索摘要；图片优先使用替代文本，否则执行 OCR。提取出的图片保存到 `.mw/assets/`，并在 Markdown 中登记资源位置。
 - `.pptx`：将文件作为 ZIP 包读取并解析 `ppt/slides/slide*.xml`。旧版 `.ppt` 不属于支持格式。
 - `.xlsx`：将文件作为 ZIP 包读取，解析 `xl/sharedStrings.xml` 和 `xl/worksheets/sheet*.xml`。小表完整提取行列；大表提取结构、表头、样例、统计信息和工作表摘要；超大或不适合语义检索的表格只索引工作表名、列名、数据范围等元信息。
-- 图片（`.jpg`、`.jpeg`、`.png`、`.webp`）：知识库入库使用 PaddleOCR 识别中英文文字和表格截图；OCR 默认关闭，在设置页开启后对后续灌库立即生效，无需重启，模型缓存位于 `runtime/models/paddleocr/`。直接上传到 Agent 会话的图片在统一解析器完成 OCR 后，还会交给 CPU 本地 Qwen 补充对象、布局、空间关系、图表趋势和其他视觉语义。
+- 图片（`.jpg`、`.jpeg`、`.png`、`.webp`）：知识库入库使用 PP-StructureV3 识别版面、中英文文字、表格、公式和阅读顺序；OCR 默认关闭，在设置页开启后对后续灌库立即生效，无需重启，模型缓存位于 `runtime/models/paddleocr/`。直接上传到 Agent 会话的图片在统一解析器完成结构化 OCR 后，还会交给 CPU 本地 Qwen 补充对象、空间关系、图表趋势和其他视觉语义。
 - `.pdf`：文档型 PDF 优先提取文本层、表格和图片；扫描型 PDF 按页渲染并执行 OCR；混合型 PDF 逐页判断是否存在文本层；表格无法稳定识别时至少输出文本块和页码范围。
 - 文档内嵌图片：图片本体不作为独立语义文档写入向量库，结构化 JSON 记录图片引用、OCR 状态和识别结果。PDF 与 Office 文档提取的图片统一保存在 `.mw/assets/`，并结合相邻标题、段落、表格编号和图注形成检索上下文。
 - 其他格式：系统先检查支持的后缀白名单；白名单外文件读取前 8192 字节，通过空字节、UTF-8/GBK 等编码解码结果和控制字符占比判断是文本还是二进制。可解码文本按普通文本处理；无法识别的二进制文件登记为资源占位并禁止入库。
+
+#### 结构化 OCR 流水线
+
+图片、扫描型 PDF 页面和 Office 内嵌图片共用 `ImageOcrService`，其底层是一个受管的 PP-StructureV3 高质量流水线。原生 DOCX/XLSX/PPTX 和带文本层 PDF 仍优先使用确定性格式解析器；只有需要理解像素内容的区域进入 OCR，避免重复识别已经存在的结构化正文。
+
+```mermaid
+flowchart TD
+    A["图片 / 扫描 PDF 页 / 文档内嵌图片"] --> B["全局 OCR 串行门禁<br/>同一时间只执行一个推理"]
+    B --> C["文档预处理<br/>方向分类 + UVDoc 校正 + 文本行方向"]
+    C --> D["PP-DocLayout-L 版面检测<br/>PP-DocBlockLayout 块与阅读顺序"]
+    D --> E["PP-OCRv5 Server<br/>文字检测 + 识别 + 置信度过滤"]
+    D --> F{"版面类型"}
+    F -->|"有线 / 无线表格"| G["表格分类 + 单元格检测<br/>SLANeXt_wired / wireless"]
+    F -->|"公式"| H["PP-FormulaNet_plus-M<br/>输出 LaTeX"]
+    F -->|"图表 / 印章"| I["模块关闭<br/>保留版面类型，不运行专用识别"]
+    E --> J["按页码与 block_order 合并"]
+    G --> J
+    H --> J
+    I --> J
+    J --> K["结构化 Markdown<br/>标题 + 正文 + HTML 表格 + LaTeX 公式"]
+    J --> L["结构 metadata<br/>page / type / bbox / order / counts"]
+    K --> M["扫描器 OCR 草稿或知识库 .mw/md"]
+    L --> N["知识库 .mw/frontmatter"]
+```
+
+流水线模型由 `AgentConfig.ocr` 统一登记，下载器先让 PaddleX 获取全部启用组件，再逐个同步到 `runtime/models/paddleocr/<model_name>/`。只有 marker 版本、模型清单和所有 `inference.yml` 同时匹配时，存储管理才报告模型完整；旧版只有 Mobile det/rec 的 marker 会被判定为缺失。模型加载后由进程共享，删除模型时先等待当前推理结束、释放共享引用，再删除受管目录。
+
+PP-StructureV3 的 Markdown 是 OCR 正文的正式来源，`parsing_res_list` 同时规整为稳定版面块。扫描器把 Markdown 持久化到 SQLite 草稿，OCR 版本删除图片节点但保留标题、表格 HTML 和公式 LaTeX；知识灌库则把版面块、页码、坐标、阅读顺序、表格数、公式数和实际标签写入 frontmatter。任何组件加载或推理失败都会返回明确的 `engine_unavailable`/失败状态，不会用空结构伪装成功。
+
+OCR 进度由 PP-StructureV3 实际调用的八个顺序节点驱动：文档方向与展平、版面检测、区域检测、公式裁决、文字检测、文字行方向、文字识别、表格裁决与结构识别。节点返回后才增加已裁决数量；公式或表格没有命中区域时记为“裁决跳过”。文字检测返回后显示真实文字框数量，方向和识别阶段按模型实际返回的文字行持续推进。事件至少相差一个百分点才落库，不使用定时器模拟增长。
+
+扫描器完成后将 OCR 块的页码、类型、内容、阅读顺序、页面尺寸和 bbox 持久化。图片与 PDF 的 Preview 在内容同一变换层中绘制 SVG 空间框；Markdown Preview 把相同 `page:block_id` 绑定到实际渲染节点。悬浮会同步高亮，点击会锁定并定位对应块。Edit/源码模式不渲染块，DOCX 的可重排左侧预览也不绘制空间框。
 
 ```mermaid
 flowchart TD
@@ -516,8 +548,8 @@ flowchart TD
     D --> E["统一解析器<br/>FrontmatterBootstrapService + MultimodalDocumentCleaner"]
     E --> E1{"是否为直接上传图片?"}
     E1 -->|"否"| F["抽取结构化章节/正文<br/>写入 .attachments/{attachment_id}.txt"]
-    E1 -->|"是"| V1["PaddleOCR 先行文字提取"]
-    V1 --> V2["CPU 本地 Qwen 读取原图 + OCR<br/>生成对象、布局、关系和图表语义"]
+    E1 -->|"是"| V1["PP-StructureV3 结构化 OCR<br/>版面、文字、表格、公式与阅读顺序"]
+    V1 --> V2["CPU 本地 Qwen 读取原图 + OCR<br/>补充对象、空间关系和图表语义"]
     V2 --> F
     F --> G["SQLite: session_attachments<br/>保存 uri、路径、摘要、metadata"]
     G --> H["ContextBuilder.build_messages()"]

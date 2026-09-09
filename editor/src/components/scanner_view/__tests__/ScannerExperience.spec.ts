@@ -57,4 +57,17 @@ describe('scanner experience contracts', () => {
     expect(resultSource).toContain('min-height: 44px')
     expect(resultSource).toContain('.scanner-variant-switch .settings-resource-page-button:hover { background: transparent !important; box-shadow: none !important; }')
   })
+
+  it('renders OCR blocks only inside left or right preview surfaces', () => {
+    expect(resultSource).toContain(`:blocks="sourceViewMode === 'preview' ? previewBlocks : []"`)
+    expect(resultSource).toContain(`v-if="viewMode === 'preview' || viewMode === 'split'"`)
+    expect(resultSource).toContain(':blocks="previewBlocks"')
+    expect(resultSource).not.toContain('<CodeEditor v-if="viewMode === \'edit\'" :blocks=')
+  })
+
+  it('shows backend stage text and one-decimal progress without inventing client progress', () => {
+    expect(uploadSource).toContain('{{ formatProgress(running.progress) }}%')
+    expect(uploadSource).toContain('{{ running.stage_label }}')
+    expect(uploadSource).not.toContain('setInterval(() => running.progress')
+  })
 })

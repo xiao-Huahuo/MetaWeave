@@ -47,6 +47,7 @@ MODEL_TOKENIZER_FILES = {
     "vocab.txt",
 }
 PADDLEOCR_MARKER_FILE = ".paddleocr_download_complete"
+PADDLEOCR_PIPELINE_VERSION = "pp-structure-v3-high-quality-v1"
 
 # ---- 下载进度跟踪 ----
 _download_progress: dict[str, dict[str, object]] = {}
@@ -302,17 +303,17 @@ def ensure_paddleocr_models(
     *,
     paddleocr_model_dir: Path | str,
     language: str,
-    text_detection_model_name: str,
-    text_recognition_model_name: str,
+    model_names: dict[str, str],
+    feature_flags: dict[str, bool],
     device: str = "cpu",
 ) -> Path:
     """
-    预热 PaddleOCR 文本检测与识别模型。
+    下载并验证 PP-StructureV3 高质量结构化流水线的全部启用模型。
 
     paddleocr_model_dir: PaddleOCR 模型缓存根目录。
     language: OCR 语言参数,中英文场景使用 ch。
-    text_detection_model_name: 文本检测模型名称。
-    text_recognition_model_name: 文本识别模型名称。
+    model_names: AgentConfig 统一提供的组件键与模型名称。
+    feature_flags: 表格、公式、预处理等流水线开关。
     device: 推理设备,默认 cpu。
     """
 
@@ -320,70 +321,91 @@ def ensure_paddleocr_models(
     target_root.mkdir(parents=True, exist_ok=True)
     _disable_paddleocr_mkldnn_by_default()
     try:
-        from paddleocr import PaddleOCR  # type: ignore[import-untyped]
+        from paddleocr import PPStructureV3  # type: ignore[import-untyped]
     except ImportError as exc:
-        raise RuntimeError("缺少 paddleocr / paddlepaddle 依赖,无法自动准备 OCR 模型。") from exc
+        raise RuntimeError("缺少支持 PP-StructureV3 的 paddleocr / paddlepaddle 依赖。") from exc
 
-    logger.info("开始准备 PaddleOCR 模型: det=%s rec=%s", text_detection_model_name, text_recognition_model_name)
+    logger.info("开始准备 PaddleOCR 结构化流水线: %s", ", ".join(dict.fromkeys(model_names.values())))
     _build_paddleocr_pipeline(
-        PaddleOCR=PaddleOCR,
-        language=language,
-        text_detection_model_name=text_detection_model_name,
-        text_recognition_model_name=text_recognition_model_name,
-        text_detection_model_dir=target_root / "text_detection",
-        text_recognition_model_dir=target_root / "text_recognition",
+        PPStructureV3=PPStructureV3,
+        model_root=target_root,
+        model_names=model_names,
+        feature_flags=feature_flags,
         device=device,
     )
-    _sync_paddlex_official_model(
-        model_name=text_detection_model_name,
-        target_dir=target_root / "text_detection",
+    for model_name in dict.fromkeys(model_names.values()):
+        _sync_paddlex_official_model(
+            model_name=model_name,
+            target_dir=_paddleocr_model_dir(target_root, model_name),
+        )
+    if not _all_paddleocr_component_dirs_available(target_root, model_names):
+        raise RuntimeError("PP-StructureV3 流水线下载后仍有模型缺失")
+    marker_payload = {
+        "pipeline_version": PADDLEOCR_PIPELINE_VERSION,
+        "language": language,
+        "device": device,
+        "models": model_names,
+        "features": feature_flags,
+    }
+    (target_root / PADDLEOCR_MARKER_FILE).write_text(
+        json.dumps(marker_payload, ensure_ascii=False, indent=2),
+        encoding="utf-8",
     )
-    _sync_paddlex_official_model(
-        model_name=text_recognition_model_name,
-        target_dir=target_root / "text_recognition",
-    )
-    marker_payload = "\n".join(
-        [
-            f"language={language}",
-            f"text_detection_model_name={text_detection_model_name}",
-            f"text_recognition_model_name={text_recognition_model_name}",
-            f"device={device}",
-        ]
-    )
-    (target_root / PADDLEOCR_MARKER_FILE).write_text(marker_payload, encoding="utf-8")
-    logger.info("PaddleOCR 模型准备完成: %s", target_root)
+    logger.info("PaddleOCR 结构化流水线准备完成: %s", target_root)
     return target_root
 
 
 def _build_paddleocr_pipeline(
     *,
-    PaddleOCR: object,
-    language: str,
-    text_detection_model_name: str,
-    text_recognition_model_name: str,
+    PPStructureV3: object,
+    model_root: Path,
+    model_names: dict[str, str],
+    feature_flags: dict[str, bool],
     device: str,
-    text_detection_model_dir: Path | None = None,
-    text_recognition_model_dir: Path | None = None,
 ) -> object:
-    """兼容 PaddleOCR 3.x 和旧版构造参数创建 OCR pipeline。"""
+    """使用受管目录和显式开关创建唯一的 PP-StructureV3 流水线。"""
 
     _disable_paddleocr_mkldnn_by_default()
-    detection_dir = _existing_paddle_model_dir(text_detection_model_dir)
-    recognition_dir = _existing_paddle_model_dir(text_recognition_model_dir)
-    try:
-        return PaddleOCR(
-            lang=language,
-            text_detection_model_name=text_detection_model_name,
-            text_recognition_model_name=text_recognition_model_name,
-            text_detection_model_dir=detection_dir,
-            text_recognition_model_dir=recognition_dir,
-            use_doc_orientation_classify=False,
-            use_doc_unwarping=False,
-            use_textline_orientation=False,
-            device=device,
-        )
-    except TypeError:
-        return PaddleOCR(lang=language, use_angle_cls=False, show_log=False)
+
+    def model_dir(component: str) -> str | None:
+        """仅向 PaddleX 传入已经完整同步到 runtime 的组件目录。"""
+
+        return _existing_paddle_model_dir(_paddleocr_model_dir(model_root, model_names[component]))
+
+    return PPStructureV3(
+        layout_detection_model_name=model_names["layout_detection"],
+        layout_detection_model_dir=model_dir("layout_detection"),
+        region_detection_model_name=model_names["region_detection"],
+        region_detection_model_dir=model_dir("region_detection"),
+        doc_orientation_classify_model_name=model_names["doc_orientation"],
+        doc_orientation_classify_model_dir=model_dir("doc_orientation"),
+        doc_unwarping_model_name=model_names["doc_unwarping"],
+        doc_unwarping_model_dir=model_dir("doc_unwarping"),
+        text_detection_model_name=model_names["text_detection"],
+        text_detection_model_dir=model_dir("text_detection"),
+        textline_orientation_model_name=model_names["textline_orientation"],
+        textline_orientation_model_dir=model_dir("textline_orientation"),
+        text_recognition_model_name=model_names["text_recognition"],
+        text_recognition_model_dir=model_dir("text_recognition"),
+        table_classification_model_name=model_names["table_classification"],
+        table_classification_model_dir=model_dir("table_classification"),
+        wired_table_structure_recognition_model_name=model_names["wired_table_structure"],
+        wired_table_structure_recognition_model_dir=model_dir("wired_table_structure"),
+        wireless_table_structure_recognition_model_name=model_names["wireless_table_structure"],
+        wireless_table_structure_recognition_model_dir=model_dir("wireless_table_structure"),
+        wired_table_cells_detection_model_name=model_names["wired_table_cells"],
+        wired_table_cells_detection_model_dir=model_dir("wired_table_cells"),
+        wireless_table_cells_detection_model_name=model_names["wireless_table_cells"],
+        wireless_table_cells_detection_model_dir=model_dir("wireless_table_cells"),
+        table_orientation_classify_model_name=model_names["table_orientation"],
+        table_orientation_classify_model_dir=model_dir("table_orientation"),
+        formula_recognition_model_name=model_names["formula_recognition"],
+        formula_recognition_model_dir=model_dir("formula_recognition"),
+        format_block_content=True,
+        markdown_ignore_labels=["number", "footnote", "header", "header_image", "footer", "footer_image"],
+        device=device,
+        **feature_flags,
+    )
 
 
 def _disable_paddleocr_mkldnn_by_default() -> None:
@@ -398,6 +420,37 @@ def _existing_paddle_model_dir(model_dir: Path | None) -> str | None:
     if model_dir is None:
         return None
     return str(model_dir) if (model_dir / "inference.yml").is_file() else None
+
+
+def _paddleocr_model_dir(root: Path, model_name: str) -> Path:
+    """把官方模型名称映射到 PaddleOCR 受管根目录下的稳定子目录。"""
+
+    return root / model_name
+
+
+def _all_paddleocr_component_dirs_available(root: Path, model_names: dict[str, str]) -> bool:
+    """检查全部唯一组件目录是否都包含 PaddleX 推理清单。"""
+
+    return all(
+        (_paddleocr_model_dir(root, name) / "inference.yml").is_file()
+        for name in dict.fromkeys(model_names.values())
+    )
+
+
+def is_paddleocr_pipeline_available(root: Path, model_names: dict[str, str]) -> bool:
+    """验证 marker 版本、模型选择和每个受管组件目录。"""
+
+    marker = root / PADDLEOCR_MARKER_FILE
+    if not marker.is_file() or not _all_paddleocr_component_dirs_available(root, model_names):
+        return False
+    try:
+        payload = json.loads(marker.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return False
+    return (
+        payload.get("pipeline_version") == PADDLEOCR_PIPELINE_VERSION
+        and payload.get("models") == model_names
+    )
 
 
 def _sync_paddlex_official_model(*, model_name: str, target_dir: Path) -> None:

@@ -604,12 +604,33 @@ class AgentConfig:
     @dataclass(slots=True)
     class OcrConfig:
         """
-        管理 OCR 运行开关与 PaddleOCR 模型配置。
+        管理 PP-StructureV3 结构化 OCR 流水线配置。
 
-        enabled: 进程级 OCR 开关,默认关闭;用户设置开启后需重启服务才会生效。
+        enabled: 进程级 OCR 默认开关；用户设置会在每次解析时覆盖，无需重启。
+        enabled: 是否启用结构化 OCR。
         language: PaddleOCR 识别语言,中英文场景使用 ch。
-        text_detection_model_name: PaddleOCR 文本检测模型名称。
-        text_recognition_model_name: PaddleOCR 文本识别模型名称。
+        layout_detection_model_name: 页面版面检测模型。
+        region_detection_model_name: 文档区域检测模型。
+        doc_orientation_model_name: 文档方向分类模型。
+        doc_unwarping_model_name: 文档透视与弯曲校正模型。
+        text_detection_model_name: 高质量文字检测模型。
+        textline_orientation_model_name: 文本行方向分类模型。
+        text_recognition_model_name: 高质量文字识别模型。
+        table_classification_model_name: 有线与无线表格分类模型。
+        wired_table_structure_model_name: 有线表格结构识别模型。
+        wireless_table_structure_model_name: 无线表格结构识别模型。
+        wired_table_cells_model_name: 有线表格单元格检测模型。
+        wireless_table_cells_model_name: 无线表格单元格检测模型。
+        table_orientation_model_name: 表格方向分类模型。
+        formula_recognition_model_name: 数学公式识别模型。
+        use_doc_orientation_classify: 是否执行文档方向分类。
+        use_doc_unwarping: 是否执行文档透视与弯曲校正。
+        use_textline_orientation: 是否执行文本行方向分类。
+        use_table_recognition: 是否识别并重建表格结构。
+        use_formula_recognition: 是否识别数学公式。
+        use_chart_recognition: 是否启用图表结构识别,默认关闭。
+        use_seal_recognition: 是否启用印章文字识别,默认关闭。
+        use_region_detection: 是否执行文档区域检测。
         device: PaddleOCR 推理设备,默认 cpu。
         min_confidence: OCR 文本行最低置信度。
         timeout_seconds: 单张图片 OCR 超时时间。
@@ -617,11 +638,67 @@ class AgentConfig:
 
         enabled: bool = False
         language: str = "ch"
-        text_detection_model_name: str = "PP-OCRv5_mobile_det"
-        text_recognition_model_name: str = "PP-OCRv5_mobile_rec"
+        layout_detection_model_name: str = "PP-DocLayout-L"
+        region_detection_model_name: str = "PP-DocBlockLayout"
+        doc_orientation_model_name: str = "PP-LCNet_x1_0_doc_ori"
+        doc_unwarping_model_name: str = "UVDoc"
+        text_detection_model_name: str = "PP-OCRv5_server_det"
+        textline_orientation_model_name: str = "PP-LCNet_x1_0_textline_ori"
+        text_recognition_model_name: str = "PP-OCRv5_server_rec"
+        table_classification_model_name: str = "PP-LCNet_x1_0_table_cls"
+        wired_table_structure_model_name: str = "SLANeXt_wired"
+        wireless_table_structure_model_name: str = "SLANeXt_wireless"
+        wired_table_cells_model_name: str = "RT-DETR-L_wired_table_cell_det"
+        wireless_table_cells_model_name: str = "RT-DETR-L_wireless_table_cell_det"
+        table_orientation_model_name: str = "PP-LCNet_x1_0_doc_ori"
+        formula_recognition_model_name: str = "PP-FormulaNet_plus-M"
+        use_doc_orientation_classify: bool = True
+        use_doc_unwarping: bool = True
+        use_textline_orientation: bool = True
+        use_table_recognition: bool = True
+        use_formula_recognition: bool = True
+        use_chart_recognition: bool = False
+        use_seal_recognition: bool = False
+        use_region_detection: bool = True
         device: str = "cpu"
         min_confidence: float = 0.5
         timeout_seconds: int = 30
+
+        @property
+        def pipeline_model_names(self) -> dict[str, str]:
+            """返回 PP-StructureV3 构造、下载和模型管理共用的组件清单。"""
+
+            return {
+                "layout_detection": self.layout_detection_model_name,
+                "region_detection": self.region_detection_model_name,
+                "doc_orientation": self.doc_orientation_model_name,
+                "doc_unwarping": self.doc_unwarping_model_name,
+                "text_detection": self.text_detection_model_name,
+                "textline_orientation": self.textline_orientation_model_name,
+                "text_recognition": self.text_recognition_model_name,
+                "table_classification": self.table_classification_model_name,
+                "wired_table_structure": self.wired_table_structure_model_name,
+                "wireless_table_structure": self.wireless_table_structure_model_name,
+                "wired_table_cells": self.wired_table_cells_model_name,
+                "wireless_table_cells": self.wireless_table_cells_model_name,
+                "table_orientation": self.table_orientation_model_name,
+                "formula_recognition": self.formula_recognition_model_name,
+            }
+
+        @property
+        def pipeline_feature_flags(self) -> dict[str, bool]:
+            """返回结构化推理时显式传递的能力开关。"""
+
+            return {
+                "use_doc_orientation_classify": self.use_doc_orientation_classify,
+                "use_doc_unwarping": self.use_doc_unwarping,
+                "use_textline_orientation": self.use_textline_orientation,
+                "use_table_recognition": self.use_table_recognition,
+                "use_formula_recognition": self.use_formula_recognition,
+                "use_chart_recognition": self.use_chart_recognition,
+                "use_seal_recognition": self.use_seal_recognition,
+                "use_region_detection": self.use_region_detection,
+            }
 
     @dataclass(slots=True)
     class TaskScheduleConfig:

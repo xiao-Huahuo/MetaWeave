@@ -64,7 +64,10 @@ def test_pyinstaller_spec_collects_runtime_files_without_all_service_submodules(
     assert "_required_data_file('alembic.ini')" in spec
     assert "_required_dsh_sdk_bundle()" in spec
     assert "collect_submodules('agent_service')" not in spec
-    assert "['xlrd', 'torchvision']" in spec
+    assert "collect_submodules('paddlex.inference.pipelines')" in spec
+    assert "collect_submodules('paddlex.inference.models')" in spec
+    assert "collect_data_files('paddlex', includes=['configs/**/*.yaml'])" in spec
+    assert "['xlrd', 'torchvision', *_paddlex_hiddenimports]" in spec
 
 
 def test_checked_in_dsh_sdk_bundle_matches_locked_release() -> None:
@@ -81,12 +84,23 @@ def test_backend_direct_runtime_dependencies_are_declared() -> None:
 
     requirements = (PROJECT_ROOT / "agent_service" / "requirements.txt").read_text(encoding="utf-8")
     declared = {
-        line.split("==", maxsplit=1)[0].split(">=", maxsplit=1)[0].strip().lower()
+        line.split("==", maxsplit=1)[0].split(">=", maxsplit=1)[0].split("[", maxsplit=1)[0].strip().lower()
         for line in requirements.splitlines()
         if line.strip() and not line.lstrip().startswith(("#", "--"))
     }
 
-    assert {"numpy", "pyyaml", "xlrd", "fpdf2"} <= declared
+    assert {"numpy", "pyyaml", "xlrd", "fpdf2", "paddleocr", "paddlepaddle", "paddlex"} <= declared
+    assert "paddleocr[doc-parser]==3.7.0" in requirements
+    assert "paddlepaddle==3.3.1" in requirements
+    assert "paddlex[ocr]==3.7.2" in requirements
+
+
+def test_paddlex_ocr_extra_is_actually_importable() -> None:
+    """PP-StructureV3 运行所需的 OCR extra 必须真实可导入，不能只验证包名存在。"""
+
+    from paddlex.utils.deps import require_extra
+
+    require_extra("ocr", obj_name="PP-StructureV3")
 
 
 def test_deepseek_stream_adapter_dependencies_are_version_locked() -> None:

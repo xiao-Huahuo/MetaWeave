@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from datetime import datetime
-from typing import Literal
+from typing import Any, Literal
 
 from pydantic import BaseModel, Field, HttpUrl
 
@@ -59,9 +59,10 @@ class ScannerOut(BaseModel):
     status: str
     stage: str
     stage_label: str
-    progress: int
+    progress: float
     no_ocr_markdown: str
     ocr_markdown: str
+    ocr_blocks: list[dict[str, Any]]
     assets: list[str]
     error: str
     source_text: str | None = None

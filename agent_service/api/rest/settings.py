@@ -113,6 +113,8 @@ async def download_model(body: dict[str, Any]) -> dict[str, Any]:
             set_model_state("rerank", ModelState.ERROR)
 
     def _download_paddleocr() -> None:
+        """在后台下载完整 PP-StructureV3 受管模型组并发布真实字节进度。"""
+
         stop_progress = threading.Event()
 
         def _tracked_bytes() -> int:
@@ -120,8 +122,10 @@ async def download_model(body: dict[str, Any]) -> dict[str, Any]:
 
             roots = [
                 Path(config.storage.paddleocr_model_dir),
-                Path.home() / ".paddlex" / "official_models" / config.ocr.text_detection_model_name,
-                Path.home() / ".paddlex" / "official_models" / config.ocr.text_recognition_model_name,
+                *(
+                    Path.home() / ".paddlex" / "official_models" / model_name
+                    for model_name in dict.fromkeys(config.ocr.pipeline_model_names.values())
+                ),
             ]
             total = 0
             for root in roots:
@@ -136,6 +140,8 @@ async def download_model(body: dict[str, Any]) -> dict[str, Any]:
             return total
 
         def _track_ocr() -> None:
+            """轮询 MetaWeave 与 PaddleX 模型目录的真实落盘字节。"""
+
             from agent_service.scripts.download_model import update_download_progress
 
             while not stop_progress.is_set():
@@ -145,7 +151,7 @@ async def download_model(body: dict[str, Any]) -> dict[str, Any]:
                     stage="official_models",
                     downloaded_bytes=_tracked_bytes(),
                     total_bytes=None,
-                    message="正在准备 OCR 检测与识别模型",
+                    message="正在准备版面、文字、表格与公式模型",
                 )
                 stop_progress.wait(0.75)
 
@@ -158,8 +164,8 @@ async def download_model(body: dict[str, Any]) -> dict[str, Any]:
             ensure_paddleocr_models(
                 paddleocr_model_dir=config.storage.paddleocr_model_dir,
                 language=config.ocr.language,
-                text_detection_model_name=config.ocr.text_detection_model_name,
-                text_recognition_model_name=config.ocr.text_recognition_model_name,
+                model_names=config.ocr.pipeline_model_names,
+                feature_flags=config.ocr.pipeline_feature_flags,
                 device=config.ocr.device,
             )
             downloaded_bytes = _tracked_bytes()
@@ -169,7 +175,7 @@ async def download_model(body: dict[str, Any]) -> dict[str, Any]:
                 stage="completed",
                 downloaded_bytes=downloaded_bytes,
                 total_bytes=downloaded_bytes,
-                message="OCR 模型准备完成",
+                message="结构化 OCR 流水线准备完成",
             )
             set_model_state("paddleocr", ModelState.READY)
         except Exception as exc:
@@ -382,12 +388,11 @@ async def check_model_disk() -> dict[str, Any]:
         else:
             set_model_state(key, ModelState.NOT_DOWNLOADED)
 
-    # paddleocr 用 marker 文件检测
-    paddleocr_available = False
-    from agent_service.scripts.download_model import PADDLEOCR_MARKER_FILE
-    marker = Path(config.storage.paddleocr_model_dir) / PADDLEOCR_MARKER_FILE
-    if marker.exists():
-        paddleocr_available = True
+    from agent_service.scripts.download_model import is_paddleocr_pipeline_available
+    paddleocr_available = is_paddleocr_pipeline_available(
+        Path(config.storage.paddleocr_model_dir),
+        config.ocr.pipeline_model_names,
+    )
     current_ocr = get_model_status().to_dict().get("paddleocr")
     if current_ocr not in ("ready", "loading", "downloading", "verifying"):
         set_model_state(

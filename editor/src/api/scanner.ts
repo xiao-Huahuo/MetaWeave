@@ -11,6 +11,17 @@ import { API_ROUTES } from '@/router/api_routes'
 export type ScannerVariant = 'ocr' | 'no_ocr'
 export type ScannerConflictStrategy = 'overwrite' | 'skip' | 'rename'
 
+export interface ScannerOcrBlock {
+  page: number
+  type: string
+  content: string
+  bbox: number[]
+  id: string | number | null
+  order: number
+  page_width?: number
+  page_height?: number
+}
+
 export interface ScannerRecord {
   scan_id: string
   user_id: string
@@ -27,6 +38,7 @@ export interface ScannerRecord {
   progress: number
   no_ocr_markdown: string
   ocr_markdown: string
+  ocr_blocks?: ScannerOcrBlock[]
   assets: string[]
   error: string
   source_text: string | null

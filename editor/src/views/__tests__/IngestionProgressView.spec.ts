@@ -24,7 +24,7 @@ const workspaceStore = {
     size: 2048,
     mtime: '2026-08-20 18:00',
     status: 'running',
-    progress: 64,
+    progress: 64.26,
     pipeline: 'pdf',
     stage: 'ocr_pages',
     stageLabel: '正在 OCR 扫描页',
@@ -77,7 +77,7 @@ describe('IngestionProgressView', () => {
 
     expect(wrapper.text()).toContain('灌库进度')
     expect(wrapper.text()).toContain('paper.pdf')
-    expect(wrapper.text()).toContain('64%')
+    expect(wrapper.text()).toContain('64.3%')
     expect(wrapper.text()).toContain('正在 OCR 扫描页')
     expect(wrapper.text()).toContain('8 / 20')
     expect(wrapper.text()).toContain('所在位置绝对路径')

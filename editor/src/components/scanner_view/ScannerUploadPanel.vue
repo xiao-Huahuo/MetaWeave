@@ -11,11 +11,12 @@ import IcIcon from '@/components/common/IcIcon.vue'
 import PixelLoader from '@/components/common/PixelLoader.vue'
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuPortal, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
 import { useSettingsStore } from '@/stores/settings'
+import { formatProgress } from '@/utils/progress'
 import type { ScannerRecord } from '@/api/scanner'
 import lightLogo from '@/assets/images/亮色无底图标.png'
 import darkLogo from '@/assets/images/暗色无底图标.png'
 
-const props = defineProps<{ running: ScannerRecord | null }>()
+defineProps<{ running: ScannerRecord | null }>()
 const emit = defineEmits<{
   upload: [file: File, sourceKind?: string]
   crawl: [url: string]
@@ -125,7 +126,7 @@ onBeforeUnmount(() => {
     <div class="scanner-progress" role="progressbar" :aria-valuenow="running.progress" aria-valuemin="0" aria-valuemax="100">
       <i :style="{ transform: `scaleX(${running.progress / 100})` }"></i>
     </div>
-    <small>{{ running.progress }}%</small>
+    <small>{{ formatProgress(running.progress) }}%</small>
   </section>
 
   <div v-else class="scanner-start">

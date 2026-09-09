@@ -15,6 +15,7 @@ import { modelLifecycleUi, requestModelLifecycleExpansion } from '@/composable/m
 import { useSettingsStore } from '@/stores/settings'
 import { useWorkspaceStore } from '@/stores/workspace'
 import { checkModelDisk } from '@/api/settings'
+import { formatProgress } from '@/utils/progress'
 import lightLogo from '@/assets/images/亮色无底图标.png'
 import darkLogo from '@/assets/images/暗色无底图标.png'
 import lightTitle from '@/assets/images/亮色标题.png'
@@ -111,7 +112,7 @@ async function handleCloseWindow() {
             :style="{ width: `${workspaceStore.ingestionProgress}%` }"
           />
         </span>
-        <span class="ingestion-progress-percent">{{ workspaceStore.ingestionProgress }}%</span>
+        <span class="ingestion-progress-percent">{{ formatProgress(workspaceStore.ingestionProgress) }}%</span>
       </div>
       <div
         v-if="workspaceStore.graphProgressVisible"
@@ -126,7 +127,7 @@ async function handleCloseWindow() {
             :style="{ width: `${workspaceStore.graphProgress}%` }"
           />
         </span>
-        <span class="ingestion-progress-percent">{{ workspaceStore.graphProgress }}%</span>
+        <span class="ingestion-progress-percent">{{ formatProgress(workspaceStore.graphProgress) }}%</span>
       </div>
     </div>
 

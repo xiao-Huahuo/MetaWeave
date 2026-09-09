@@ -16,9 +16,9 @@ from typing import Any
 
 from agent_service.core.model_status import ModelState, get_model_status, set_model_state
 from agent_service.scripts.download_model import (
-    PADDLEOCR_MARKER_FILE,
     get_download_progress,
     is_model_available,
+    is_paddleocr_pipeline_available,
     model_target_dir,
     reset_download_progress,
 )
@@ -133,6 +133,10 @@ class ModelManagementService:
         target = self._model_path(model)
         removed = target.exists()
         if removed:
+            if model == "paddleocr":
+                from agent_service.services.memory.rag.image_ocr import ImageOcrService
+
+                ImageOcrService.clear_shared_pipeline()
             shutil.rmtree(target)
         self._auto_download_suppressed.add((user_id, model))
         reset_download_progress(model)
@@ -175,20 +179,28 @@ class ModelManagementService:
             update_download_progress(
                 "paddleocr", status="downloading", stage="official_models",
                 downloaded_bytes=self._directory_stats(self._model_path(model))[0], total_bytes=None,
-                message="正在准备 OCR 检测与识别模型",
+                message="正在准备版面、文字、表格与公式模型",
             )
-            ensure_paddleocr_models(
-                paddleocr_model_dir=self.config.storage.paddleocr_model_dir,
-                language=self.config.ocr.language,
-                text_detection_model_name=self.config.ocr.text_detection_model_name,
-                text_recognition_model_name=self.config.ocr.text_recognition_model_name,
-                device=self.config.ocr.device,
-            )
+            try:
+                ensure_paddleocr_models(
+                    paddleocr_model_dir=self.config.storage.paddleocr_model_dir,
+                    language=self.config.ocr.language,
+                    model_names=self.config.ocr.pipeline_model_names,
+                    feature_flags=self.config.ocr.pipeline_feature_flags,
+                    device=self.config.ocr.device,
+                )
+            except Exception as exc:
+                update_download_progress(
+                    "paddleocr", status="error", stage="failed",
+                    downloaded_bytes=self._directory_stats(self._model_path(model))[0], total_bytes=None,
+                    message=str(exc),
+                )
+                raise
             downloaded_bytes = self._directory_stats(self._model_path(model))[0]
             update_download_progress(
                 "paddleocr", status="completed", stage="completed",
                 downloaded_bytes=downloaded_bytes, total_bytes=downloaded_bytes,
-                message="OCR 模型下载完成",
+                message="结构化 OCR 流水线下载完成",
             )
         else:
             from agent_service.scripts.download_model import ensure_model
@@ -236,7 +248,10 @@ class ModelManagementService:
         """按模型类型执行只读磁盘完整性验证。"""
 
         if model == "paddleocr":
-            return (self._model_path(model) / PADDLEOCR_MARKER_FILE).is_file()
+            return is_paddleocr_pipeline_available(
+                self._model_path(model),
+                self.config.ocr.pipeline_model_names,
+            )
         return is_model_available(self._model_path(model))
 
     def _model_path(self, model: str) -> Path:
@@ -301,12 +316,14 @@ class ModelManagementService:
         )
         ocr_path = Path(self.config.storage.paddleocr_model_dir).expanduser().resolve()
         ocr_size, ocr_files = self._directory_stats(ocr_path)
-        ocr_downloaded = (ocr_path / PADDLEOCR_MARKER_FILE).is_file()
+        model_names = self.config.ocr.pipeline_model_names
+        feature_flags = self.config.ocr.pipeline_feature_flags
+        ocr_downloaded = is_paddleocr_pipeline_available(ocr_path, model_names)
         paddleocr = {
             "key": "paddleocr",
-            "label": "PaddleOCR 模型",
-            "role": "图片与扫描文档文字识别",
-            "name": f"{self.config.ocr.text_detection_model_name} + {self.config.ocr.text_recognition_model_name}",
+            "label": "PaddleOCR 结构化流水线",
+            "role": "扫描文档版面、文字、表格、公式与阅读顺序解析",
+            "name": "PP-StructureV3 高质量流水线",
             "path": str(ocr_path),
             "base_path": str(ocr_path),
             "size_bytes": ocr_size,
@@ -320,8 +337,31 @@ class ModelManagementService:
                 "provider": "PaddleOCR / PaddleX",
                 "language": self.config.ocr.language,
                 "device": self.config.ocr.device,
-                "detection_model": self.config.ocr.text_detection_model_name,
-                "recognition_model": self.config.ocr.text_recognition_model_name,
+                "layout_model": model_names.get("layout_detection", ""),
+                "ocr_models": " / ".join(filter(None, (
+                    model_names.get("text_detection"), model_names.get("text_recognition"),
+                ))),
+                "table_models": " / ".join(filter(None, (
+                    model_names.get("wired_table_structure"), model_names.get("wireless_table_structure"),
+                ))),
+                "formula_model": model_names.get("formula_recognition", ""),
+                "supporting_models": " / ".join(dict.fromkeys(filter(None, (
+                    model_names.get("region_detection"),
+                    model_names.get("doc_orientation"),
+                    model_names.get("doc_unwarping"),
+                    model_names.get("textline_orientation"),
+                    model_names.get("table_classification"),
+                    model_names.get("wired_table_cells"),
+                    model_names.get("wireless_table_cells"),
+                    model_names.get("table_orientation"),
+                )))),
+                "preprocessing": "方向分类 / 透视与弯曲校正 / 文本行方向",
+                "disabled_modules": " / ".join(
+                    label for key, label in (
+                        ("use_chart_recognition", "图表解析"),
+                        ("use_seal_recognition", "印章识别"),
+                    ) if not feature_flags.get(key, False)
+                ),
             },
         }
         return {"models": [local_qwen, embedding, rerank, paddleocr]}

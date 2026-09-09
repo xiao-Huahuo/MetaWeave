@@ -27,7 +27,7 @@ const scannerStore = useScannerStore()
 const settingsStore = useSettingsStore()
 const workspaceStore = useWorkspaceStore()
 const variant = ref<ScannerVariant>(props.record.ocr_enabled ? 'ocr' : 'no_ocr')
-const viewMode = ref<EditorWorkspaceMode>('split')
+const viewMode = ref<EditorWorkspaceMode>('preview')
 const sourceViewMode = ref<EditorWorkspaceMode>(props.record.source_text !== null ? 'edit' : 'preview')
 const markdownDraft = ref('')
 const sourceDraft = ref('')
@@ -35,7 +35,8 @@ const sourcePreview = ref<FilePreviewPayload | null>(null)
 const resultGrid = ref<HTMLElement | null>(null)
 const paneSplitRatio = ref(0.5)
 const busyAction = ref('')
-const actionMessage = ref('')
+const hoveredBlockId = ref('')
+const lockedBlockId = ref('')
 let draftTimer: number | null = null
 let sourceTimer: number | null = null
 let draggingPaneDivider = false
@@ -59,6 +60,18 @@ const resultGridStyle = computed(() => ({
   '--scanner-source-ratio': `${paneSplitRatio.value}fr`,
   '--scanner-markdown-ratio': `${1 - paneSplitRatio.value}fr`,
 }))
+const previewBlocks = computed(() => variant.value === 'ocr' ? (props.record.ocr_blocks ?? []) : [])
+const activeBlockId = computed(() => hoveredBlockId.value || lockedBlockId.value)
+
+/** Share hover state between both preview surfaces without touching editors. */
+function hoverBlock(blockId: string): void {
+  hoveredBlockId.value = blockId
+}
+
+/** Keep a clicked block selected until it is clicked again. */
+function selectBlock(blockId: string): void {
+  lockedBlockId.value = lockedBlockId.value === blockId ? '' : blockId
+}
 
 /** Replace local editor state when another history record or variant is selected. */
 function syncDrafts(): void {
@@ -71,6 +84,8 @@ function selectVariant(next: ScannerVariant): void {
   if (next === variant.value) return
   flushDraftSave()
   variant.value = next
+  hoveredBlockId.value = ''
+  lockedBlockId.value = ''
 }
 
 /** Start resizing the two scanner editor panes through their shared boundary. */
@@ -103,7 +118,7 @@ async function loadSourcePreview(): Promise<void> {
   try {
     sourcePreview.value = await previewKnowledgeFile(settingsStore.profile.userId, props.record.source_path)
   } catch (error) {
-    actionMessage.value = error instanceof Error ? error.message : '原文件预览失败'
+    workspaceStore.showToast(error instanceof Error ? error.message : '原文件预览失败', 5000)
   }
 }
 
@@ -158,14 +173,17 @@ async function revealSource(): Promise<void> {
 /** Toggle scanner favorites through the shared persisted favorites store. */
 async function toggleFavorite(): Promise<void> {
   const favoritesStore = (await import('@/stores/favorites')).useFavoritesStore()
-  await favoritesStore.toggle('scanner', props.record.scan_id, props.record.library_id)
-  actionMessage.value = favoritesStore.isFavorite('scanner', props.record.scan_id, props.record.library_id) ? '已收藏' : '已取消收藏'
+  try {
+    await favoritesStore.toggle('scanner', props.record.scan_id, props.record.library_id)
+    workspaceStore.showToast(favoritesStore.isFavorite('scanner', props.record.scan_id, props.record.library_id) ? '已收藏' : '已取消收藏')
+  } catch (error) {
+    workspaceStore.showToast(error instanceof Error ? error.message : '收藏操作失败', 5000)
+  }
 }
 
 /** Save into the knowledge root after the existing conflict dialog resolves. */
 async function saveToKnowledge(): Promise<void> {
   busyAction.value = 'save'
-  actionMessage.value = ''
   try {
     await workspaceStore.loadKnowledgeTree()
     const filename = `${props.record.source_name.replace(/\.[^.]+$/u, '')}.md`
@@ -173,9 +191,9 @@ async function saveToKnowledge(): Promise<void> {
     if (!strategy) return
     const result = await saveScanToKnowledge(settingsStore.profile.userId, props.record.scan_id, variant.value, strategy)
     await workspaceStore.loadKnowledgeTree()
-    actionMessage.value = `已保存到 ${result.path}`
+    workspaceStore.showToast(`已保存到 ${result.path}`)
   } catch (error) {
-    actionMessage.value = error instanceof Error ? error.message : '保存失败'
+    workspaceStore.showToast(error instanceof Error ? error.message : '保存失败', 5000)
   } finally {
     busyAction.value = ''
   }
@@ -184,12 +202,11 @@ async function saveToKnowledge(): Promise<void> {
 /** Fetch the backend package and open the native save-as dialog. */
 async function exportOutside(): Promise<void> {
   busyAction.value = 'export'
-  actionMessage.value = ''
   try {
     const result = await fetchScanExport(settingsStore.profile.userId, props.record.scan_id, variant.value)
     if (window.agentEditorDesktop?.saveFileAs) {
       const saved = await window.agentEditorDesktop.saveFileAs({ filename: result.filename, data: await result.blob.arrayBuffer() })
-      actionMessage.value = saved ? `已导出到 ${saved}` : ''
+      if (saved) workspaceStore.showToast(`已导出到 ${saved}`)
       return
     }
     const url = URL.createObjectURL(result.blob)
@@ -198,9 +215,9 @@ async function exportOutside(): Promise<void> {
     anchor.download = result.filename
     anchor.click()
     URL.revokeObjectURL(url)
-    actionMessage.value = '已开始下载'
+    workspaceStore.showToast('已开始下载')
   } catch (error) {
-    actionMessage.value = error instanceof Error ? error.message : '导出失败'
+    workspaceStore.showToast(error instanceof Error ? error.message : '导出失败', 5000)
   } finally {
     busyAction.value = ''
   }
@@ -208,13 +225,21 @@ async function exportOutside(): Promise<void> {
 
 /** Copy one short or full scanner value to the system clipboard. */
 async function copyText(value: string, label: string): Promise<void> {
-  if (window.agentEditorDesktop?.writeClipboardText) await window.agentEditorDesktop.writeClipboardText(value)
-  else await navigator.clipboard.writeText(value)
-  actionMessage.value = `已复制${label}`
+  try {
+    if (window.agentEditorDesktop?.writeClipboardText) await window.agentEditorDesktop.writeClipboardText(value)
+    else await navigator.clipboard.writeText(value)
+    workspaceStore.showToast(`已复制${label}`)
+  } catch (error) {
+    workspaceStore.showToast(error instanceof Error ? error.message : `复制${label}失败`, 5000)
+  }
 }
 
 watch(() => [props.record.scan_id, variant.value, props.record.updated_at], syncDrafts, { immediate: true })
-watch(() => props.record.scan_id, loadSourcePreview, { immediate: true })
+watch(() => props.record.scan_id, () => {
+  hoveredBlockId.value = ''
+  lockedBlockId.value = ''
+  void loadSourcePreview()
+}, { immediate: true })
 watch(markdownDraft, scheduleDraftSave)
 watch(sourceDraft, scheduleSourceSave)
 onBeforeUnmount(() => {
@@ -248,7 +273,6 @@ onBeforeUnmount(() => {
         <button type="button" title="复制全文" aria-label="复制全文" @click="copyText(markdownDraft, '全文')"><IcIcon name="copy" :size="17" /></button>
       </div>
     </header>
-    <p v-if="actionMessage" class="scanner-action-message">{{ actionMessage }}</p>
     <div ref="resultGrid" class="scanner-result-grid" :style="resultGridStyle">
       <section class="scanner-source-pane">
         <EditorPaneToolbar
@@ -261,7 +285,16 @@ onBeforeUnmount(() => {
         />
         <CodeEditor v-if="sourceEditable && sourceViewMode === 'edit'" v-model="sourceDraft" :language="sourceLanguage" @save="scannerStore.saveSource(sourceDraft, record.scan_id)" />
         <CodePreview v-else-if="sourceEditable" :content="sourceDraft" :language="sourceLanguage" />
-        <MultimodalPreview v-else :preview="sourcePreview" />
+        <MultimodalPreview
+          v-else
+          :preview="sourcePreview"
+          :blocks="sourceViewMode === 'preview' ? previewBlocks : []"
+          :active-block-id="activeBlockId"
+          :locked-block-id="lockedBlockId"
+          @block-hover="hoverBlock"
+          @block-leave="hoveredBlockId = ''"
+          @block-select="selectBlock"
+        />
       </section>
       <div class="scanner-pane-divider" role="separator" aria-label="调整编辑区宽度" aria-orientation="vertical" @pointerdown="startPaneResize"></div>
       <section class="scanner-markdown-pane">
@@ -275,7 +308,17 @@ onBeforeUnmount(() => {
         />
         <div class="scanner-markdown-body" :data-mode="viewMode">
           <CodeEditor v-if="viewMode === 'edit' || viewMode === 'split'" v-model="markdownDraft" language="markdown" @save="scannerStore.saveDraft(variant, markdownDraft, record.scan_id)" />
-          <MarkdownPreview v-if="viewMode === 'preview' || viewMode === 'split'" :content="markdownDraft" :path="virtualMarkdownPath" />
+          <MarkdownPreview
+            v-if="viewMode === 'preview' || viewMode === 'split'"
+            :content="markdownDraft"
+            :path="virtualMarkdownPath"
+            :blocks="previewBlocks"
+            :active-block-id="activeBlockId"
+            :locked-block-id="lockedBlockId"
+            @block-hover="hoverBlock"
+            @block-leave="hoveredBlockId = ''"
+            @block-select="selectBlock"
+          />
         </div>
       </section>
     </div>
@@ -295,7 +338,6 @@ onBeforeUnmount(() => {
 .scanner-variant-switch { margin-right: var(--space-6); }
 .scanner-variant-switch .settings-resource-page-button { min-width: 58px; white-space: nowrap; }
 .scanner-variant-switch .settings-resource-page-button:hover { background: transparent !important; box-shadow: none !important; }
-.scanner-action-message { position: absolute; top: 46px; right: 12px; z-index: 5; margin: 0; padding: 6px 10px; border: 0; border-radius: 7px; background: var(--color-surface); color: var(--color-text-secondary); font-size: calc(11px * var(--font-scale)); box-shadow: 0 8px 22px rgba(0,0,0,.12); }
 .scanner-result-grid { display: grid; grid-template-columns: minmax(0,var(--scanner-source-ratio)) 6px minmax(0,var(--scanner-markdown-ratio)); min-width: 0; min-height: 0; }
 .scanner-source-pane,.scanner-markdown-pane { display: grid; grid-template-rows: auto minmax(0,1fr); min-width: 0; min-height: 0; overflow: hidden; background: var(--color-canvas); }
 .scanner-pane-divider { position: relative; min-width: 6px; cursor: col-resize; touch-action: none; }

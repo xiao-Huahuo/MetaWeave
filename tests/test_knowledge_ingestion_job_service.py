@@ -144,7 +144,7 @@ def test_progress_event_persists_detailed_stage_units(tmp_path: Path) -> None:
         "stage_label": "OCR 第 3 / 12 页",
         "stage_current": 3,
         "stage_total": 12,
-        "overall_progress": 46,
+        "overall_progress": 46.27,
         "message": "正在识别扫描页",
     })
     updated = service.get_job(job_id=job["job_id"], user_id="u1")
@@ -153,7 +153,7 @@ def test_progress_event_persists_detailed_stage_units(tmp_path: Path) -> None:
     assert updated["stage"] == "ocr"
     assert updated["stage_current"] == 3
     assert updated["stage_total"] == 12
-    assert updated["progress"] == 46
+    assert updated["progress"] == 46.3
     assert updated["message"] == "正在识别扫描页"
 
 

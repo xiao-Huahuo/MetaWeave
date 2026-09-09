@@ -217,39 +217,6 @@ class FrontmatterBootstrapService:
             result=result,
         )
 
-    def build_markdown_projection(
-        self,
-        *,
-        source_path: Path,
-        knowledge_dir: Path,
-        asset_output_dir: Path | None = None,
-        asset_public_prefix: str = "",
-        progress_callback: Callable[[dict[str, Any]], None] | None = None,
-    ) -> StructuredKnowledgeDocument:
-        """Build the reusable pre-embedding Markdown projection for one source.
-
-        Scanner and ingestion callers share the same parsing implementation;
-        scanner callers may select a task-local asset directory and stop before
-        frontmatter persistence, chunking, and embedding.
-        """
-
-        resolved_source = source_path.expanduser().resolve()
-        resolved_root = knowledge_dir.expanduser().resolve()
-        try:
-            relative_path = resolved_source.relative_to(resolved_root)
-        except ValueError as exc:
-            raise ValueError("source file escapes knowledge_dir") from exc
-        if not resolved_source.is_file():
-            raise ValueError("source file not found")
-        return self._build_document(
-            source_path=resolved_source,
-            source_hash=self._hash_file(resolved_source),
-            knowledge_dir=resolved_root,
-            progress_callback=progress_callback,
-            asset_output_dir=asset_output_dir,
-            asset_public_prefix=asset_public_prefix,
-        )
-
         self._emit_stage_progress(
             progress_callback,
             relative_path=relative_path,
@@ -257,7 +224,6 @@ class FrontmatterBootstrapService:
             stage_label="正在计算文件指纹",
             overall_progress=2,
         )
-
         source_hash = self._hash_file(resolved_source)
         document = self._build_document(
             source_path=resolved_source,
@@ -314,6 +280,39 @@ class FrontmatterBootstrapService:
             sections=len(document.sections),
         )
         return result, output_path
+
+    def build_markdown_projection(
+        self,
+        *,
+        source_path: Path,
+        knowledge_dir: Path,
+        asset_output_dir: Path | None = None,
+        asset_public_prefix: str = "",
+        progress_callback: Callable[[dict[str, Any]], None] | None = None,
+    ) -> StructuredKnowledgeDocument:
+        """Build the reusable pre-embedding Markdown projection for one source.
+
+        Scanner and ingestion callers share the same parsing implementation;
+        scanner callers may select a task-local asset directory and stop before
+        frontmatter persistence, chunking, and embedding.
+        """
+
+        resolved_source = source_path.expanduser().resolve()
+        resolved_root = knowledge_dir.expanduser().resolve()
+        try:
+            relative_path = resolved_source.relative_to(resolved_root)
+        except ValueError as exc:
+            raise ValueError("source file escapes knowledge_dir") from exc
+        if not resolved_source.is_file():
+            raise ValueError("source file not found")
+        return self._build_document(
+            source_path=resolved_source,
+            source_hash=self._hash_file(resolved_source),
+            knowledge_dir=resolved_root,
+            progress_callback=progress_callback,
+            asset_output_dir=asset_output_dir,
+            asset_public_prefix=asset_public_prefix,
+        )
 
     @staticmethod
     def _emit_progress(

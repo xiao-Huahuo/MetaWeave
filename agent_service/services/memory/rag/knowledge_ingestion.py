@@ -394,7 +394,7 @@ class KnowledgeIngestionService:
                 stage_label=f"正在写入向量批次 {batch_index} / {total_batches}",
                 current=batch_index,
                 total=total_batches,
-                overall_progress=54 + round((batch_index / total_batches) * 42),
+                overall_progress=round(54 + (batch_index / total_batches) * 42, 1),
                 message=f"已写入 {created} / {total_chunks} 个切片",
             )
         return created
@@ -408,7 +408,7 @@ class KnowledgeIngestionService:
         stage_label: str,
         current: int,
         total: int,
-        overall_progress: int,
+        overall_progress: float,
         message: str = "",
     ) -> None:
         """发送切片和分批向量写入的真实工作单位。"""

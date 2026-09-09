@@ -48,6 +48,7 @@ from agent_service.scripts.download_model import PADDLEOCR_MARKER_FILE
 from agent_service.scripts.download_model import ensure_paddleocr_models
 from agent_service.scripts.draw_agent_graph import build_mermaid
 from agent_service.scripts.download_model import is_model_available
+from agent_service.scripts.download_model import is_paddleocr_pipeline_available
 from agent_service.scripts.download_model import model_target_dir
 from agent_service.services.memory.longterm_memory_service import LongTermMemoryService
 from agent_service.services.memory.memory_resolver import MemoryFact
@@ -2222,31 +2223,45 @@ def test_download_model_resolves_safe_target_dir_and_checks_completeness() -> No
 
 
 def test_paddleocr_model_prepare_initializes_pipeline(tmp_path: Path, monkeypatch: Any) -> None:
-    """验证 PaddleOCR 模型预热会初始化 pipeline 并写入完成标记。"""
+    """验证结构化 OCR 会初始化全部组件、同步受管目录并写入版本清单。"""
 
     calls: list[dict[str, Any]] = []
 
-    class FakePaddleOCR:
+    class FakePPStructureV3:
         def __init__(self, **kwargs: Any) -> None:
-            """记录 PaddleOCR 初始化参数。"""
+            """记录 PP-StructureV3 初始化参数。"""
 
             calls.append(kwargs)
 
-    monkeypatch.setitem(sys.modules, "paddleocr", types.SimpleNamespace(PaddleOCR=FakePaddleOCR))
+    def fake_sync(*, model_name: str, target_dir: Path) -> None:
+        """模拟 PaddleX 下载后被同步到 MetaWeave 受管目录。"""
+
+        target_dir.mkdir(parents=True, exist_ok=True)
+        (target_dir / "inference.yml").write_text(f"model: {model_name}", encoding="utf-8")
+
+    monkeypatch.setitem(sys.modules, "paddleocr", types.SimpleNamespace(PPStructureV3=FakePPStructureV3))
+    monkeypatch.setattr("agent_service.scripts.download_model._sync_paddlex_official_model", fake_sync)
     target_dir = tmp_path / "models" / "paddleocr"
+    config = AgentConfig.load_config(load_env=False, ensure_directories=False, ensure_models=False)
 
     ensure_paddleocr_models(
         paddleocr_model_dir=target_dir,
         language="ch",
-        text_detection_model_name="PP-OCRv5_mobile_det",
-        text_recognition_model_name="PP-OCRv5_mobile_rec",
+        model_names=config.ocr.pipeline_model_names,
+        feature_flags=config.ocr.pipeline_feature_flags,
         device="cpu",
     )
 
-    assert calls[0]["lang"] == "ch"
-    assert calls[0]["text_detection_model_name"] == "PP-OCRv5_mobile_det"
-    assert calls[0]["text_recognition_model_name"] == "PP-OCRv5_mobile_rec"
+    assert calls[0]["layout_detection_model_name"] == "PP-DocLayout-L"
+    assert calls[0]["text_detection_model_name"] == "PP-OCRv5_server_det"
+    assert calls[0]["text_recognition_model_name"] == "PP-OCRv5_server_rec"
+    assert calls[0]["wired_table_structure_recognition_model_name"] == "SLANeXt_wired"
+    assert calls[0]["formula_recognition_model_name"] == "PP-FormulaNet_plus-M"
+    assert calls[0]["use_chart_recognition"] is False
+    assert calls[0]["use_seal_recognition"] is False
+    assert all((target_dir / name / "inference.yml").is_file() for name in set(config.ocr.pipeline_model_names.values()))
     assert (target_dir / PADDLEOCR_MARKER_FILE).exists()
+    assert is_paddleocr_pipeline_available(target_dir, config.ocr.pipeline_model_names) is True
 
 
 def test_ocr_paddle_env_overrides_are_loaded(monkeypatch: Any) -> None:

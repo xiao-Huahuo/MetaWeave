@@ -384,9 +384,9 @@ class ScannerService:
                     return
                 context = self._context(record.user_id, expected_library_id=record.library_id)
                 if record.source_kind == "url":
-                    no_ocr, ocr, assets, source_name, source_path, size = self._crawl(record=record, context=context)
+                    no_ocr, ocr, assets, ocr_blocks, source_name, source_path, size = self._crawl(record=record, context=context)
                 else:
-                    no_ocr, ocr, assets = self._project_file(record=record, context=context)
+                    no_ocr, ocr, assets, ocr_blocks = self._project_file(record=record, context=context)
                     source_name, source_path, size = record.source_name, record.source_path, record.size
             with Session(self.engine) as db:
                 record = db.get(ScannerRecord, scan_id)
@@ -397,6 +397,7 @@ class ScannerService:
                 record.size = size
                 record.no_ocr_markdown = no_ocr
                 record.ocr_markdown = ocr
+                record.ocr_blocks_json = json.dumps(ocr_blocks, ensure_ascii=False)
                 record.assets_json = json.dumps(assets, ensure_ascii=False)
                 record.status = "finished"
                 record.stage = "completed"
@@ -422,7 +423,7 @@ class ScannerService:
                 db.add(record)
                 db.commit()
 
-    def _project_file(self, *, record: ScannerRecord, context: dict[str, Any]) -> tuple[str, str, list[str]]:
+    def _project_file(self, *, record: ScannerRecord, context: dict[str, Any]) -> tuple[str, str, list[str], list[dict[str, Any]]]:
         """Create no-OCR and optional OCR projections through the shared cleaner."""
 
         source = self._source_absolute(record=record, context=context)
@@ -446,7 +447,7 @@ class ScannerService:
             no_ocr = no_ocr_doc.markdown
         assets = [path.relative_to(context["root"]).as_posix() for path in sorted(assets_dir.glob("*")) if path.is_file()]
         if not record.ocr_enabled:
-            return no_ocr, "", assets
+            return no_ocr, "", assets, []
         ocr_doc = FrontmatterBootstrapService(config=self.config, ocr_enabled=True).build_markdown_projection(
             source_path=source,
             knowledge_dir=context["root"],
@@ -454,9 +455,10 @@ class ScannerService:
             asset_public_prefix="./assets",
             progress_callback=lambda payload: self._projection_progress(record.scan_id, payload, 50, 96),
         )
-        return no_ocr, self._strip_markdown_images(ocr_doc.markdown), assets
+        ocr_blocks = [dict(block) for block in ocr_doc.metadata.get("ocr_blocks", []) if isinstance(block, dict)]
+        return no_ocr, self._strip_markdown_images(ocr_doc.markdown), assets, ocr_blocks
 
-    def _crawl(self, *, record: ScannerRecord, context: dict[str, Any]) -> tuple[str, str, list[str], str, str, int]:
+    def _crawl(self, *, record: ScannerRecord, context: dict[str, Any]) -> tuple[str, str, list[str], list[dict[str, Any]], str, str, int]:
         """Fetch a public webpage, localize images, and build both projection variants."""
 
         self._set_progress(record.scan_id, status="running", stage="download", label="正在抓取网页", progress=12)
@@ -495,17 +497,19 @@ class ScannerService:
         self._set_progress(record.scan_id, status="running", stage="normalize", label="正在生成 Markdown", progress=72)
         assets = [path.relative_to(context["root"]).as_posix() for path in sorted(assets_dir.glob("*")) if path.is_file()]
         ocr_texts: list[str] = []
+        ocr_blocks: list[dict[str, Any]] = []
         if record.ocr_enabled and assets:
             ocr_service = ImageOcrService(config=self.config, enabled=True)
             for index, relative in enumerate(assets, start=1):
                 result = ocr_service.extract_image_text(context["root"] / relative)
                 if result.has_text:
                     ocr_texts.append(result.content)
+                ocr_blocks.extend(dict(block) for block in result.blocks)
                 self._set_progress(record.scan_id, status="running", stage="ocr", label=f"正在识别网页图片 {index}/{len(assets)}", progress=72 + round(index / len(assets) * 22))
         ocr_markdown = self._strip_markdown_images(markdown)
         if ocr_texts:
             ocr_markdown += "\n\n## 图片文字\n\n" + "\n\n".join(ocr_texts)
-        return markdown.strip() + "\n", ocr_markdown.strip() + "\n" if record.ocr_enabled else "", assets, source.name, source.relative_to(context["root"]).as_posix(), len(body)
+        return markdown.strip() + "\n", ocr_markdown.strip() + "\n" if record.ocr_enabled else "", assets, ocr_blocks, source.name, source.relative_to(context["root"]).as_posix(), len(body)
 
     def _fetch_url(self, url: str) -> tuple[str, str, bytes]:
         """Fetch one public URL with per-hop SSRF checks and bounded bytes."""
@@ -553,11 +557,11 @@ class ScannerService:
     def _projection_progress(self, scan_id: str, payload: dict[str, Any], start: int, end: int) -> None:
         """Map the shared 0-100 projection progress into one scanner phase."""
 
-        source_progress = int(payload.get("overall_progress") or 0)
-        progress = start + round(max(0, min(100, source_progress)) / 100 * (end - start))
+        source_progress = float(payload.get("overall_progress") or 0)
+        progress = round(start + max(0, min(100, source_progress)) / 100 * (end - start), 1)
         self._set_progress(scan_id, status="running", stage=str(payload.get("stage") or "extract"), label=str(payload.get("stage_label") or "正在解析文件"), progress=progress)
 
-    def _set_progress(self, scan_id: str, *, status: str, stage: str, label: str, progress: int) -> None:
+    def _set_progress(self, scan_id: str, *, status: str, stage: str, label: str, progress: float) -> None:
         """Persist monotonic scanner task progress."""
 
         with Session(self.engine) as db:
@@ -567,7 +571,8 @@ class ScannerService:
             record.status = status
             record.stage = stage
             record.stage_label = label
-            record.progress = max(record.progress, min(99, progress))
+            running_max = self.config.limits.progress_max_percent - 0.1
+            record.progress = max(record.progress, min(running_max, round(progress, 1)))
             record.updated_at = self._now()
             db.add(record)
             db.commit()
@@ -694,6 +699,10 @@ class ScannerService:
             assets = json.loads(record.assets_json or "[]")
         except json.JSONDecodeError:
             assets = []
+        try:
+            ocr_blocks = json.loads(record.ocr_blocks_json or "[]")
+        except json.JSONDecodeError:
+            ocr_blocks = []
         return ScannerOut(
             scan_id=record.scan_id,
             user_id=record.user_id,
@@ -710,6 +719,7 @@ class ScannerService:
             progress=record.progress,
             no_ocr_markdown=record.no_ocr_markdown if include_content else "",
             ocr_markdown=record.ocr_markdown if include_content else "",
+            ocr_blocks=[dict(item) for item in ocr_blocks if isinstance(item, dict)] if include_content else [],
             assets=[str(item) for item in assets] if isinstance(assets, list) else [],
             error=record.error,
             source_text=source_text,

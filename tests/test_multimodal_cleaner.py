@@ -59,7 +59,7 @@ def test_docx_embedded_image_ocr_is_ingested(tmp_path: Path) -> None:
         archive.writestr("word/media/image1.png", b"fake-png")
 
     class FakeOcrService:
-        def extract_image_text(self, source_path: Path) -> ImageOcrResult:
+        def extract_image_text(self, source_path: Path, progress_callback=None) -> ImageOcrResult:
             assert source_path.exists()
             return ImageOcrResult(content="嵌入图片文字", has_text=True, word_count=1, average_confidence=0.9, engine_available=True)
 
@@ -81,7 +81,7 @@ def test_scanned_pdf_embedded_image_ocr_is_ingested(tmp_path: Path) -> None:
     document.close()
 
     class FakeOcrService:
-        def extract_image_text(self, source_path: Path) -> ImageOcrResult:
+        def extract_image_text(self, source_path: Path, progress_callback=None) -> ImageOcrResult:
             assert source_path.exists()
             return ImageOcrResult(content="扫描件识别内容", has_text=True, word_count=1, average_confidence=0.95, engine_available=True)
 
@@ -192,7 +192,7 @@ def test_docx_embedded_image_ocr_preserves_document_order(tmp_path: Path) -> Non
         archive.writestr("word/media/image1.png", b"fake-png")
 
     class FakeOcrService:
-        def extract_image_text(self, source_path: Path) -> ImageOcrResult:
+        def extract_image_text(self, source_path: Path, progress_callback=None) -> ImageOcrResult:
             assert source_path.name == "image1.png"
             return ImageOcrResult(content="图片内文字", has_text=True, word_count=1, average_confidence=0.9, engine_available=True)
 
@@ -372,7 +372,7 @@ def test_pdf_image_ocr_replaces_inline_render_placeholder(tmp_path: Path, monkey
         )
 
     class FakeOcrService:
-        def extract_image_text(self, source_path: Path) -> ImageOcrResult:
+        def extract_image_text(self, source_path: Path, progress_callback=None) -> ImageOcrResult:
             assert source_path == image_path
             return ImageOcrResult(content="图片 OCR 内容", has_text=True, word_count=3, average_confidence=0.92, engine_available=True)
 
@@ -433,7 +433,7 @@ def test_cleaner_extracts_image_ocr_text(tmp_path: Path) -> None:
     """图片 OCR 命中文本时应生成可检索章节。"""
 
     class FakeOcrService:
-        def extract_image_text(self, source_path: Path) -> ImageOcrResult:
+        def extract_image_text(self, source_path: Path, progress_callback=None) -> ImageOcrResult:
             assert source_path.name == "table.png"
             return ImageOcrResult(
                 content="姓名 | 分数\nAlice | 98",
@@ -458,7 +458,7 @@ def test_cleaner_skips_image_without_ocr_text(tmp_path: Path) -> None:
     """图片没有 OCR 文本时不应生成语义章节。"""
 
     class FakeOcrService:
-        def extract_image_text(self, source_path: Path) -> ImageOcrResult:
+        def extract_image_text(self, source_path: Path, progress_callback=None) -> ImageOcrResult:
             return ImageOcrResult(has_text=False, engine_available=True)
 
     image_path = tmp_path / "photo.png"

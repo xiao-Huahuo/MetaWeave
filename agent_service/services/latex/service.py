@@ -22,6 +22,11 @@ import zipfile
 from pathlib import Path
 from typing import Any
 
+try:
+    import winreg
+except ImportError:  # pragma: no cover - 项目仅发布 Windows，此处便于非 Windows 静态检查
+    winreg = None  # type: ignore[assignment]
+
 logger = logging.getLogger(__name__)
 
 MIKTEX_SETUP_URL = (
@@ -488,7 +493,7 @@ class LatexService:
         )
 
     def _discover_toolchain(self) -> dict[str, str] | None:
-        """优先发现托管 MiKTeX 的三个引擎，再回退系统 PATH。"""
+        """依次发现托管 MiKTeX、系统 PATH 与 Windows 已注册的 MiKTeX。"""
 
         managed = {
             engine: str(self._find_managed_executable(f"{engine}.exe") or "")
@@ -504,14 +509,67 @@ class LatexService:
             }
         system = {engine: shutil.which(engine) or "" for engine in SUPPORTED_ENGINES}
         system_default = next((Path(path) for path in system.values() if path), None)
-        if not system_default:
-            return None
-        return {
-            "source": "system",
-            **system,
-            "latexmk": shutil.which("latexmk") or "",
-            "bin_dir": str(system_default.parent),
-        }
+        if system_default:
+            return {
+                "source": "system",
+                **system,
+                "latexmk": shutil.which("latexmk") or "",
+                "bin_dir": str(system_default.parent),
+            }
+        for install_root in self._system_install_roots():
+            for bin_dir in (
+                install_root / "miktex" / "bin" / "x64",
+                install_root / "bin" / "x64",
+                install_root / "bin",
+            ):
+                discovered = {
+                    engine: str(bin_dir / f"{engine}.exe") if (bin_dir / f"{engine}.exe").is_file() else ""
+                    for engine in SUPPORTED_ENGINES
+                }
+                if not any(discovered.values()):
+                    continue
+                latexmk = bin_dir / "latexmk.exe"
+                return {
+                    "source": "system",
+                    **discovered,
+                    "latexmk": str(latexmk) if latexmk.is_file() else "",
+                    "bin_dir": str(bin_dir),
+                }
+        return None
+
+    @staticmethod
+    def _system_install_roots() -> list[Path]:
+        """读取 MiKTeX 注册信息和固定安装位置，不依赖父进程 PATH。"""
+
+        roots: list[Path] = []
+        if winreg is not None:
+            for hive in (winreg.HKEY_CURRENT_USER, winreg.HKEY_LOCAL_MACHINE):
+                try:
+                    with winreg.OpenKey(hive, r"Software\MiKTeX.org\MiKTeX") as base_key:
+                        index = 0
+                        while True:
+                            try:
+                                version = winreg.EnumKey(base_key, index)
+                            except OSError:
+                                break
+                            index += 1
+                            try:
+                                with winreg.OpenKey(base_key, rf"{version}\Core") as core_key:
+                                    value, _ = winreg.QueryValueEx(core_key, "UserInstall")
+                            except OSError:
+                                continue
+                            roots.append(Path(str(value)).expanduser())
+                except OSError:
+                    continue
+        for variable, suffix in (
+            ("LOCALAPPDATA", Path("Programs") / "MiKTeX"),
+            ("LOCALAPPDATA", Path("MiKTeX")),
+            ("ProgramFiles", Path("MiKTeX")),
+        ):
+            base = os.environ.get(variable)
+            if base:
+                roots.append(Path(base) / suffix)
+        return list(dict.fromkeys(root.resolve() for root in roots if root.is_dir()))
 
     def _find_managed_executable(self, filename: str) -> Path | None:
         """在固定托管目录内查找 MiKTeX 可执行文件。"""

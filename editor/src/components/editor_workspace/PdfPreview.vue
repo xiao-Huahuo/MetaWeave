@@ -11,11 +11,21 @@ import { computed, nextTick, onBeforeUnmount, ref, watch } from 'vue'
 
 import { buildApiUrl } from '@/api/client'
 import IcIcon from '@/components/common/IcIcon.vue'
+import OcrBlockOverlay from '@/components/common/OcrBlockOverlay.vue'
+import type { ScannerOcrBlock } from '@/api/scanner'
 import type { FilePreviewPayload, PdfPreviewPage } from '@/types/knowledge'
 
 const props = defineProps<{
   preview: FilePreviewPayload
   source: string
+  blocks?: ScannerOcrBlock[]
+  activeBlockId?: string
+  lockedBlockId?: string
+}>()
+const emit = defineEmits<{
+  blockHover: [blockId: string]
+  blockLeave: []
+  blockSelect: [blockId: string]
 }>()
 
 type PdfPreviewMode = 'pages' | 'native'
@@ -182,6 +192,14 @@ watch(() => props.preview.path, () => {
   failedPages.value = new Set()
 })
 
+watch(() => props.lockedBlockId, async (blockId) => {
+  if (!blockId) return
+  const block = (props.blocks ?? []).find((item) => `${item.page}:${item.id ?? item.order}` === blockId)
+  if (!block) return
+  await nextTick()
+  pageElements.get(block.page)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+})
+
 watch([() => props.preview.path, viewerMode], async () => {
   pageObserver?.disconnect()
   resizeObserver?.disconnect()
@@ -245,6 +263,17 @@ onBeforeUnmount(() => {
           />
           <span v-else-if="failedPages.has(index + 1)" class="page-message">第 {{ index + 1 }} 页加载失败</span>
           <span v-else class="page-number">{{ index + 1 }}</span>
+          <OcrBlockOverlay
+            :blocks="blocks ?? []"
+            :page="index + 1"
+            :width="page.width"
+            :height="page.height"
+            :active-block-id="activeBlockId"
+            :locked-block-id="lockedBlockId"
+            @block-hover="emit('blockHover', $event)"
+            @block-leave="emit('blockLeave')"
+            @block-select="emit('blockSelect', $event)"
+          />
         </figure>
       </div>
       <div v-else class="page-message">无法读取 PDF 页面，您可以切换到 Preview2。</div>

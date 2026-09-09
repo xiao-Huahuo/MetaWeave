@@ -237,7 +237,8 @@ class KnowledgeIngestionJobService:
             record.stage_label = str(normalized.get("stage_label") or record.stage_label)
             record.stage_current = max(0, int(normalized.get("stage_current") or 0))
             record.stage_total = max(0, int(normalized.get("stage_total") or 0))
-            record.progress = max(record.progress, min(99, int(normalized.get("overall_progress") or 0)))
+            running_max = self.limits.progress_max_percent - 0.1
+            record.progress = max(record.progress, min(running_max, round(float(normalized.get("overall_progress") or 0), 1)))
             record.message = str(normalized.get("message") or record.message)
             record.updated_at = _utc_now()
             db.add(record)

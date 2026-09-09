@@ -1,11 +1,10 @@
 """
-图片 OCR 工具。
+图片结构化 OCR 工具。
 
 功能说明:
-本文件封装 PaddleOCR 图片文字识别,用于普通图片预览和图片知识源入库。调用方传入
-AgentConfig 后,工具会按配置选择中英文 OCR 模型、推理设备和置信度阈值,并将识别
-结果按图片中的行列位置重排为可检索文本。未启用 OCR 或缺少 PaddleOCR 依赖时返回
-空结果而不是打断预览。
+本文件封装 PP-StructureV3 高质量流水线,供扫描器、普通图片、扫描 PDF 和文档内嵌
+图片共用。流水线串行完成预处理、版面、文字、表格、公式和阅读顺序解析，并同时
+返回 Markdown 与可写入 frontmatter 的版面块。未启用 OCR 或模型不完整时返回空结果。
 
 使用说明:
 service = ImageOcrService(config=config)
@@ -16,13 +15,21 @@ from __future__ import annotations
 
 import logging
 import threading
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
 from agent_service.core.agent_config import AgentConfig
-from agent_service.scripts.download_model import PADDLEOCR_MARKER_FILE, _build_paddleocr_pipeline
-from agent_service.scripts.download_model import _disable_paddleocr_mkldnn_by_default
+from agent_service.scripts.download_model import (
+    _build_paddleocr_pipeline,
+    _disable_paddleocr_mkldnn_by_default,
+    is_paddleocr_pipeline_available,
+)
+from agent_service.services.memory.rag.ocr_model_progress import (
+    OCR_MODEL_STAGE_COUNT,
+    OcrModelProgressObserver,
+    OcrProgressCallback,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +44,9 @@ class ImageOcrResult:
     word_count: 可信文本片段数量。
     average_confidence: 可信文本片段平均置信度。
     engine_available: OCR 引擎是否可用。
+    blocks: 按页码和阅读顺序排列的可序列化版面块。
+    page_count/table_count/formula_count: 结构化结果统计。
+    layout_labels: 本次结果实际出现的版面类型。
     """
 
     content: str = ""
@@ -44,6 +54,11 @@ class ImageOcrResult:
     word_count: int = 0
     average_confidence: float = 0.0
     engine_available: bool = False
+    blocks: list[dict[str, Any]] = field(default_factory=list)
+    page_count: int = 0
+    table_count: int = 0
+    formula_count: int = 0
+    layout_labels: list[str] = field(default_factory=list)
 
 
 class ImageOcrService:
@@ -56,6 +71,7 @@ class ImageOcrService:
     _pipeline_cache: dict[tuple[str, ...], Any] = {}
     _pipeline_errors: dict[tuple[str, ...], Exception] = {}
     _pipeline_lock = threading.Lock()
+    _inference_lock = threading.Lock()
 
     def __init__(self, *, config: AgentConfig, enabled: bool | None = None) -> None:
         """保存配置；enabled 用于承载用户级 OCR 开关覆盖进程默认值。"""
@@ -63,7 +79,11 @@ class ImageOcrService:
         self.config = config
         self.enabled = config.ocr.enabled if enabled is None else bool(enabled)
 
-    def extract_image_text(self, source_path: Path) -> ImageOcrResult:
+    def extract_image_text(
+        self,
+        source_path: Path,
+        progress_callback: OcrProgressCallback | None = None,
+    ) -> ImageOcrResult:
         """
         对单张图片执行 OCR。
 
@@ -72,15 +92,33 @@ class ImageOcrService:
 
         if not self.enabled:
             return ImageOcrResult()
-        pipeline = self._get_pipeline()
-        if pipeline is None:
-            return ImageOcrResult()
         try:
-            raw_result = self._run_pipeline(pipeline=pipeline, source_path=source_path)
+            with self._inference_lock:
+                if progress_callback:
+                    progress_callback({
+                        "status": "loading", "progress": 0.0, "completed": 0, "skipped": 0,
+                        "total": OCR_MODEL_STAGE_COUNT, "stage": "ocr_model_loading", "stage_label": "正在加载结构化 OCR 模型",
+                    })
+                pipeline = self._get_pipeline()
+                if pipeline is None:
+                    return ImageOcrResult()
+                raw_result = self._run_pipeline(
+                    pipeline=pipeline,
+                    source_path=source_path,
+                    progress_callback=progress_callback,
+                )
         except Exception as exc:
             logger.warning("PaddleOCR 图片推理失败: %s | path=%s", exc, source_path)
             return ImageOcrResult(engine_available=False)
 
+        if progress_callback:
+            progress_callback({
+                "status": "formatting", "progress": 100.0,
+                "stage": "ocr_result", "stage_label": "正在整理结构化 OCR 结果 · 模型裁决已完成",
+            })
+        structured = self._collect_structured_result(raw_result)
+        if structured.content:
+            return structured
         items = self._collect_items(raw_result)
         trusted_items = [item for item in items if item["confidence"] >= self.config.ocr.min_confidence]
         if not trusted_items:
@@ -110,16 +148,24 @@ class ImageOcrService:
 
         return self._pipeline_key() in self._pipeline_cache
 
+    @classmethod
+    def clear_shared_pipeline(cls) -> None:
+        """在删除受管模型时等待当前推理结束并释放全部共享流水线引用。"""
+
+        with cls._inference_lock:
+            with cls._pipeline_lock:
+                cls._pipeline_cache.clear()
+                cls._pipeline_errors.clear()
+
     def _pipeline_key(self) -> tuple[str, ...]:
         """构造当前 OCR 配置的稳定共享缓存键。"""
 
         return (
             self.config.ocr.language,
-            self.config.ocr.text_detection_model_name,
-            self.config.ocr.text_recognition_model_name,
+            *self.config.ocr.pipeline_model_names.values(),
+            *(str(value) for value in self.config.ocr.pipeline_feature_flags.values()),
             self.config.ocr.device,
-            str(self.config.storage.paddleocr_model_dir / "text_detection"),
-            str(self.config.storage.paddleocr_model_dir / "text_recognition"),
+            str(self.config.storage.paddleocr_model_dir),
         )
 
     def _get_pipeline(self) -> Any | None:
@@ -127,8 +173,8 @@ class ImageOcrService:
 
         from agent_service.core.model_status import ModelState, set_model_state
 
-        marker = Path(self.config.storage.paddleocr_model_dir) / PADDLEOCR_MARKER_FILE
-        if not marker.is_file():
+        model_root = Path(self.config.storage.paddleocr_model_dir)
+        if not is_paddleocr_pipeline_available(model_root, self.config.ocr.pipeline_model_names):
             set_model_state("paddleocr", ModelState.AWAITING_DOWNLOAD)
             return None
 
@@ -153,34 +199,100 @@ class ImageOcrService:
 
         _disable_paddleocr_mkldnn_by_default()
         try:
-            from paddleocr import PaddleOCR  # type: ignore[import-untyped]
+            from paddleocr import PPStructureV3  # type: ignore[import-untyped]
         except ImportError:
             set_model_state("paddleocr", ModelState.ERROR)
-            self._pipeline_errors[key] = ImportError("缺少 PaddleOCR 依赖")
+            self._pipeline_errors[key] = ImportError("缺少支持 PP-StructureV3 的 PaddleOCR 依赖")
             return
         set_model_state("paddleocr", ModelState.LOADING)
         try:
             self._pipeline_cache[key] = _build_paddleocr_pipeline(
-                PaddleOCR=PaddleOCR,
-                language=self.config.ocr.language,
-                text_detection_model_name=self.config.ocr.text_detection_model_name,
-                text_recognition_model_name=self.config.ocr.text_recognition_model_name,
+                PPStructureV3=PPStructureV3,
+                model_root=Path(self.config.storage.paddleocr_model_dir),
+                model_names=self.config.ocr.pipeline_model_names,
+                feature_flags=self.config.ocr.pipeline_feature_flags,
                 device=self.config.ocr.device,
-                text_detection_model_dir=self.config.storage.paddleocr_model_dir / "text_detection",
-                text_recognition_model_dir=self.config.storage.paddleocr_model_dir / "text_recognition",
             )
             set_model_state("paddleocr", ModelState.READY)
         except Exception as exc:
             set_model_state("paddleocr", ModelState.ERROR)
             self._pipeline_errors[key] = exc
 
-    @staticmethod
-    def _run_pipeline(*, pipeline: Any, source_path: Path) -> Any:
-        """兼容 PaddleOCR 3.x predict 与旧版 ocr 调用入口。"""
+    def _run_pipeline(
+        self,
+        *,
+        pipeline: Any,
+        source_path: Path,
+        progress_callback: OcrProgressCallback | None = None,
+    ) -> Any:
+        """执行结构化推理并显式关闭未纳入产品范围的图表和印章模块。"""
 
-        if hasattr(pipeline, "predict"):
-            return pipeline.predict(input=str(source_path))
-        return pipeline.ocr(str(source_path), cls=False)
+        with OcrModelProgressObserver(pipeline, progress_callback):
+            return list(pipeline.predict(
+                input=str(source_path),
+                format_block_content=True,
+                text_rec_score_thresh=self.config.ocr.min_confidence,
+                use_wired_table_cells_trans_to_html=True,
+                use_wireless_table_cells_trans_to_html=True,
+                use_e2e_wired_table_rec_model=False,
+                use_e2e_wireless_table_rec_model=False,
+                **self.config.ocr.pipeline_feature_flags,
+            ))
+
+    def _collect_structured_result(self, raw_result: Any) -> ImageOcrResult:
+        """将 PP-StructureV3 页面结果规整为 Markdown、版面块与统计。"""
+
+        markdown_pages: list[str] = []
+        blocks: list[dict[str, Any]] = []
+        confidences: list[float] = []
+        table_count = 0
+        formula_count = 0
+        page_count = 0
+        for fallback_page, node in enumerate(_iter_result_nodes(raw_result), start=1):
+            payload = _result_json_payload(node)
+            if not payload:
+                continue
+            page = int(payload.get("page_index") or 0) + 1 if payload.get("page_index") is not None else fallback_page
+            page_count = max(page_count, page)
+            markdown = _result_markdown(node)
+            if markdown:
+                markdown_pages.append(markdown.strip())
+            for raw_block in payload.get("parsing_res_list") or []:
+                block = _normalize_structure_block(
+                    raw_block,
+                    page=page,
+                    page_width=float(payload.get("width") or 0),
+                    page_height=float(payload.get("height") or 0),
+                )
+                if block:
+                    blocks.append(block)
+            ocr_payload = payload.get("overall_ocr_res") or {}
+            scores = ocr_payload.get("rec_scores") or ocr_payload.get("scores") or []
+            confidences.extend(
+                score for score in (_safe_float(value, default=0.0) for value in scores)
+                if score >= self.config.ocr.min_confidence
+            )
+            table_count += len(payload.get("table_res_list") or [])
+            formula_count += len(payload.get("formula_res_list") or [])
+        blocks.sort(key=lambda block: (int(block["page"]), int(block["order"])))
+        if not markdown_pages and blocks:
+            markdown_pages = [str(block["content"]) for block in blocks if str(block["content"]).strip()]
+        content = "\n\n".join(part for part in markdown_pages if part).strip()
+        if not content:
+            return ImageOcrResult(engine_available=True)
+        labels = sorted({str(block["type"]) for block in blocks})
+        return ImageOcrResult(
+            content=content,
+            has_text=True,
+            word_count=len(confidences) or len([block for block in blocks if block["content"]]),
+            average_confidence=(sum(confidences) / len(confidences)) if confidences else 0.0,
+            engine_available=True,
+            blocks=blocks,
+            page_count=page_count or len(markdown_pages),
+            table_count=table_count,
+            formula_count=formula_count,
+            layout_labels=labels,
+        )
 
     def _collect_items(self, raw_result: Any) -> list[dict[str, Any]]:
         """从 PaddleOCR 不同版本的输出结构中抽取文本、置信度和框坐标。"""
@@ -257,6 +369,69 @@ class ImageOcrService:
             ordered = sorted(line, key=lambda item: float(item["left"]))
             formatted_lines.append(" | ".join(str(item["text"]).strip() for item in ordered if str(item["text"]).strip()))
         return "\n".join(line for line in formatted_lines if line).strip()
+
+
+def _iter_result_nodes(raw_result: Any) -> list[Any]:
+    """保留 PaddleX 结果对象本身，以便同时读取 markdown 与 json 属性。"""
+
+    if raw_result is None:
+        return []
+    if isinstance(raw_result, (list, tuple)):
+        return list(raw_result)
+    return [raw_result]
+
+
+def _result_json_payload(node: Any) -> dict[str, Any]:
+    """读取 LayoutParsingResultV2 或测试字典中的 JSON `res`。"""
+
+    raw = node.get("json") if isinstance(node, dict) and "json" in node else getattr(node, "json", node)
+    if not isinstance(raw, dict):
+        return {}
+    payload = raw.get("res", raw)
+    return payload if isinstance(payload, dict) else {}
+
+
+def _result_markdown(node: Any) -> str:
+    """读取 PaddleX MarkdownMixin 生成的结构化正文。"""
+
+    raw = node.get("markdown") if isinstance(node, dict) and "markdown" in node else getattr(node, "markdown", None)
+    if isinstance(raw, dict):
+        return str(raw.get("markdown_texts") or raw.get("text") or "")
+    return str(raw or "")
+
+
+def _normalize_structure_block(
+    raw_block: Any,
+    *,
+    page: int,
+    page_width: float,
+    page_height: float,
+) -> dict[str, Any] | None:
+    """把版面块转换为可写入 frontmatter JSON 的稳定字段。"""
+
+    if not isinstance(raw_block, dict):
+        return None
+    label = str(raw_block.get("block_label") or raw_block.get("label") or "").strip()
+    content = str(raw_block.get("block_content") or raw_block.get("content") or "").strip()
+    if not label and not content:
+        return None
+    raw_bbox = raw_block.get("block_bbox") or raw_block.get("bbox") or []
+    if hasattr(raw_bbox, "tolist"):
+        raw_bbox = raw_bbox.tolist()
+    bbox = [float(value) for value in raw_bbox] if isinstance(raw_bbox, (list, tuple)) else []
+    block_id = raw_block.get("block_id", raw_block.get("id"))
+    raw_order = raw_block.get("block_order", raw_block.get("order"))
+    order = int(raw_order) if raw_order is not None else int(block_id or 0)
+    return {
+        "page": page,
+        "type": label or "text",
+        "content": content,
+        "bbox": bbox,
+        "id": block_id,
+        "order": order,
+        "page_width": page_width,
+        "page_height": page_height,
+    }
 
 
 def _normalize_raw_result(raw_result: Any) -> list[Any]:

@@ -12,10 +12,16 @@ from pathlib import Path
 import shutil
 import tempfile
 
+from PyInstaller.utils.hooks import collect_data_files, collect_submodules
 from scripts.build_dsh_windows_bundle import verify_bundle_files
 
 # SPECPATH 由 PyInstaller 在 exec spec 前注入,指向 spec 文件所在目录
 _project_root = Path(SPECPATH)  # noqa: F821
+_paddlex_hiddenimports = (
+    collect_submodules('paddlex.inference.pipelines')
+    + collect_submodules('paddlex.inference.models')
+)
+_paddlex_config_data = collect_data_files('paddlex', includes=['configs/**/*.yaml'])
 
 
 def _required_data_dir(relative_path: str) -> tuple[str, str]:
@@ -72,8 +78,9 @@ a = Analysis(
         _required_data_file('alembic.ini'),
         _required_data_dir('agent_service/vendor/deepseek_harness'),
         _required_dsh_sdk_bundle(),
+        *_paddlex_config_data,
     ],
-    hiddenimports=['xlrd', 'torchvision'],
+    hiddenimports=['xlrd', 'torchvision', *_paddlex_hiddenimports],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],

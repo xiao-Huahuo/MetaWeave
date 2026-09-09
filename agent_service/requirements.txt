@@ -28,8 +28,9 @@ xlrd
 fpdf2
 PyMuPDF
 Pillow
-paddlepaddle
-paddleocr
+paddlepaddle==3.3.1
+paddleocr[doc-parser]==3.7.0
+paddlex[ocr]==3.7.2
 requests
 bandit
 numpy

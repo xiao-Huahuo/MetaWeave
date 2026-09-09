@@ -12,6 +12,7 @@ import IcIcon from '@/components/common/IcIcon.vue'
 import { useSettingsStore } from '@/stores/settings'
 import { useWorkspaceStore } from '@/stores/workspace'
 import type { HistorySourceType, IngestionHistoryItem, IngestionQueueItem } from '@/types/knowledge'
+import { formatProgress } from '@/utils/progress'
 
 type IngestionTab = 'queue' | 'graph-queue' | 'history'
 
@@ -284,7 +285,7 @@ function historySummary(row: IngestionHistoryItem): string {
           <span class="progress-cell ingestion-progress-cell column-progress">
             <div class="progress-bar-wrap" :title="row.message || row.stageLabel">
               <div class="progress-bar-fill" :style="{ width: `${row.progress ?? 0}%` }" />
-              <span class="progress-pct">{{ row.progress ?? 0 }}%</span>
+              <span class="progress-pct">{{ formatProgress(row.progress ?? 0) }}%</span>
             </div>
             <span class="progress-detail" :title="row.message || row.stageLabel">
               {{ row.stageLabel || '等待灌库' }}
@@ -342,7 +343,7 @@ function historySummary(row: IngestionHistoryItem): string {
           <span class="progress-cell graph-progress-cell column-progress">
             <div class="progress-bar-wrap" :title="row.message || row.stageLabel">
               <div class="progress-bar-fill" :style="{ width: `${row.progress ?? 0}%` }" />
-              <span class="progress-pct">{{ row.progress ?? 0 }}%</span>
+              <span class="progress-pct">{{ formatProgress(row.progress ?? 0) }}%</span>
             </div>
             <span class="progress-detail" :title="row.message || row.stageLabel">
               {{ row.stageLabel || '等待图谱抽取' }}

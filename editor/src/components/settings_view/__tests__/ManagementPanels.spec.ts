@@ -109,6 +109,51 @@ describe('management panels', () => {
     expect(wrapper.text()).toContain('Hugging Face')
   })
 
+  it('shows every backend-owned component of the structured OCR pipeline', async () => {
+    fetchModelManagement.mockResolvedValue({ models: [{
+      key: 'paddleocr',
+      label: 'PaddleOCR 结构化流水线',
+      role: '扫描文档版面、文字、表格、公式与阅读顺序解析',
+      name: 'PP-StructureV3 高质量流水线',
+      path: 'D:/models/paddleocr',
+      base_path: 'D:/models/paddleocr',
+      size_bytes: 4096,
+      file_count: 42,
+      status: 'ready',
+      enabled: true,
+      active: true,
+      downloaded: true,
+      progress: {
+        status: 'idle', stage: 'idle', downloaded_bytes: 0,
+        total_bytes: null, percent: null, indeterminate: false, message: '',
+      },
+      details: {
+        provider: 'PaddleOCR / PaddleX',
+        layout_model: 'PP-DocLayout-L',
+        ocr_models: 'PP-OCRv5_server_det / PP-OCRv5_server_rec',
+        table_models: 'SLANeXt_wired / SLANeXt_wireless',
+        formula_model: 'PP-FormulaNet_plus-M',
+        supporting_models: 'PP-DocBlockLayout / UVDoc / RT-DETR-L_wired_table_cell_det',
+        disabled_modules: '图表解析 / 印章识别',
+      },
+    }] })
+    const wrapper = mount(ModelManagement, {
+      props: { userId: 'u1' },
+      global: { stubs: { IcIcon: iconStub } },
+    })
+    await flushPromises()
+
+    expect(wrapper.text()).toContain('PaddleOCR 结构化流水线')
+    expect(wrapper.text()).toContain('PP-StructureV3 高质量流水线')
+    await wrapper.get('.details-toggle').trigger('click')
+    expect(wrapper.text()).toContain('版面模型')
+    expect(wrapper.text()).toContain('PP-DocLayout-L')
+    expect(wrapper.text()).toContain('SLANeXt_wired / SLANeXt_wireless')
+    expect(wrapper.text()).toContain('PP-FormulaNet_plus-M')
+    expect(wrapper.text()).toContain('PP-DocBlockLayout / UVDoc / RT-DETR-L_wired_table_cell_det')
+    expect(wrapper.text()).toContain('图表解析 / 印章识别')
+  })
+
   it('polls automatically when an active download is discovered on initial load', async () => {
     vi.useFakeTimers()
     const downloadingModel = (percent: number) => ({

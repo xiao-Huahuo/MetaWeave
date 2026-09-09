@@ -30,7 +30,7 @@ class KnowledgeIngestionJobRecord(SQLModel, table=True):
     status: str = Field(default="queued", index=True, max_length=DEFAULT_BUSINESS_LIMITS.timestamp_text_max_length)
     stage: str = Field(default="queued", max_length=DEFAULT_BUSINESS_LIMITS.short_type_max_length)
     stage_label: str = Field(default="等待灌库")
-    progress: int = Field(default=0, ge=DEFAULT_BUSINESS_LIMITS.nonnegative_min_value, le=DEFAULT_BUSINESS_LIMITS.progress_max_percent)
+    progress: float = Field(default=0.0, ge=DEFAULT_BUSINESS_LIMITS.nonnegative_min_value, le=DEFAULT_BUSINESS_LIMITS.progress_max_percent)
     stage_current: int = Field(default=0, ge=DEFAULT_BUSINESS_LIMITS.nonnegative_min_value)
     stage_total: int = Field(default=0, ge=DEFAULT_BUSINESS_LIMITS.nonnegative_min_value)
     size: int | None = None

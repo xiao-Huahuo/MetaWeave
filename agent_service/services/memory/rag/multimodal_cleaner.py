@@ -173,11 +173,13 @@ class MultimodalDocumentCleaner:
         *,
         stage: str,
         label: str,
-        current: int,
-        total: int,
+        current: float,
+        total: float,
         start: int,
         end: int,
         message: str = "",
+        stage_current: float | None = None,
+        stage_total: float | None = None,
     ) -> None:
         """把类型专属工作单位映射为统一且单调的文件总进度。"""
 
@@ -190,9 +192,9 @@ class MultimodalDocumentCleaner:
             "status": "processing",
             "stage": stage,
             "stage_label": label,
-            "stage_current": max(0, current),
-            "stage_total": max(0, total),
-            "overall_progress": round(start + ((end - start) * ratio)),
+            "stage_current": max(0, current if stage_current is None else stage_current),
+            "stage_total": max(0, total if stage_total is None else stage_total),
+            "overall_progress": round(start + ((end - start) * ratio), 1),
             "message": message,
         })
 
@@ -396,6 +398,7 @@ class MultimodalDocumentCleaner:
                     image_ref["ocr_status"] = "completed" if result.has_text else ("no_text" if result.engine_available else "engine_unavailable")
                     image_ref["ocr_word_count"] = result.word_count
                     image_ref["ocr_average_confidence"] = result.average_confidence
+                    image_ref.update(_ocr_result_metadata(result))
                 if include_original:
                     yield archive_name, result, original_ref
                 else:
@@ -436,6 +439,10 @@ class MultimodalDocumentCleaner:
                 temp_dir.cleanup()
             return self._clean_binary_placeholder(source_path=source_path, title=title, source_type="pdf")
         ocr_text: list[str] = []
+        page_ocr_blocks: list[dict[str, Any]] = []
+        page_table_count = 0
+        page_formula_count = 0
+        page_layout_labels: set[str] = set()
         if self.ocr_enabled and self.image_ocr_service:
             for image_index, image_ref in enumerate(extracted.image_refs, start=1):
                 image_path = image_ref.get("asset_path")
@@ -446,6 +453,7 @@ class MultimodalDocumentCleaner:
                 image_ref["ocr_status"] = "completed" if result.has_text else ("no_text" if result.engine_available else "engine_unavailable")
                 image_ref["ocr_word_count"] = result.word_count
                 image_ref["ocr_average_confidence"] = result.average_confidence
+                image_ref.update(_ocr_result_metadata(result))
                 if result.has_text:
                     image_ref["ocr_text"] = result.content
                     ocr_text.append(f"PDF 图片 OCR: {result.content}")
@@ -462,6 +470,10 @@ class MultimodalDocumentCleaner:
                             self._emit_progress(stage="ocr", label=f"正在识别扫描页 {page_index + 1} / {document.page_count}", current=page_index + 1, total=document.page_count, start=28, end=44)
                             if result.has_text:
                                 ocr_text.append(f"PDF 第 {page_index + 1} 页 OCR: {result.content}")
+                            page_ocr_blocks.extend({**block, "page": page_index + 1} for block in result.blocks)
+                            page_table_count += result.table_count
+                            page_formula_count += result.formula_count
+                            page_layout_labels.update(result.layout_labels)
                         document.close()
                 except Exception:
                     pass
@@ -478,6 +490,19 @@ class MultimodalDocumentCleaner:
             "image_count": extracted.image_count,
             "image_refs": extracted.image_refs,
             "table_count": extracted.table_count,
+            "ocr_blocks": [
+                block
+                for image_ref in extracted.image_refs
+                for block in image_ref.get("ocr_blocks", [])
+                if isinstance(block, dict)
+            ] + page_ocr_blocks,
+            "ocr_table_count": sum(int(ref.get("ocr_table_count") or 0) for ref in extracted.image_refs) + page_table_count,
+            "ocr_formula_count": sum(int(ref.get("ocr_formula_count") or 0) for ref in extracted.image_refs) + page_formula_count,
+            "ocr_layout_labels": sorted({
+                str(label)
+                for ref in extracted.image_refs
+                for label in ref.get("ocr_layout_labels", [])
+            } | page_layout_labels),
             "ocr_status": "completed" if ocr_text else ("no_text" if self.ocr_enabled and extracted.is_scanned else ("pending" if extracted.is_scanned else "not_required")),
         }
         if not content:
@@ -504,9 +529,20 @@ class MultimodalDocumentCleaner:
 
         if not self.image_ocr_service:
             return self._clean_binary_placeholder(source_path=source_path, title=title, source_type="image")
-        self._emit_progress(stage="ocr", label="正在识别图片文字", current=0, total=1, start=10, end=44)
-        result = self.image_ocr_service.extract_image_text(source_path)
-        self._emit_progress(stage="ocr", label="图片文字识别完成", current=1, total=1, start=10, end=44)
+        result = self.image_ocr_service.extract_image_text(
+            source_path,
+            progress_callback=lambda payload: self._emit_progress(
+                stage=str(payload["stage"]),
+                label=str(payload["stage_label"]),
+                current=float(payload["progress"]),
+                total=100,
+                start=10,
+                end=44,
+                stage_current=float(payload.get("completed", 0)) + float(payload.get("skipped", 0)),
+                stage_total=float(payload.get("total", 0)),
+            ),
+        )
+        self._emit_progress(stage="ocr_result", label="结构化 OCR 完成", current=10, total=10, start=10, end=44)
         metadata = {
             "modality": "image",
             "ocr_enabled": self.ocr_enabled,
@@ -515,6 +551,7 @@ class MultimodalDocumentCleaner:
             "ocr_word_count": result.word_count,
             "ocr_average_confidence": result.average_confidence,
             "file_size": source_path.stat().st_size,
+            **_ocr_result_metadata(result),
         }
         if not result.has_text:
             return CleanedDocument(source_type="image", sections=[], metadata=metadata)
@@ -553,6 +590,18 @@ def _single_section_document(*, source_type: str, title: str, content: str, meta
 
     section = _make_section(index=0, heading=title, content=content)
     return CleanedDocument(source_type=source_type, sections=[section] if content.strip() else [], metadata=metadata)
+
+
+def _ocr_result_metadata(result: Any) -> dict[str, Any]:
+    """返回扫描器、灌库与文档内嵌图片共用的结构化 OCR metadata。"""
+
+    return {
+        "ocr_blocks": [dict(block) for block in result.blocks],
+        "ocr_page_count": result.page_count,
+        "ocr_table_count": result.table_count,
+        "ocr_formula_count": result.formula_count,
+        "ocr_layout_labels": list(result.layout_labels),
+    }
 
 
 def _read_text_with_fallback(path: Path) -> str:

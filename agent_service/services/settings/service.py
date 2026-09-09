@@ -1791,10 +1791,10 @@ class SettingsService:
             ensure_paddleocr_models(
                 paddleocr_model_dir=self.config.storage.paddleocr_model_dir,
                 language=self.config.ocr.language,
-                text_detection_model_name=self.config.ocr.text_detection_model_name,
-                text_recognition_model_name=self.config.ocr.text_recognition_model_name,
+                model_names=self.config.ocr.pipeline_model_names,
+                feature_flags=self.config.ocr.pipeline_feature_flags,
                 device=self.config.ocr.device,
             )
             self.config.ocr.enabled = True
         except Exception as exc:
-            logger.warning("PaddleOCR 模型检查失败: %s", exc)
+            logger.warning("PaddleOCR 结构化流水线检查失败: %s", exc)

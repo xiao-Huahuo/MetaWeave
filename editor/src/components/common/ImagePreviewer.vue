@@ -14,6 +14,8 @@ import { computed, onMounted, onUnmounted, reactive, ref, watch } from 'vue'
 
 import { useImagePreviewer } from '@/components/common/useImagePreviewer'
 import type { ImagePreviewItem } from '@/components/common/useImagePreviewer'
+import OcrBlockOverlay from '@/components/common/OcrBlockOverlay.vue'
+import type { ScannerOcrBlock } from '@/api/scanner'
 import { useSettingsStore } from '@/stores/settings'
 
 const settingsStore = useSettingsStore()
@@ -21,7 +23,15 @@ const settingsStore = useSettingsStore()
 const props = withDefaults(defineProps<{
   mode?: 'modal' | 'embedded'
   files?: ImagePreviewItem[]
+  blocks?: ScannerOcrBlock[]
+  activeBlockId?: string
+  lockedBlockId?: string
 }>(), { mode: 'modal' })
+const emit = defineEmits<{
+  blockHover: [blockId: string]
+  blockLeave: []
+  blockSelect: [blockId: string]
+}>()
 
 /* =============================================
    State: modal uses singleton composable,
@@ -58,10 +68,6 @@ function nextImage() {
 function prevImage() {
   if (hasPrev.value) localState.currentIndex--
 }
-function goToImage(index: number) {
-  if (index >= 0 && index < images.value.length) localState.currentIndex = index
-}
-
 const imageRef = ref<HTMLImageElement | null>(null)
 const stageRef = ref<HTMLDivElement | null>(null)
 const toolbarRef = ref<HTMLDivElement | null>(null)
@@ -436,6 +442,18 @@ onUnmounted(() => { toolbarObserver?.disconnect() })
               @error="onImageError"
               draggable="false"
             />
+            <OcrBlockOverlay
+              v-if="mode === 'embedded'"
+              :blocks="blocks ?? []"
+              :page="currentIndex + 1"
+              :width="blocks?.[0]?.page_width || naturalSize.width"
+              :height="blocks?.[0]?.page_height || naturalSize.height"
+              :active-block-id="activeBlockId"
+              :locked-block-id="lockedBlockId"
+              @block-hover="emit('blockHover', $event)"
+              @block-leave="emit('blockLeave')"
+              @block-select="emit('blockSelect', $event)"
+            />
           </div>
         </Transition>
       </div>
@@ -697,6 +715,7 @@ onUnmounted(() => { toolbarObserver?.disconnect() })
 }
 
 .previewer-image-wrap {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;

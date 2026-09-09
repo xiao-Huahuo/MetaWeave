@@ -8,6 +8,8 @@
 -->
 <script setup lang="ts">
 import { nextTick, onBeforeUnmount, onMounted, onUnmounted, ref, watch } from 'vue'
+import 'vditor/dist/js/i18n/zh_CN.js'
+import lutePath from 'vditor/dist/js/lute/lute.min.js?url'
 import Vditor from 'vditor'
 
 import {
@@ -25,6 +27,7 @@ import { decorateWikiPreview } from './wikiPreview'
 
 import { useImagePreviewer } from '@/components/common/useImagePreviewer'
 import type { ImagePreviewItem } from '@/components/common/useImagePreviewer'
+import type { ScannerOcrBlock } from '@/api/scanner'
 
 const props = defineProps<{
   content: string
@@ -35,6 +38,9 @@ const props = defineProps<{
   imageDownload?: boolean
   /** Requests a one-shot scroll and highlight after navigating through a wiki link. */
   focusAnchor?: { path: string; heading: string; blockId: string; nonce: number } | null
+  blocks?: ScannerOcrBlock[]
+  activeBlockId?: string
+  lockedBlockId?: string
 }>()
 
 const emit = defineEmits<{
@@ -44,6 +50,9 @@ const emit = defineEmits<{
   updateContent: [content: string]
   downloadImage: [src: string, name: string]
   navigateWiki: [destination: string]
+  blockHover: [blockId: string]
+  blockLeave: []
+  blockSelect: [blockId: string]
 }>()
 
 interface SourceMarkdownTable {
@@ -55,6 +64,7 @@ interface SourceMarkdownTable {
 
 const settingsStore = useSettingsStore()
 const workspaceStore = useWorkspaceStore()
+const embeddedVditorI18n = (window as unknown as { VditorI18n: Record<string, string> }).VditorI18n
 
 type VditorPreviewInternals = Vditor & {
   vditor?: {
@@ -73,12 +83,14 @@ let lastWikiFocusNonce = -1
 let wikiHighlightTimer: ReturnType<typeof setTimeout> | null = null
 const TABLE_EDGE_BUTTON_SIZE = 9
 const TABLE_EDGE_HIT_ZONE = 14
+const EDITABLE_PREVIEW_TABLE_SELECTOR = 'table:not([data-metaweave-html-table])'
 const tableOverlay = ref<{
   visible: boolean
   showLeftEdge: boolean
   showTopEdge: boolean
   showRightEdge: boolean
   showBottomEdge: boolean
+  insetBottomEdge: boolean
   left: number
   top: number
   width: number
@@ -96,6 +108,7 @@ const tableOverlay = ref<{
   showTopEdge: false,
   showRightEdge: false,
   showBottomEdge: false,
+  insetBottomEdge: false,
   left: 0,
   top: 0,
   width: 0,
@@ -281,8 +294,34 @@ function rewriteMarkdownHighlights(content: string): string {
   }).join('\n')
 }
 
+/** Marks source HTML tables as read-only without changing fenced or inline code examples. */
+function markPreviewHtmlTables(content: string): string {
+  let fenceChar = ''
+  let fenceLength = 0
+  return content.split('\n').map((line) => {
+    const fence = line.match(/^\s{0,3}(`{3,}|~{3,})/u)?.[1] ?? ''
+    if (fence) {
+      const marker = fence[0] ?? ''
+      if (!fenceChar) {
+        fenceChar = marker
+        fenceLength = fence.length
+      } else if (marker === fenceChar && fence.length >= fenceLength) {
+        fenceChar = ''
+        fenceLength = 0
+      }
+      return line
+    }
+    if (fenceChar) return line
+    return line.split(/(`+[^`]*`+)/u).map((segment, index) => (
+      index % 2 === 1
+        ? segment
+        : segment.replace(/<table(?=[\s>])/giu, '<table data-metaweave-html-table')
+    )).join('')
+  }).join('\n')
+}
+
 function preparePreviewMarkdown(content: string): string {
-  const highlightedContent = rewriteMarkdownHighlights(content)
+  const highlightedContent = markPreviewHtmlTables(rewriteMarkdownHighlights(content))
   const renderContent = rewriteMarkdownImageUrls(highlightedContent, getImageUrlContext())
   const { markdown, displayBlocks: nextDisplayBlocks, inlineBlocks: nextInlineBlocks } = extractPreviewMath(renderContent)
   displayBlocks = nextDisplayBlocks
@@ -447,7 +486,7 @@ function tableFromPointerTarget(target: Element | null) {
   if (!table || !previewElement?.contains(table)) {
     return null
   }
-  const tables = [...previewElement.querySelectorAll<HTMLTableElement>('table')]
+  const tables = [...previewElement.querySelectorAll<HTMLTableElement>(EDITABLE_PREVIEW_TABLE_SELECTOR)]
   const tableIndex = tables.indexOf(table)
   if (tableIndex < 0) {
     return null
@@ -472,7 +511,7 @@ function tableFromPointerEvent(event: MouseEvent) {
   if (!previewElement) {
     return null
   }
-  const tables = [...previewElement.querySelectorAll<HTMLTableElement>('table')]
+  const tables = [...previewElement.querySelectorAll<HTMLTableElement>(EDITABLE_PREVIEW_TABLE_SELECTOR)]
   const table = tables.find((candidate) => (
     rectContainsPoint(tableContentRect(candidate), event.clientX, event.clientY, TABLE_EDGE_BUTTON_SIZE)
   ))
@@ -581,6 +620,8 @@ function updateTableOverlayFromEvent(event: MouseEvent) {
     return
   }
   const tableRect = tableContentRect(tableHit.table)
+  const previewElement = getPreviewElement()
+  const previewRect = previewElement?.getBoundingClientRect()
   const withinHorizontalEdgeBand = event.clientX >= tableRect.left - TABLE_EDGE_BUTTON_SIZE
     && event.clientX <= tableRect.right + TABLE_EDGE_BUTTON_SIZE
   const withinVerticalEdgeBand = event.clientY >= tableRect.top - TABLE_EDGE_BUTTON_SIZE
@@ -609,6 +650,8 @@ function updateTableOverlayFromEvent(event: MouseEvent) {
     showTopEdge,
     showRightEdge,
     showBottomEdge,
+    insetBottomEdge: Boolean(previewElement && previewRect
+      && tableRect.bottom + TABLE_EDGE_BUTTON_SIZE > previewRect.top + previewElement.clientHeight),
     left: tableRect.left - hostRect.left,
     top: tableRect.top - hostRect.top,
     width: tableRect.width,
@@ -826,6 +869,7 @@ function handlePreviewParse(element: HTMLElement) {
   decoratePreviewVideoBlocks(element)
   injectImageDownloadButtons(element)
   highlightVueCodeBlocks(element)
+  decorateOcrBlocks(resetEl)
   injectCodeCopyButtons()
   tableOverlay.value.visible = false
   flushPendingHeadingScroll()
@@ -836,6 +880,51 @@ function handlePreviewParse(element: HTMLElement) {
     userId: settingsStore.profile.userId,
     cache: wikiEmbedCache,
   }).then(() => focusWikiAnchor())
+}
+
+/** Attach persisted OCR block ids to the nearest rendered semantic elements. */
+function decorateOcrBlocks(root: HTMLElement) {
+  root.querySelectorAll<HTMLElement>('[data-ocr-block-id]').forEach((element) => {
+    delete element.dataset.ocrBlockId
+    element.classList.remove('ocr-semantic-block', 'active', 'locked')
+  })
+  const candidates = [...root.querySelectorAll<HTMLElement>('h1,h2,h3,h4,h5,h6,p,table,pre,blockquote,li')]
+  const used = new Set<HTMLElement>()
+  const normalize = (value: string) => {
+    const holder = document.createElement('div')
+    holder.innerHTML = value
+    return (holder.textContent ?? value).replace(/\s+/gu, '').replace(/[$\\{}]/gu, '').toLowerCase()
+  }
+  for (const block of [...(props.blocks ?? [])].sort((a, b) => a.order - b.order)) {
+    const source = normalize(block.content)
+    const target = candidates.find((element) => {
+      if (used.has(element)) return false
+      const rendered = normalize(element.textContent ?? '')
+      const sample = source.slice(0, 24)
+      return Boolean(sample && rendered && (rendered.includes(sample) || source.includes(rendered)))
+    })
+    if (!target) continue
+    used.add(target)
+    target.dataset.ocrBlockId = `${block.page}:${block.id ?? block.order}`
+    target.classList.add('ocr-semantic-block')
+  }
+  applyOcrBlockState()
+}
+
+/** Reflect the shared hover/locked id after either preview changes it. */
+function applyOcrBlockState() {
+  const root = getPreviewElement()
+  if (!root) return
+  root.querySelectorAll<HTMLElement>('[data-ocr-block-id]').forEach((element) => {
+    element.classList.toggle('active', element.dataset.ocrBlockId === props.activeBlockId)
+    element.classList.toggle('locked', element.dataset.ocrBlockId === props.lockedBlockId)
+  })
+}
+
+function handleOcrBlockMove(event: PointerEvent) {
+  const target = event.target instanceof Element ? event.target.closest<HTMLElement>('[data-ocr-block-id]') : null
+  if (target?.dataset.ocrBlockId) emit('blockHover', target.dataset.ocrBlockId)
+  else emit('blockLeave')
 }
 
 function scrollToPreviewElement(target: HTMLElement) {
@@ -923,6 +1012,8 @@ function syncPreviewContentImmediately() {
 
 function handleClick(event: MouseEvent) {
   const eventTarget = event.target instanceof Element ? event.target : null
+  const ocrBlock = eventTarget?.closest<HTMLElement>('[data-ocr-block-id]')
+  if (ocrBlock?.dataset.ocrBlockId) emit('blockSelect', ocrBlock.dataset.ocrBlockId)
 
   const wikiLink = eventTarget?.closest<HTMLAnchorElement>('a[data-wiki-destination]')
   if (wikiLink) {
@@ -986,6 +1077,9 @@ onMounted(() => {
   window.addEventListener('metaweave-knowledge-file-change', handleKnowledgeFileChange)
   try {
     instance = new Vditor(previewHost.value, {
+      i18n: embeddedVditorI18n,
+      _lutePath: lutePath,
+      icon: '',
       value: preparePreviewMarkdown(props.content),
       height: '100%',
       mode: 'sv',
@@ -1032,6 +1126,12 @@ watch(
 )
 
 watch(() => props.focusAnchor?.nonce, () => void nextTick(focusWikiAnchor))
+watch(() => [props.activeBlockId, props.lockedBlockId], () => {
+  applyOcrBlockState()
+  if (!props.lockedBlockId) return
+  const target = getPreviewElement()?.querySelector<HTMLElement>(`[data-ocr-block-id="${CSS.escape(props.lockedBlockId)}"]`)
+  if (target) scrollToPreviewElement(target)
+})
 
 onBeforeUnmount(() => {
   mounted = false
@@ -1059,7 +1159,8 @@ onBeforeUnmount(() => {
     class="markdown-preview"
     :class="{ compact: props.compact }"
     @mousemove="updateTableOverlayFromEvent"
-    @mouseleave="tableOverlay.visible = false"
+    @pointermove="handleOcrBlockMove"
+    @mouseleave="tableOverlay.visible = false; emit('blockLeave')"
   >
     <div
       ref="previewHost"
@@ -1099,6 +1200,7 @@ onBeforeUnmount(() => {
       <button
         v-if="tableOverlay.showBottomEdge"
         class="preview-table-add-row-button"
+        :class="{ 'is-inset': tableOverlay.insetBottomEdge }"
         type="button"
         title="添加空行"
         @click="addPreviewTableRow"
@@ -1197,6 +1299,10 @@ onBeforeUnmount(() => {
   right: 0;
   bottom: -9px;
   height: 9px;
+}
+
+.preview-table-add-row-button.is-inset {
+  bottom: 0;
 }
 
 .preview-table-add-column-button {
@@ -1314,6 +1420,10 @@ onBeforeUnmount(() => {
   box-shadow: 0 0 0 5px color-mix(in srgb, var(--color-primary) 10%, transparent);
   transition: background 180ms ease, box-shadow 180ms ease;
 }
+
+.markdown-preview :deep(.ocr-semantic-block) { outline: 1px solid color-mix(in srgb,var(--color-primary) 45%,transparent); outline-offset: 3px; transition: outline-color 120ms ease, background 120ms ease; }
+.markdown-preview :deep(.ocr-semantic-block.active),.markdown-preview :deep(.ocr-semantic-block.locked) { outline: 2px solid var(--color-primary); background: color-mix(in srgb,var(--color-primary) 10%,transparent); }
+.markdown-preview :deep(.ocr-semantic-block.locked) { outline-style: dashed; }
 
 .markdown-preview :deep(h1) { color: var(--color-primary) !important; font-size: calc(2rem * var(--text-font-scale)) !important; }
 .markdown-preview :deep(h2) { color: color-mix(in srgb, var(--color-primary) 86.7%, white) !important; font-size: calc(1.35rem * var(--text-font-scale)) !important; }

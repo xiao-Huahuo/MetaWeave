@@ -83,7 +83,7 @@ def test_local_qwen_runtime_dependencies_stay_cpu_compatible() -> None:
     assert "torchvision==0.26.0+cpu" in requirements
     assert "transformers==5.2.0" in requirements
     assert "sentence-transformers==6.0.0" in requirements
-    assert "['xlrd', 'torchvision']" in spec
+    assert "['xlrd', 'torchvision', *_paddlex_hiddenimports]" in spec
     assert "'torchvision'," not in spec.split("excludes=[", maxsplit=1)[1]
 
 

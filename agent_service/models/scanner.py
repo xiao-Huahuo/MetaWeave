@@ -33,9 +33,14 @@ class ScannerRecord(SQLModel, table=True):
     status: str = Field(default="queued", index=True, max_length=DEFAULT_BUSINESS_LIMITS.short_status_max_length)
     stage: str = Field(default="queued", max_length=DEFAULT_BUSINESS_LIMITS.short_type_max_length)
     stage_label: str = Field(default="等待解析", max_length=DEFAULT_BUSINESS_LIMITS.secret_max_length)
-    progress: int = Field(default=0, ge=0, le=100)
+    progress: float = Field(
+        default=0.0,
+        ge=DEFAULT_BUSINESS_LIMITS.nonnegative_min_value,
+        le=DEFAULT_BUSINESS_LIMITS.progress_max_percent,
+    )
     no_ocr_markdown: str = Field(default="", sa_column=Column(Text))
     ocr_markdown: str = Field(default="", sa_column=Column(Text))
+    ocr_blocks_json: str = Field(default="[]", sa_column=Column(Text))
     assets_json: str = Field(default="[]", sa_column=Column(Text))
     error: str = Field(default="", sa_column=Column(Text))
     created_at: datetime = Field(default_factory=utc_now, index=True)
