@@ -450,6 +450,14 @@ def test_scanner_text_projection_draft_save_export_and_delete(tmp_path: Path) ->
         assert filename == "notes.zip"
         assert media_type == "application/zip"
         assert payload.startswith(b"PK")
+        batch_filename, batch_media_type, batch_payload = service.export_batch_payload(
+            user_id="u1",
+            items=[(created.scan_id, "no_ocr")],
+        )
+        assert batch_filename == "scanner-batch.zip"
+        assert batch_media_type == "application/zip"
+        with zipfile.ZipFile(io.BytesIO(batch_payload)) as batch_archive:
+            assert any(name.endswith("/notes.md") for name in batch_archive.namelist())
 
         assert service.delete_scan(user_id="u1", scan_id=created.scan_id)
         assert not (root / ".mw" / "scan" / created.scan_id).exists()

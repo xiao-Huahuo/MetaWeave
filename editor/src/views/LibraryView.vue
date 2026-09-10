@@ -896,11 +896,11 @@ function errorMessage(error: unknown): string {
           </DropdownMenuPortal>
         </DropdownMenu>
         <div class="library-actions" aria-label="图书馆操作">
-          <button class="tool-button" type="button" title="新增文件" @click="openCreateBookDialog">
+          <button class="tool-button v1-icon-button" type="button" title="新增文件" @click="openCreateBookDialog">
             <IcIcon name="new-file" :size="17" />
           </button>
           <button
-            class="tool-button"
+            class="tool-button v1-icon-button"
             :class="{ active: effectiveFavoritesOnly }"
             type="button"
             title="我的收藏"
@@ -911,7 +911,7 @@ function errorMessage(error: unknown): string {
             <IcIcon name="star" :size="17" />
           </button>
           <button
-            class="tool-button"
+            class="tool-button v1-icon-button"
             :class="{ active: effectivePrivacyOnly }"
             type="button"
             title="我的隐私"
@@ -922,10 +922,10 @@ function errorMessage(error: unknown): string {
           >
             <IcIcon name="visibility-off" :size="17" />
           </button>
-          <button class="tool-button" type="button" title="新增集锦" @click="openCreateCollectionDialog">
+          <button class="tool-button v1-icon-button" type="button" title="新增集锦" @click="openCreateCollectionDialog">
             <IcIcon name="new-folder" :size="17" />
           </button>
-          <button class="tool-button" :class="{ active: multiSelect }" type="button" title="多选" @click="multiSelect = !multiSelect">
+          <button class="tool-button v1-icon-button" :class="{ active: multiSelect }" type="button" title="多选" @click="multiSelect = !multiSelect">
             <IcIcon name="label" :size="17" />
             <span v-if="multiSelect" class="multi-indicator">{{ selectedIds.size }}</span>
           </button>

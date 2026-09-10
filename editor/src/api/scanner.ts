@@ -112,6 +112,19 @@ export async function fetchScanExport(userId: string, scanId: string, variant: S
   return { filename: encodedName ? decodeURIComponent(encodedName) : `scanner.${variant === 'ocr' ? 'md' : 'zip'}`, blob: await response.blob() }
 }
 
+/** Request one server-built ZIP containing every selected scanner projection. */
+export async function fetchScanBatchExport(userId: string, items: Array<{ scan_id: string; variant: ScannerVariant }>): Promise<{ filename: string; blob: Blob }> {
+  const response = await fetch(buildApiUrl(`${API_ROUTES.SCANNER}/export-batch`), {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ user_id: userId, items }),
+  })
+  if (!response.ok) throw new Error(`批量导出失败 (${response.status})`)
+  const disposition = response.headers.get('Content-Disposition') ?? ''
+  const encodedName = disposition.match(/filename\*=UTF-8''([^;]+)/i)?.[1]
+  return { filename: encodedName ? decodeURIComponent(encodedName) : 'scanner-batch.zip', blob: await response.blob() }
+}
+
 /** Permanently delete one terminal scanner record and its managed artifacts. */
 export function deleteScan(userId: string, scanId: string): Promise<{ ok: boolean; deleted: boolean }> {
   return apiDelete(`${API_ROUTES.SCANNER}/${encodeURIComponent(scanId)}`, { user_id: userId })

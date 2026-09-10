@@ -48,7 +48,7 @@ withDefaults(defineProps<{
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: calc(11px * var(--font-scale));
+  font-size: calc(13px * var(--font-scale));
   font-weight: 600;
 }
 
@@ -59,7 +59,7 @@ withDefaults(defineProps<{
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  font-size: calc(9px * var(--font-scale));
+  font-size: calc(12px * var(--font-scale));
   color: var(--color-text-tertiary);
 }
 

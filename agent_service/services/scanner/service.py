@@ -362,6 +362,29 @@ class ScannerService:
                 archive.write(asset, f"{asset_dir}/{asset.name}")
         return f"{stem}.zip", "application/zip", buffer.getvalue()
 
+    def export_batch_payload(
+        self,
+        *,
+        user_id: str,
+        items: list[tuple[str, ScannerVariant]],
+    ) -> tuple[str, str, bytes]:
+        """Combine selected per-record exports into one flat downloadable ZIP."""
+
+        buffer = io.BytesIO()
+        with zipfile.ZipFile(buffer, "w", compression=zipfile.ZIP_DEFLATED) as archive:
+            for scan_id, variant in items:
+                filename, _, content = self.export_payload(user_id=user_id, scan_id=scan_id, variant=variant)
+                folder = f"{Path(filename).stem}-{scan_id[-8:]}"
+                if filename.lower().endswith(".zip"):
+                    with zipfile.ZipFile(io.BytesIO(content), "r") as source_archive:
+                        for member in source_archive.infolist():
+                            if member.is_dir():
+                                continue
+                            archive.writestr(f"{folder}/{member.filename}", source_archive.read(member))
+                    continue
+                archive.writestr(f"{folder}/{filename}", content)
+        return "scanner-batch.zip", "application/zip", buffer.getvalue()
+
     def _submit(self, scan_id: str) -> None:
         """Wake the queue dispatcher after a durable record is committed."""
 

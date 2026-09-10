@@ -648,10 +648,10 @@ function historySummary(row: IngestionHistoryItem): string {
   min-width: 0;
   min-height: 0;
   overflow: auto;
-  border: 1px solid var(--color-border);
-  border-radius: 18px;
+  border: 0;
+  border-radius: 28px;
   background: var(--color-surface);
-  box-shadow: none;
+  box-shadow: 0 0 0 4px var(--library-form-ring);
 }
 
 .file-table-body {

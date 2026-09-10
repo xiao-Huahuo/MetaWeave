@@ -1,7 +1,7 @@
 /* Scanner API construction tests. */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { cancelScan, createFileScan, createUrlScan, listScans, saveScanToKnowledge, updateScanDraft } from '@/api/scanner'
+import { cancelScan, createFileScan, createUrlScan, fetchScanBatchExport, listScans, saveScanToKnowledge, updateScanDraft } from '@/api/scanner'
 
 describe('scanner API', () => {
   beforeEach(() => vi.restoreAllMocks())
@@ -42,5 +42,17 @@ describe('scanner API', () => {
     const response = await listScans('user/1')
 
     expect(response.max_concurrency).toBe(3)
+  })
+
+  it('posts every selected projection and reads the single ZIP response', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response('zip', {
+      status: 200,
+      headers: { 'Content-Type': 'application/zip', 'Content-Disposition': "attachment; filename*=UTF-8''scanner-batch.zip" },
+    }))
+
+    const result = await fetchScanBatchExport('u1', [{ scan_id: 'scan-1', variant: 'ocr' }])
+
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({ user_id: 'u1', items: [{ scan_id: 'scan-1', variant: 'ocr' }] })
+    expect(result.filename).toBe('scanner-batch.zip')
   })
 })

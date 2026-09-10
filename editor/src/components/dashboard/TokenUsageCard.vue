@@ -261,7 +261,7 @@ function baseOption({ xData, series, xRotate = 0 }: { xData: string[]; series: u
       axisTick: { show: false },
       axisLabel: {
         color: TXT_LABEL,
-        fontSize: 7,
+        fontSize: 11,
         rotate: xRotate || (xData.length > 8 ? 30 : 0),
         overflow: 'truncate',
       },
@@ -269,12 +269,12 @@ function baseOption({ xData, series, xRotate = 0 }: { xData: string[]; series: u
     yAxis: {
       type: 'value',
       splitLine: { lineStyle: { color: BORDER, type: 'dashed' } },
-      axisLabel: { color: TXT_LABEL, fontSize: 8 },
+      axisLabel: { color: TXT_LABEL, fontSize: 11 },
     },
     series,
     legend: {
       bottom: 0,
-      textStyle: { color: TXT_LABEL, fontSize: 9 },
+      textStyle: { color: TXT_LABEL, fontSize: 11 },
       itemWidth: 10,
       itemHeight: 6,
       icon: 'roundRect',
@@ -501,7 +501,7 @@ watch(
   align-items: center;
   gap: 2px;
   padding: 2px;
-  border: 1px solid var(--color-border);
+  border: 0;
   border-radius: 999px;
   background: var(--color-surface);
 }
@@ -522,14 +522,14 @@ watch(
 .chart-type-btn {
   position: relative;
   z-index: 1;
-  height: 22px;
+  height: 28px;
   padding: 0 8px;
   border: none;
   border-radius: 999px;
   background: transparent;
   color: var(--color-text-tertiary);
   font-family: var(--font-ui);
-  font-size: calc(9px * var(--font-scale));
+  font-size: calc(12px * var(--font-scale));
   cursor: pointer;
   outline: none;
 }
@@ -553,14 +553,14 @@ watch(
 }
 
 :deep(.filter-select.ui-dropdown-select-trigger) {
-  height: 22px;
+  height: 28px;
   padding: 0 6px;
-  border: 1px solid var(--color-border);
+  border: 0;
   border-radius: var(--radius-sm);
   background: var(--color-surface);
   color: var(--color-text-tertiary);
   font-family: var(--font-ui);
-  font-size: calc(9px * var(--font-scale));
+  font-size: calc(12px * var(--font-scale));
 }
 
 .chart-area {
@@ -584,6 +584,6 @@ watch(
 .placeholder-text {
   color: var(--color-text-tertiary);
   font-family: var(--font-ui);
-  font-size: calc(11px * var(--font-scale));
+  font-size: calc(12px * var(--font-scale));
 }
 </style>

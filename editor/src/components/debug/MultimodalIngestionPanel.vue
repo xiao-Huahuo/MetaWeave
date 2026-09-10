@@ -6,7 +6,7 @@
   and overlapped chunks without opening the editor or writing vector records.
 -->
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 import IcIcon from '@/components/common/IcIcon.vue'
 import MarkdownPreview from '@/components/editor_workspace/MarkdownPreview.vue'
@@ -40,6 +40,8 @@ const workspaceStore = useWorkspaceStore()
 const currentDir = ref('')
 const selectedPath = ref('')
 const activeObservationTab = ref<ObservationTab>('markdown')
+const observationTabsRef = ref<HTMLElement | null>(null)
+const observationSliderStyle = ref({ width: '0px', left: '0px' })
 const observation = ref<MultimodalIngestionObservation | null>(null)
 const loading = ref(false)
 const error = ref('')
@@ -74,6 +76,20 @@ const listGridColumns = computed(() => {
   const indexColumn = settingsStore.showIndexColumn ? ' minmax(110px, 0.55fr)' : ''
   return `minmax(220px, 1.6fr) minmax(150px, 0.8fr) minmax(90px, 0.5fr) minmax(80px, 0.4fr)${indexColumn}`
 })
+
+/** Aligns the observation slider after its data or active tab changes. */
+function updateObservationSlider(): void {
+  void nextTick(() => {
+    const active = observationTabsRef.value?.querySelector<HTMLElement>('.observation-tab.active')
+    if (!active) return
+    observationSliderStyle.value = {
+      width: `${active.offsetWidth}px`,
+      left: `${active.offsetLeft}px`,
+    }
+  })
+}
+
+watch([activeObservationTab, observation], updateObservationSlider)
 
 const visibleItems = computed(() => {
   const targetDir = currentDir.value
@@ -385,7 +401,8 @@ onBeforeUnmount(() => {
           </div>
         </div>
 
-        <div class="observation-tabs">
+        <div ref="observationTabsRef" class="observation-tabs">
+          <span class="observation-slider" :style="observationSliderStyle" aria-hidden="true"></span>
           <button
             class="observation-tab"
             :class="{ active: activeObservationTab === 'markdown' }"
@@ -503,14 +520,19 @@ onBeforeUnmount(() => {
 .file-browser,
 .observation-pane {
   min-height: 0;
+  border: 0;
+  border-radius: 28px;
   background: var(--color-surface-raised);
+  box-shadow: 0 0 0 4px var(--library-form-ring);
   overflow: hidden;
 }
 
 .file-browser {
   display: flex;
+  flex: 1 1 auto;
   flex-direction: column;
-  width: 100%;
+  width: auto;
+  margin: 4px;
   padding-right: 0;
   transition: padding-right 260ms ease;
 }
@@ -525,7 +547,7 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: var(--space-8);
   padding: var(--space-8);
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 0;
 }
 
 .navigation-tools,
@@ -541,7 +563,7 @@ onBeforeUnmount(() => {
   width: 28px;
   height: 28px;
   border: 0;
-  border-radius: 999px;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--color-text-secondary);
   cursor: pointer;
@@ -637,7 +659,7 @@ onBeforeUnmount(() => {
   top: 0;
   z-index: 2;
   padding: 9px var(--space-12);
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 0;
   background: var(--color-surface-raised);
   color: var(--color-text-muted);
   font-size: var(--font-size-xs);
@@ -648,7 +670,7 @@ onBeforeUnmount(() => {
   min-height: 38px;
   padding: 0 var(--space-12);
   border: 0;
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 0;
   background: transparent;
   color: var(--color-text-secondary);
   font: inherit;
@@ -691,13 +713,13 @@ onBeforeUnmount(() => {
 
 .observation-pane {
   position: absolute;
-  top: 0;
-  right: 0;
-  bottom: 0;
+  top: 4px;
+  right: 4px;
+  bottom: 4px;
   display: flex;
   flex-direction: column;
   width: var(--observation-pane-width);
-  border-left: 1px solid var(--color-border);
+  border-left: 0;
   transform: translateX(100%);
   transition: transform 260ms ease;
   pointer-events: none;
@@ -715,7 +737,7 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: var(--space-12);
   padding: var(--space-10) var(--space-12);
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 0;
   color: var(--color-text);
 }
 
@@ -750,8 +772,8 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: space-between;
   padding: 0 var(--space-12);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border: 0;
+  border-radius: 18px;
   background: var(--color-canvas-soft);
   color: var(--color-text-secondary);
   font-size: var(--font-size-xs);
@@ -763,15 +785,34 @@ onBeforeUnmount(() => {
 }
 
 .observation-tabs {
+  position: relative;
   display: flex;
   gap: 2px;
-  padding: 0 var(--space-12) var(--space-8);
+  align-self: flex-start;
+  margin: 0 var(--space-12) var(--space-8);
+  padding: 2px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface-raised);
+}
+
+.observation-slider {
+  position: absolute;
+  top: 2px;
+  height: calc(100% - 4px);
+  border-radius: 999px;
+  background: var(--color-primary-soft);
+  transition: left 250ms ease, width 250ms ease;
+  pointer-events: none;
 }
 
 .observation-tab {
-  border: 1px solid transparent;
-  border-radius: var(--radius-md);
-  padding: 4px 10px;
+  position: relative;
+  z-index: 1;
+  height: 28px;
+  border: 0;
+  border-radius: 999px;
+  padding: 0 10px;
   background: transparent;
   color: var(--color-text-secondary);
   font: inherit;
@@ -780,12 +821,10 @@ onBeforeUnmount(() => {
 }
 
 .observation-tab:hover {
-  background: var(--color-bg-hover);
+  color: var(--color-primary);
 }
 
 .observation-tab.active {
-  border-color: color-mix(in srgb, var(--color-primary) 32%, var(--color-border));
-  background: var(--color-primary-soft);
   color: var(--color-primary);
 }
 
@@ -817,8 +856,8 @@ onBeforeUnmount(() => {
 
 .chunk-card {
   flex: 0 0 auto;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
+  border: 0;
+  border-radius: 18px;
   background: var(--color-canvas-soft);
   overflow: hidden;
 }
@@ -829,7 +868,7 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: var(--space-10);
   padding: var(--space-8) var(--space-10);
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 0;
 }
 
 .chunk-card strong {
@@ -872,8 +911,10 @@ onBeforeUnmount(() => {
 
   .observation-pane {
     position: relative;
-    width: 100%;
+    inset: auto;
+    width: calc(100% - 8px);
     min-height: 420px;
+    margin: 4px;
     border-left: 0;
   }
 }

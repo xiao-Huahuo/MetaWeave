@@ -18,6 +18,8 @@ interface MockScan {
 async function mockBatchScannerWorkspace(page: Page): Promise<void> {
   const scans: MockScan[] = []
   let batchStartedAt = 0
+  let batchExportBody: unknown = null
+  let savedCount = 0
 
   const record = (scan: MockScan, index: number) => {
     const finished = batchStartedAt > 0 && Date.now() - batchStartedAt > 1_200
@@ -33,6 +35,12 @@ async function mockBatchScannerWorkspace(page: Page): Promise<void> {
       created_at: `2026-09-10T08:0${index}:00Z`, updated_at: '2026-09-10T08:10:00Z', finished_at: status === 'finished' ? '2026-09-10T08:12:00Z' : null,
     }
   }
+  const historicalRecord = () => ({
+    ...record({ scan_id: 'scan-history', source_name: '昨日归档.pdf', cancelled: false }, 3),
+    status: 'finished', stage: 'completed', stage_label: '解析完成', progress: 100,
+    no_ocr_markdown: '# 昨日归档', ocr_markdown: '# 昨日归档',
+    finished_at: '2026-09-09T08:12:00Z',
+  })
 
   await page.route('**/*', async (route) => {
     const request = route.request()
@@ -52,7 +60,15 @@ async function mockBatchScannerWorkspace(page: Page): Promise<void> {
       if (!batchStartedAt) batchStartedAt = Date.now()
       return json(record(scan, index))
     }
-    if (url.pathname === '/scanner' && request.method() === 'GET') return json({ scans: scans.map(record), max_concurrency: 2 })
+    if (url.pathname === '/scanner/export-batch' && request.method() === 'POST') {
+      batchExportBody = request.postDataJSON()
+      return route.fulfill({ status: 200, contentType: 'application/zip', headers: { 'Content-Disposition': "attachment; filename*=UTF-8''scanner-batch.zip" }, body: 'zip' })
+    }
+    if (/^\/scanner\/scan-\d+\/save$/u.test(url.pathname) && request.method() === 'POST') {
+      savedCount += 1
+      return json({ ok: true, path: `saved-${savedCount}.md`, assets: [] })
+    }
+    if (url.pathname === '/scanner' && request.method() === 'GET') return json({ scans: [...scans.map(record), historicalRecord()], max_concurrency: 2 })
     if (url.pathname === '/agent-queue/tasks') return json({ tasks: [], settings: { max_concurrency: 5 } })
     const cancelMatch = url.pathname.match(/^\/scanner\/(scan-\d+)\/cancel$/u)
     if (cancelMatch && request.method() === 'POST') {
@@ -78,6 +94,7 @@ async function mockBatchScannerWorkspace(page: Page): Promise<void> {
     userId: 'batch-smoke', knowledgeDir: 'D:/Knowledge', activeLibraryId: 'default',
     knowledgeLibraries: [{ libraryId: 'default', name: '批量扫描验收库', knowledgeDir: 'D:/Knowledge', libraryStorageDir: '.mw/library', isActive: true }],
   })))
+  await page.exposeFunction('batchScannerSmokeState', () => ({ batchExportBody, savedCount }))
 }
 
 /** Assert the queue page remains within its responsive content span. */
@@ -124,6 +141,11 @@ test('batch scanner submits independent tasks and matches queue layouts responsi
   await page.screenshot({ path: `${screenshotDirectory}/desktop-1024.png`, fullPage: true })
 
   await expect(page.locator('.queue-lane').nth(2).locator('.queue-task-card')).toHaveCount(3, { timeout: 8_000 })
+  await page.screenshot({ path: `${screenshotDirectory}/completed-actions-1024.png`, fullPage: true })
+  await page.getByRole('button', { name: '批量保存到知识库' }).click()
+  await expect.poll(async () => (await page.evaluate(async () => await (window as typeof window & { batchScannerSmokeState: () => Promise<{ savedCount: number }> }).batchScannerSmokeState())).savedCount).toBe(3)
+  await page.getByRole('button', { name: '批量导出 ZIP' }).click()
+  await expect.poll(async () => (await page.evaluate(async () => await (window as typeof window & { batchScannerSmokeState: () => Promise<{ batchExportBody: { items?: unknown[] } | null }> }).batchScannerSmokeState())).batchExportBody?.items?.length ?? 0).toBe(3)
   await page.locator('.queue-lane').nth(2).locator('.queue-task-card').first().click()
   await expect(page.getByRole('dialog', { name: '扫描结果' })).toBeVisible()
   await page.getByRole('dialog', { name: '扫描结果' }).getByRole('button', { name: '关闭', exact: true }).click()
@@ -141,6 +163,11 @@ test('batch scanner submits independent tasks and matches queue layouts responsi
   await page.emulateMedia({ reducedMotion: 'reduce' })
   const reducedDuration = await page.locator('.queue-page-slider').evaluate(element => Number.parseFloat(getComputedStyle(element).transitionDuration))
   expect(reducedDuration).toBeLessThan(0.001)
+
+  await page.getByRole('button', { name: '历史', exact: true }).click()
+  await expect(page.locator('.history-list .queue-lane')).toHaveCount(3)
+  await expect(page.locator('.history-list .queue-lane').nth(2)).toContainText('昨日归档.pdf')
+  await page.screenshot({ path: `${screenshotDirectory}/history-1024.png`, fullPage: true })
 
   await page.getByRole('button', { name: '娱乐功能' }).click()
   await page.getByRole('button', { name: '任务队列', exact: true }).click()

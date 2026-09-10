@@ -13,12 +13,13 @@ import CodePreview from '@/components/editor_workspace/CodePreview.vue'
 import EditorPaneToolbar from '@/components/editor_workspace/EditorPaneToolbar.vue'
 import MarkdownPreview from '@/components/editor_workspace/MarkdownPreview.vue'
 import MultimodalPreview from '@/components/editor_workspace/MultimodalPreview.vue'
-import { fetchScanExport, saveScanToKnowledge, type ScannerRecord, type ScannerVariant } from '@/api/scanner'
+import { type ScannerRecord, type ScannerVariant } from '@/api/scanner'
 import { previewKnowledgeFile } from '@/api/knowledge'
 import { useScannerStore } from '@/stores/scanner'
 import { useSettingsStore } from '@/stores/settings'
 import { useWorkspaceStore } from '@/stores/workspace'
 import type { EditorWorkspaceMode, FilePreviewPayload } from '@/types/knowledge'
+import { preferredScannerVariant, useScannerRecordActions } from '@/components/scanner_view/useScannerRecordActions'
 
 const props = defineProps<{ record: ScannerRecord }>()
 const emit = defineEmits<{ back: []; updated: [record: ScannerRecord] }>()
@@ -26,7 +27,8 @@ const emit = defineEmits<{ back: []; updated: [record: ScannerRecord] }>()
 const scannerStore = useScannerStore()
 const settingsStore = useSettingsStore()
 const workspaceStore = useWorkspaceStore()
-const variant = ref<ScannerVariant>(props.record.ocr_enabled ? 'ocr' : 'no_ocr')
+const scannerActions = useScannerRecordActions()
+const variant = ref<ScannerVariant>(preferredScannerVariant(props.record))
 const viewMode = ref<EditorWorkspaceMode>('preview')
 const sourceViewMode = ref<EditorWorkspaceMode>(props.record.source_text !== null ? 'edit' : 'preview')
 const markdownDraft = ref('')
@@ -162,42 +164,21 @@ function flushSourceSave(): void {
   void scannerStore.saveSource(sourceDraft.value, props.record.scan_id)
 }
 
-/** Resolve the absolute managed source path for native reveal. */
-function absoluteSourcePath(): string {
-  const root = settingsStore.profile.knowledgeDir.replace(/[\\/]+$/u, '')
-  const child = props.record.source_path.replace(/\//gu, window.agentEditorDesktop?.platform === 'win32' ? '\\' : '/')
-  return `${root}${window.agentEditorDesktop?.platform === 'win32' ? '\\' : '/'}${child}`
-}
-
 /** Reveal the managed original copy in the operating-system file manager. */
 async function revealSource(): Promise<void> {
-  await window.agentEditorDesktop?.showItemInFolder?.(absoluteSourcePath())
+  await scannerActions.revealSource(props.record)
 }
 
 /** Toggle scanner favorites through the shared persisted favorites store. */
 async function toggleFavorite(): Promise<void> {
-  const favoritesStore = (await import('@/stores/favorites')).useFavoritesStore()
-  try {
-    await favoritesStore.toggle('scanner', props.record.scan_id, props.record.library_id)
-    workspaceStore.showToast(favoritesStore.isFavorite('scanner', props.record.scan_id, props.record.library_id) ? '已收藏' : '已取消收藏')
-  } catch (error) {
-    workspaceStore.showToast(error instanceof Error ? error.message : '收藏操作失败', 5000)
-  }
+  await scannerActions.toggleFavorite(props.record)
 }
 
 /** Save into the knowledge root after the existing conflict dialog resolves. */
 async function saveToKnowledge(): Promise<void> {
   busyAction.value = 'save'
   try {
-    await workspaceStore.loadKnowledgeTree()
-    const filename = `${props.record.source_name.replace(/\.[^.]+$/u, '')}.md`
-    const strategy = await workspaceStore.promptConflictStrategy('', [filename], 'scanner')
-    if (!strategy) return
-    const result = await saveScanToKnowledge(settingsStore.profile.userId, props.record.scan_id, variant.value, strategy)
-    await workspaceStore.loadKnowledgeTree()
-    workspaceStore.showToast(`已保存到 ${result.path}`)
-  } catch (error) {
-    workspaceStore.showToast(error instanceof Error ? error.message : '保存失败', 5000)
+    await scannerActions.saveToKnowledge(props.record, variant.value)
   } finally {
     busyAction.value = ''
   }
@@ -207,21 +188,7 @@ async function saveToKnowledge(): Promise<void> {
 async function exportOutside(): Promise<void> {
   busyAction.value = 'export'
   try {
-    const result = await fetchScanExport(settingsStore.profile.userId, props.record.scan_id, variant.value)
-    if (window.agentEditorDesktop?.saveFileAs) {
-      const saved = await window.agentEditorDesktop.saveFileAs({ filename: result.filename, data: await result.blob.arrayBuffer() })
-      if (saved) workspaceStore.showToast(`已导出到 ${saved}`)
-      return
-    }
-    const url = URL.createObjectURL(result.blob)
-    const anchor = document.createElement('a')
-    anchor.href = url
-    anchor.download = result.filename
-    anchor.click()
-    URL.revokeObjectURL(url)
-    workspaceStore.showToast('已开始下载')
-  } catch (error) {
-    workspaceStore.showToast(error instanceof Error ? error.message : '导出失败', 5000)
+    await scannerActions.exportOutside(props.record, variant.value)
   } finally {
     busyAction.value = ''
   }
@@ -229,13 +196,7 @@ async function exportOutside(): Promise<void> {
 
 /** Copy one short or full scanner value to the system clipboard. */
 async function copyText(value: string, label: string): Promise<void> {
-  try {
-    if (window.agentEditorDesktop?.writeClipboardText) await window.agentEditorDesktop.writeClipboardText(value)
-    else await navigator.clipboard.writeText(value)
-    workspaceStore.showToast(`已复制${label}`)
-  } catch (error) {
-    workspaceStore.showToast(error instanceof Error ? error.message : `复制${label}失败`, 5000)
-  }
+  await scannerActions.copyText(value, label)
 }
 
 watch(() => [props.record.scan_id, variant.value, props.record.updated_at], syncDrafts, { immediate: true })

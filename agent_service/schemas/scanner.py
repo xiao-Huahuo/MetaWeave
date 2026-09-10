@@ -50,6 +50,20 @@ class ScannerSaveRequest(BaseModel):
     conflict_strategy: ScannerConflictStrategy = "overwrite"
 
 
+class ScannerBatchExportItem(BaseModel):
+    """Select one completed scanner projection for a combined ZIP export."""
+
+    scan_id: str = Field(min_length=1, max_length=DEFAULT_BUSINESS_LIMITS.medium_name_max_length)
+    variant: ScannerVariant
+
+
+class ScannerBatchExportRequest(BaseModel):
+    """Request one ZIP containing every selected scanner export payload."""
+
+    user_id: str = Field(min_length=1, max_length=DEFAULT_BUSINESS_LIMITS.medium_name_max_length)
+    items: list[ScannerBatchExportItem] = Field(min_length=1)
+
+
 class ScannerOut(BaseModel):
     """Complete scanner history and editable projection payload."""
 

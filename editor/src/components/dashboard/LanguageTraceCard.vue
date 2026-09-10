@@ -7,9 +7,10 @@
 -->
 
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed, nextTick, onMounted, ref, watch } from 'vue'
 
 import ThinkingSteps from '@/components/chat/ThinkingSteps.vue'
+import DropdownSelect from '@/components/ui/dropdown-menu/DropdownSelect.vue'
 import { buildExactRequestAssembly, useObsData, type AssemblyBlock } from '@/composable/useObsData'
 import { useChatStore } from '@/stores/chat'
 import { useSettingsStore } from '@/stores/settings'
@@ -21,10 +22,27 @@ const props = withDefaults(defineProps<{
 })
 
 const contextMode = ref<'raw' | 'readable'>('readable')
+const contextToggleRef = ref<HTMLElement | null>(null)
+const contextSliderStyle = ref({ width: '0px', left: '0px' })
 const obs = useObsData()
 const chatStore = useChatStore()
 const settingsStore = useSettingsStore()
 const selectedCallIndex = ref(0)
+
+/** Keeps the Debug toggle slider aligned with the active mode button. */
+function updateContextSlider(): void {
+  void nextTick(() => {
+    const active = contextToggleRef.value?.querySelector<HTMLElement>('.mode-button.active')
+    if (!active) return
+    contextSliderStyle.value = {
+      width: `${active.offsetWidth}px`,
+      left: `${active.offsetLeft}px`,
+    }
+  })
+}
+
+onMounted(updateContextSlider)
+watch(contextMode, updateContextSlider)
 
 const cardTitle = computed(() => props.mode === 'trace' ? '语言轨迹' : '上下文拼装')
 
@@ -40,6 +58,10 @@ const thinkingModeLabel = computed(() => {
 })
 
 const contextSnapshots = computed(() => obs.contextSnapshots.value)
+const contextCallOptions = computed(() => contextSnapshots.value.map((snapshot, index) => ({
+  value: index,
+  label: `#${snapshot.call_index} ${snapshot.node} · ${snapshot.model}`,
+})))
 watch(() => contextSnapshots.value.length, (length) => {
   selectedCallIndex.value = Math.max(0, length - 1)
 }, { immediate: true })
@@ -81,32 +103,32 @@ const rawContextJson = computed(() => {
 
       <div v-else class="card-scroll context-view">
         <div class="context-toolbar">
-          <button
-            class="mode-button"
-            :class="{ active: contextMode === 'readable' }"
-            type="button"
-            @click="contextMode = 'readable'"
-          >
-            可读格式
-          </button>
-          <button
-            class="mode-button"
-            :class="{ active: contextMode === 'raw' }"
-            type="button"
-            @click="contextMode = 'raw'"
-          >
-            Raw
-          </button>
-          <select
+          <div ref="contextToggleRef" class="context-mode-toggle">
+            <span class="context-mode-slider" :style="contextSliderStyle" aria-hidden="true"></span>
+            <button
+              class="mode-button"
+              :class="{ active: contextMode === 'readable' }"
+              type="button"
+              @click="contextMode = 'readable'"
+            >
+              可读格式
+            </button>
+            <button
+              class="mode-button"
+              :class="{ active: contextMode === 'raw' }"
+              type="button"
+              @click="contextMode = 'raw'"
+            >
+              Raw
+            </button>
+          </div>
+          <DropdownSelect
             v-if="contextSnapshots.length > 0"
-            v-model.number="selectedCallIndex"
+            v-model="selectedCallIndex"
             class="call-select"
             aria-label="选择模型调用"
-          >
-            <option v-for="(snapshot, index) in contextSnapshots" :key="index" :value="index">
-              #{{ snapshot.call_index }} {{ snapshot.node }} · {{ snapshot.model }}
-            </option>
-          </select>
+            :options="contextCallOptions"
+          />
         </div>
 
         <div v-if="contextMode === 'readable'" class="source-groups">
@@ -210,10 +232,11 @@ const rawContextJson = computed(() => {
   min-height: 0;
   flex-direction: column;
   overflow: hidden;
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
+  border: 0;
+  border-radius: 28px;
   background: var(--color-surface);
-  box-shadow: var(--shadow-window);
+  box-shadow: 0 0 0 4px var(--library-form-ring);
+  margin-inline: 4px;
 }
 
 .trace-surface {
@@ -263,45 +286,87 @@ const rawContextJson = computed(() => {
 
 .context-toolbar {
   display: flex;
+  align-items: center;
   gap: var(--space-6);
   margin-bottom: var(--space-10);
 }
 
-.call-select {
-  min-width: 0;
+.context-mode-toggle {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-surface);
+}
+
+.context-mode-slider {
+  position: absolute;
+  top: 2px;
+  height: calc(100% - 4px);
+  border-radius: 999px;
+  background: var(--color-primary-soft);
+  transition: left 250ms ease, width 250ms ease;
+  z-index: 0;
+  pointer-events: none;
+}
+
+:deep(.call-select.ui-dropdown-select-trigger) {
+  min-width: 160px;
+  height: 28px;
   margin-left: auto;
   border: 1px solid var(--color-border);
-  border-radius: 4px;
-  padding: 3px var(--space-8);
+  border-radius: 999px;
+  padding: 0 12px;
   color: var(--color-text-secondary);
-  background: var(--color-surface);
+  background: var(--color-canvas);
   font-family: var(--font-ui);
-  font-size: calc(9px * var(--font-scale));
+  font-size: calc(12px * var(--font-scale));
+}
+
+:deep(.call-select.ui-dropdown-select-trigger:hover) {
+  border-color: color-mix(in srgb, var(--color-primary) 40%, transparent);
+  color: var(--color-primary);
+}
+
+:deep(.call-select.ui-dropdown-select-trigger[data-state='open']) {
+  border-color: color-mix(in srgb, var(--color-primary) 45%, transparent);
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+}
+
+:deep(.call-select.ui-dropdown-select-trigger > svg) {
+  opacity: 0.62;
+  transition: transform var(--transition-fast);
+}
+
+:deep(.call-select.ui-dropdown-select-trigger[data-state='open'] > svg) {
+  transform: rotate(180deg);
 }
 
 .mode-button {
   position: relative;
   z-index: 1;
-  border: 1px solid transparent;
+  border: 0;
   border-radius: 999px;
-  padding: 3px 10px;
+  height: 28px;
+  padding: 0 8px;
   background: transparent;
   color: var(--color-text-tertiary);
   cursor: pointer;
   font-family: var(--font-ui);
-  font-size: calc(9px * var(--font-scale));
-  transition: color var(--transition-fast), border-color var(--transition-fast), background var(--transition-fast);
+  font-size: calc(12px * var(--font-scale));
+  transition: color var(--transition-fast);
 }
 
 .mode-button:hover {
-  color: var(--color-text-secondary);
-  background: var(--color-bg-hover);
+  color: var(--color-primary);
 }
 
 .mode-button.active {
-  border-color: color-mix(in srgb, var(--color-primary) 32%, var(--color-border));
   color: var(--color-primary);
-  background: var(--color-primary-soft);
 }
 
 .source-groups {
@@ -323,7 +388,7 @@ const rawContextJson = computed(() => {
   gap: var(--space-10);
   min-height: 58px;
   min-width: 0;
-  border: 1px solid var(--color-border);
+  border: 0;
   border-radius: 6px;
   padding: var(--space-10) var(--space-12);
   background: rgba(255, 255, 255, 0.02);
@@ -358,7 +423,7 @@ const rawContextJson = computed(() => {
 
 .assembly-block,
 .source-group {
-  border: 1px solid var(--color-border);
+  border: 0;
   border-radius: 6px;
   overflow: hidden;
   background: rgba(255, 255, 255, 0.02);
@@ -370,7 +435,7 @@ const rawContextJson = computed(() => {
   align-items: center;
   gap: var(--space-6);
   padding: var(--space-6) var(--space-8);
-  border-bottom: 1px solid var(--color-border-light);
+  border-bottom: 0;
 }
 
 .assembly-header {
@@ -395,7 +460,7 @@ const rawContextJson = computed(() => {
 
 .source-title {
   color: var(--source-accent);
-  font-size: calc(10px * var(--font-scale));
+  font-size: calc(12px * var(--font-scale));
 }
 
 .assembly-order,
@@ -407,24 +472,24 @@ const rawContextJson = computed(() => {
 
 .assembly-order {
   color: var(--color-text-tertiary);
-  font-size: calc(9px * var(--font-scale));
+  font-size: calc(12px * var(--font-scale));
 }
 
 .assembly-title {
   color: var(--source-accent);
-  font-size: calc(10px * var(--font-scale));
+  font-size: calc(12px * var(--font-scale));
 }
 
 .assembly-kind,
 .assembly-count {
   color: var(--color-text-tertiary);
-  font-size: calc(9px * var(--font-scale));
+  font-size: calc(12px * var(--font-scale));
 }
 
 .source-count {
   margin-left: auto;
   color: var(--color-text-tertiary);
-  font-size: calc(9px * var(--font-scale));
+  font-size: calc(12px * var(--font-scale));
 }
 
 .source-items,
@@ -438,7 +503,7 @@ const rawContextJson = computed(() => {
 .source-text {
   margin: 0;
   color: var(--color-text-secondary);
-  font-size: calc(10px * var(--font-scale));
+  font-size: calc(12px * var(--font-scale));
   line-height: var(--line-height-relaxed);
   white-space: pre-wrap;
   word-break: break-word;
@@ -448,7 +513,7 @@ const rawContextJson = computed(() => {
   min-height: 100%;
   margin: 0;
   color: var(--color-text-secondary);
-  font-size: calc(10px * var(--font-scale));
+  font-size: calc(12px * var(--font-scale));
   line-height: var(--line-height-relaxed);
   white-space: pre-wrap;
   word-break: break-word;
@@ -481,7 +546,17 @@ const rawContextJson = computed(() => {
 .trace-view :deep(.thinking-steps),
 .trace-view :deep(.step-item),
 .trace-view :deep(.step-detail) {
-  border-color: transparent;
+  border: 0;
+}
+
+.trace-view :deep(.bar-text),
+.trace-view :deep(.step-chevron),
+.trace-view :deep(.step-node),
+.trace-view :deep(.step-summary),
+.trace-view :deep(.step-tool-tag),
+.trace-view :deep(.detail-label),
+.trace-view :deep(.detail-value) {
+  font-size: calc(12px * var(--font-scale));
 }
 
 @media (max-width: 720px) {
@@ -489,7 +564,7 @@ const rawContextJson = computed(() => {
     flex-wrap: wrap;
   }
 
-  .call-select {
+  :deep(.call-select.ui-dropdown-select-trigger) {
     width: 100%;
     margin-left: 0;
   }

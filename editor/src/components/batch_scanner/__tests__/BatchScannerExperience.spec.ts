@@ -11,6 +11,7 @@ import batchScannerSource from '@/views/BatchScannerView.vue?raw'
 import agentCardSource from '@/components/agent_queue/AgentQueueTaskCard.vue?raw'
 import batchCardSource from '@/components/batch_scanner/BatchScannerTaskCard.vue?raw'
 import batchDialogSource from '@/components/batch_scanner/BatchScannerTaskDialog.vue?raw'
+import { partitionFinishedScans } from '@/components/batch_scanner/batchScannerBuckets'
 
 /** Build one complete scanner record for card interaction checks. */
 function scannerRecord(status: ScannerRecord['status'] = 'running'): ScannerRecord {
@@ -82,6 +83,17 @@ describe('batch scanner experience', () => {
     expect(batchCardSource).toMatch(/\.queue-task-card \{[^}]*border-radius:20px;/s)
   })
 
+  it('keeps only local-today completions on the board and sends older completions to history', () => {
+    const now = new Date(2026, 8, 10, 12)
+    const today = { ...scannerRecord('finished'), scan_id: 'today', finished_at: new Date(2026, 8, 10, 0, 1).toISOString() }
+    const older = { ...scannerRecord('finished'), scan_id: 'older', finished_at: new Date(2026, 8, 9, 23, 59).toISOString() }
+
+    const buckets = partitionFinishedScans([today, older, scannerRecord('running')], now)
+
+    expect(buckets.today.map(record => record.scan_id)).toEqual(['today'])
+    expect(buckets.history.map(record => record.scan_id)).toEqual(['older'])
+  })
+
   it('exposes real progress and single-record cancellation from a running card', async () => {
     const record = scannerRecord()
     const wrapper = mount(BatchScannerTaskCard, { props: { record }, global: { stubs: { IcIcon: true } } })
@@ -89,5 +101,18 @@ describe('batch scanner experience', () => {
     expect(wrapper.get('[role="progressbar"]').attributes('aria-valuenow')).toBe('42.6')
     await wrapper.get('[aria-label="终止扫描"]').trigger('click')
     expect(wrapper.emitted('cancel')?.[0]?.[0]).toEqual(record)
+  })
+
+  it('places favorite and copy above completed cards and reveal, save, export below', async () => {
+    const record = { ...scannerRecord('finished'), finished_at: '2026-09-10T10:02:00Z' }
+    const wrapper = mount(BatchScannerTaskCard, { props: { record, favorite: true }, global: { stubs: { IcIcon: true } } })
+
+    expect(wrapper.findAll('.queue-card-top-actions button').map(button => button.attributes('aria-label'))).toEqual(['取消收藏', '复制全文'])
+    expect(wrapper.findAll('.queue-card-bottom-actions button').map(button => button.attributes('aria-label'))).toEqual(['打开文件夹', '保存到知识库', '导出'])
+    await wrapper.get('[aria-label="复制全文"]').trigger('click')
+    await wrapper.get('[aria-label="保存到知识库"]').trigger('click')
+
+    expect(wrapper.emitted('copy')?.[0]?.[0]).toEqual(record)
+    expect(wrapper.emitted('save')?.[0]?.[0]).toEqual(record)
   })
 })

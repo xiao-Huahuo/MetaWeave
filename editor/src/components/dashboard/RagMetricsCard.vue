@@ -148,14 +148,14 @@ const lineOption = computed(() => {
       data: rows.map((r) => `R${r.turn}`),
       axisLine: { lineStyle: { color: BORDER } },
       axisTick: { show: false },
-      axisLabel: { color: TXT_LABEL, fontSize: 8 },
+      axisLabel: { color: TXT_LABEL, fontSize: 11 },
     },
     yAxis: {
       type: 'value',
       min: 0,
       max: 100,
       splitLine: { lineStyle: { color: BORDER, type: 'dashed' } },
-      axisLabel: { color: TXT_LABEL, fontSize: 8 },
+      axisLabel: { color: TXT_LABEL, fontSize: 11 },
     },
     series: [
       {
@@ -191,7 +191,7 @@ const lineOption = computed(() => {
     ],
     legend: {
       bottom: 0,
-      textStyle: { color: TXT_LABEL, fontSize: 9 },
+      textStyle: { color: TXT_LABEL, fontSize: 11 },
       itemWidth: 10,
       itemHeight: 6,
       icon: 'roundRect',
@@ -278,16 +278,16 @@ const lineOption = computed(() => {
   flex-shrink: 0;
 }
 
-.range-select {
+:deep(.range-select.ui-dropdown-select-trigger) {
   min-width: 88px;
-  height: 24px;
-  border: 1px solid var(--color-border);
+  height: 28px;
+  border: 0;
   border-radius: var(--radius-sm);
-  color: var(--color-text-secondary);
   background: var(--color-surface);
+  color: var(--color-text-tertiary);
   font-family: var(--font-ui);
-  font-size: calc(9px * var(--font-scale));
-  padding: 0 var(--space-6);
+  font-size: calc(12px * var(--font-scale));
+  padding: 0 6px;
 }
 
 .capsule-slider {
@@ -305,12 +305,13 @@ const lineOption = computed(() => {
   position: relative;
   z-index: 1;
   font-family: var(--font-ui);
-  font-size: calc(9px * var(--font-scale));
+  height: 28px;
+  font-size: calc(12px * var(--font-scale));
   color: var(--color-text-tertiary);
   background: transparent;
   border: none;
   border-radius: 999px;
-  padding: 2px 8px;
+  padding: 0 8px;
   cursor: pointer;
   outline: none;
 }
@@ -368,7 +369,7 @@ const lineOption = computed(() => {
 
 .gauge-label {
   font-family: var(--font-ui);
-  font-size: calc(8px * var(--font-scale));
+  font-size: calc(12px * var(--font-scale));
   line-height: 1.3;
   color: var(--color-text-tertiary);
   text-transform: lowercase;
@@ -417,7 +418,7 @@ const lineOption = computed(() => {
   }
 
   .gauge-label {
-    font-size: calc(7px * var(--font-scale));
+    font-size: calc(11px * var(--font-scale));
   }
 }
 </style>

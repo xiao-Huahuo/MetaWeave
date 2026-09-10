@@ -141,15 +141,15 @@ const lineOption = computed(() => {
       data: items.map((t) => `M${t.index}`),
       axisLine: { lineStyle: { color: GRID_COLOR } },
       axisTick: { show: false },
-      axisLabel: { color: TXT_LABEL, fontSize: 9 },
+      axisLabel: { color: TXT_LABEL, fontSize: 11 },
     },
     yAxis: {
       type: 'value',
       name: '秒',
       min: 0,
-      nameTextStyle: { color: TXT_LABEL, fontSize: 9 },
+      nameTextStyle: { color: TXT_LABEL, fontSize: 11 },
       splitLine: { lineStyle: { color: GRID_COLOR, type: 'dashed' } },
-      axisLabel: { color: TXT_LABEL, fontSize: 9 },
+      axisLabel: { color: TXT_LABEL, fontSize: 11 },
     },
     series: [{
       type: 'line',
@@ -204,14 +204,14 @@ const barOption = computed(() => {
     xAxis: {
       type: 'category',
       data: items.map((d) => d.node),
-      axisLabel: { color: TXT_LABEL, fontSize: 7, rotate: items.length > 4 ? 30 : 0 },
+      axisLabel: { color: TXT_LABEL, fontSize: 11, rotate: items.length > 4 ? 30 : 0 },
       axisTick: { show: false },
     },
     yAxis: {
       type: 'value',
       max: 100,
       splitLine: { lineStyle: { color: GRID_COLOR, type: 'dashed' } },
-      axisLabel: { color: TXT_LABEL, fontSize: 7, formatter: '{value}%' },
+      axisLabel: { color: TXT_LABEL, fontSize: 11, formatter: '{value}%' },
     },
     series: [{
       type: 'bar',
@@ -233,7 +233,7 @@ const roseOption = computed(() => {
     backgroundColor: 'transparent',
     legend: {
       bottom: 0,
-      textStyle: { color: TXT_LABEL, fontSize: 7 },
+      textStyle: { color: TXT_LABEL, fontSize: 11 },
       itemWidth: 8,
       itemHeight: 6,
       icon: 'roundRect',
@@ -359,18 +359,18 @@ function onLineClick(params: { componentType?: string; dataIndex?: number }): vo
 .range-label {
   color: var(--color-text-tertiary);
   font-family: var(--font-ui);
-  font-size: calc(9px * var(--font-scale));
+  font-size: calc(12px * var(--font-scale));
 }
 
 :deep(.range-select.ui-dropdown-select-trigger) {
   min-width: 96px;
-  height: 26px;
-  border: 1px solid var(--color-border);
+  height: 28px;
+  border: 0;
   border-radius: var(--radius-sm);
   color: var(--color-text-secondary);
   background: var(--color-surface);
   font-family: var(--font-ui);
-  font-size: calc(9px * var(--font-scale));
+  font-size: calc(12px * var(--font-scale));
   padding: 0 var(--space-6);
 }
 
@@ -424,7 +424,7 @@ function onLineClick(params: { componentType?: string; dataIndex?: number }): vo
 
 .axis-text {
   fill: var(--color-text-secondary);
-  font-size: calc(4px * var(--font-scale));
+  font-size: calc(4.5px * var(--font-scale));
   font-family: var(--font-ui);
 }
 
@@ -456,7 +456,7 @@ function onLineClick(params: { componentType?: string; dataIndex?: number }): vo
 
 .detail-title {
   font-family: var(--font-ui);
-  font-size: calc(10px * var(--font-scale));
+  font-size: calc(12px * var(--font-scale));
   color: var(--color-text-primary);
   min-width: 0;
   overflow-wrap: anywhere;
@@ -464,14 +464,14 @@ function onLineClick(params: { componentType?: string; dataIndex?: number }): vo
 
 .detail-time {
   font-family: var(--font-ui);
-  font-size: calc(9px * var(--font-scale));
+  font-size: calc(12px * var(--font-scale));
   color: var(--color-accent);
   margin-left: auto;
 }
 
 .detail-prompt {
   font-family: var(--font-text);
-  font-size: calc(10px * var(--font-scale));
+  font-size: calc(12px * var(--font-scale));
   color: var(--color-text-secondary);
   line-height: var(--line-height-relaxed);
   white-space: pre-wrap;
@@ -510,7 +510,7 @@ function onLineClick(params: { componentType?: string; dataIndex?: number }): vo
 
 .col-label {
   font-family: var(--font-ui);
-  font-size: calc(8px * var(--font-scale));
+  font-size: calc(12px * var(--font-scale));
   color: var(--color-text-tertiary);
   margin-bottom: var(--space-4);
   flex-shrink: 0;

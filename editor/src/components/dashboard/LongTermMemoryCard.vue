@@ -65,7 +65,8 @@ function formatScore(value: number | undefined): string {
 <template>
   <DashboardCardFrame title="长期记忆召回" :status="windowStatus">
     <div class="card-body">
-      <div class="chart-toolbar">
+      <div class="chart-toolbar" :class="{ post: activeTab === 'post' }">
+        <span class="chart-mode-slider" aria-hidden="true"></span>
         <button class="chart-mode-btn" :class="{ active: activeTab === 'pre' }" @click="activeTab = 'pre'">ReRank 前</button>
         <button class="chart-mode-btn" :class="{ active: activeTab === 'post' }" @click="activeTab = 'post'">ReRank 后</button>
       </div>
@@ -131,31 +132,51 @@ function formatScore(value: number | undefined): string {
 }
 
 .chart-toolbar {
+  position: relative;
   display: flex;
-  gap: var(--space-6);
+  gap: 2px;
+  align-self: flex-start;
+  padding: 2px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
   flex-shrink: 0;
 }
 
+.chart-mode-slider {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: calc(50% - 3px);
+  height: calc(100% - 4px);
+  border-radius: 999px;
+  background: var(--color-primary-soft);
+  transition: transform 250ms ease;
+  pointer-events: none;
+}
+
+.chart-toolbar.post .chart-mode-slider { transform: translateX(calc(100% + 2px)); }
+
 .chart-mode-btn {
-  font-size: calc(9px * var(--font-scale));
+  position: relative;
+  z-index: 1;
+  min-width: 72px;
+  height: 28px;
+  font-size: calc(12px * var(--font-scale));
   color: var(--color-text-tertiary);
   background: transparent;
-  border: 1px solid transparent;
-  border-radius: var(--radius-sm);
-  padding: 2px 8px;
+  border: 0;
+  border-radius: 999px;
+  padding: 0 8px;
   cursor: pointer;
   transition: color var(--transition-fast), background var(--transition-fast), border-color var(--transition-fast);
 }
 
 .chart-mode-btn:hover {
-  color: var(--color-text-secondary);
-  background: var(--color-bg-hover);
+  color: var(--color-primary);
 }
 
 .chart-mode-btn.active {
   color: var(--color-primary);
-  border-color: color-mix(in srgb, var(--color-primary) 32%, var(--color-border));
-  background: var(--color-primary-soft);
 }
 
 .memory-list {
@@ -165,9 +186,9 @@ function formatScore(value: number | undefined): string {
 }
 
 .memory-item {
-  border: 1px solid var(--memory-accent);
+  border: 0;
   background: var(--color-surface-raised);
-  border-radius: 6px;
+  border-radius: 18px;
   padding: var(--space-8);
 }
 
@@ -179,14 +200,14 @@ function formatScore(value: number | undefined): string {
 }
 
 .memory-type {
-  font-size: calc(8px * var(--font-scale));
+  font-size: calc(12px * var(--font-scale));
   color: var(--memory-accent);
   text-transform: uppercase;
 }
 
 .memory-score {
   margin-left: auto;
-  font-size: calc(8px * var(--font-scale));
+  font-size: calc(12px * var(--font-scale));
   color: var(--color-text-tertiary);
 }
 
@@ -198,13 +219,13 @@ function formatScore(value: number | undefined): string {
 }
 
 .memory-meta-item {
-  font-size: calc(8px * var(--font-scale));
+  font-size: calc(12px * var(--font-scale));
   color: var(--color-text-tertiary);
 }
 
 .memory-text {
   margin: 0;
-  font-size: calc(10px * var(--font-scale));
+  font-size: calc(12px * var(--font-scale));
   color: var(--color-text-secondary);
   line-height: var(--line-height-relaxed);
   white-space: pre-wrap;

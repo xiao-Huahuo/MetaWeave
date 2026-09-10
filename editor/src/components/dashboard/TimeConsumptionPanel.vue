@@ -66,7 +66,7 @@ const typePieOption = computed(() => ({
         show: true,
         formatter: '{b}\n{c}',
         color: '#5f6673',
-        fontSize: 10,
+        fontSize: 12,
         fontWeight: 'bold',
         lineHeight: 14,
       },
@@ -268,7 +268,7 @@ function fileTypeOf(node: KnowledgeFileNode): string {
   padding: 0 2px;
   color: var(--color-text-primary);
   font-family: var(--font-ui);
-  font-size: calc(11px * var(--font-scale));
+  font-size: calc(13px * var(--font-scale));
   font-weight: 600;
 }
 
@@ -319,7 +319,7 @@ function fileTypeOf(node: KnowledgeFileNode): string {
   gap: var(--space-8);
   min-height: 58px;
   min-width: 0;
-  border: 1px solid var(--color-border);
+  border: 0;
   border-radius: 28px;
   padding: var(--space-10) var(--space-12);
   background: rgba(255, 255, 255, 0.02);

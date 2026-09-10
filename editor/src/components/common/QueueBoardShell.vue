@@ -22,9 +22,11 @@ const props = withDefaults(defineProps<{
   newLabel: string
   concurrency: string
   concurrencyOptions?: QueueBoardOption[]
+  historyColumns?: number
 }>(), {
   historyLabel: '历史',
   concurrencyOptions: () => [],
+  historyColumns: 2,
 })
 
 const emit = defineEmits<{
@@ -88,7 +90,7 @@ onMounted(updatePageSlider)
     </header>
 
     <Transition name="queue-switch" mode="out-in">
-      <main :key="historyMode ? 'history' : 'board'" :class="historyMode ? 'history-list' : 'queue-board'">
+      <main :key="historyMode ? 'history' : 'board'" :class="historyMode ? `history-list history-columns-${historyColumns}` : 'queue-board'">
         <slot :name="historyMode ? 'history' : 'board'"></slot>
       </main>
     </Transition>
@@ -114,6 +116,7 @@ onMounted(updatePageSlider)
 .queue-board,.history-list { display:grid; flex:1 1 auto; min-height:0; margin:20px 24px 24px; }
 .queue-board { grid-template-columns:repeat(3,minmax(220px,1fr)); gap:16px; }
 .history-list { grid-template-columns:repeat(2,minmax(260px,1fr)); gap:16px; }
+.history-list.history-columns-3 { grid-template-columns:repeat(3,minmax(220px,1fr)); }
 :deep(.queue-lane) { display:flex; min-width:0; min-height:0; flex-direction:column; gap:var(--space-10); }
 :deep(.queue-lane > section) { display:flex; min-height:0; flex:1 1 auto; flex-direction:column; padding:var(--space-8); border:0; border-radius:28px; background:var(--color-surface); box-shadow:0 0 0 4px var(--library-form-ring); }
 :deep(.queue-column-title) { display:flex; flex:0 0 auto; align-items:center; justify-content:space-between; width:100%; min-height:32px; margin:0; padding:0 var(--space-12); border-radius:999px; font:650 calc(13px * var(--font-scale)) var(--font-ui); }
@@ -122,6 +125,7 @@ onMounted(updatePageSlider)
 :deep(.queue-column-title.running) { background:color-mix(in srgb,var(--color-warning) 18%,transparent); color:var(--color-warning); }
 :deep(.queue-column-title.review),:deep(.queue-column-title.confirmed) { background:color-mix(in srgb,var(--color-success) 16%,transparent); color:var(--color-success); }
 :deep(.queue-column-title.terminated) { background:color-mix(in srgb,var(--color-danger) 14%,transparent); color:var(--color-danger); }
+:deep(.queue-column-title.history) { background:var(--color-primary-softer); color:var(--color-primary); }
 :deep(.queue-column) { display:grid; flex:1 1 auto; min-height:0; align-content:start; gap:var(--space-12); padding:4px; margin:-4px; overflow:auto; }
 :deep(.queue-card-enter-active),:deep(.queue-card-leave-active) { transition:opacity 180ms ease, transform 180ms ease; }
 :deep(.queue-card-enter-from),:deep(.queue-card-leave-to) { opacity:0; transform:translateY(8px); }

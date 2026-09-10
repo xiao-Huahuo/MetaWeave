@@ -9,6 +9,7 @@ from starlette.concurrency import run_in_threadpool
 
 from agent_service.api.rest.deps import _require_scanner_service
 from agent_service.schemas.scanner import (
+    ScannerBatchExportRequest,
     ScannerCancelRequest,
     ScannerDraftUpdate,
     ScannerListOut,
@@ -157,6 +158,22 @@ async def export_scan(
             user_id=user_id,
             scan_id=scan_id,
             variant=variant,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    encoded = quote(filename)
+    return Response(content=content, media_type=media_type, headers={"Content-Disposition": f"attachment; filename*=UTF-8''{encoded}"})
+
+
+@router.post("/export-batch")
+async def export_scan_batch(payload: ScannerBatchExportRequest) -> Response:
+    """Return one ZIP containing all requested completed scanner projections."""
+
+    try:
+        filename, media_type, content = await run_in_threadpool(
+            _require_scanner_service().export_batch_payload,
+            user_id=payload.user_id,
+            items=[(item.scan_id, item.variant) for item in payload.items],
         )
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc

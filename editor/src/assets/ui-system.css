@@ -142,7 +142,7 @@
   color: var(--color-primary);
 }
 
-/* Canonical V1 toolbar icon button, matched to the file-resource toolbar. */
+/* Canonical V1 circular toolbar icon button. */
 button.v1-icon-button {
   display: inline-flex !important;
   align-items: center !important;
@@ -155,7 +155,7 @@ button.v1-icon-button {
   gap: 0 !important;
   padding: 0 !important;
   border: 0 !important;
-  border-radius: var(--radius-sm) !important;
+  border-radius: 50% !important;
   background: transparent !important;
   color: var(--color-text-secondary) !important;
   cursor: pointer;

@@ -609,8 +609,8 @@ onBeforeUnmount(() => {
                 </DropdownMenuContent>
               </DropdownMenuPortal>
             </DropdownMenu>
-            <button class="toolbar-command icon-only" type="button" title="刷新" aria-label="刷新文献库" @click="load"><IcIcon name="refresh" :size="15" /></button>
-            <button class="toolbar-command icon-only" type="button" title="新建" aria-label="新建文献" @click="openCreate()"><IcIcon name="add" :size="16" /></button>
+            <button class="toolbar-command icon-only v1-icon-button" type="button" title="刷新" aria-label="刷新文献库" @click="load"><IcIcon name="refresh" :size="15" /></button>
+            <button class="toolbar-command icon-only v1-icon-button" type="button" title="新建" aria-label="新建文献" @click="openCreate()"><IcIcon name="add" :size="16" /></button>
           </div>
         </div>
       </header>

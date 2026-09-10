@@ -171,8 +171,8 @@ defineEmits<{
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: start;
   gap: var(--space-8);
-  border: 1px solid var(--color-border);
-  border-radius: 6px;
+  border: 0;
+  border-radius: 18px;
   padding: var(--space-8);
   background: var(--color-surface-raised);
 }
@@ -181,7 +181,7 @@ defineEmits<{
   margin: 0;
   color: var(--color-text-secondary);
   font-family: var(--font-text);
-  font-size: calc(10px * var(--font-scale));
+  font-size: calc(12px * var(--font-scale));
   line-height: var(--line-height-relaxed);
   white-space: pre-wrap;
   word-break: break-word;

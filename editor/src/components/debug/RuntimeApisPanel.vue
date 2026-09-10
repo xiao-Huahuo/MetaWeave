@@ -88,7 +88,8 @@ onMounted(() => {
           <h2>API</h2>
           <span>{{ visibleApis.length }} / {{ apis.length }} endpoints</span>
         </div>
-        <div class="protocol-tabs" role="tablist" aria-label="API protocol">
+        <div class="protocol-tabs" :class="{ grpc: activeProtocol === 'grpc' }" role="tablist" aria-label="API protocol">
+          <span class="protocol-slider" aria-hidden="true"></span>
           <button class="protocol-tab" :class="{ active: activeProtocol === 'rest' }" type="button" @click="activeProtocol = 'rest'">
             REST
           </button>
@@ -294,7 +295,11 @@ onMounted(() => {
   min-width: 0;
   flex-direction: column;
   overflow: hidden;
-  background: transparent;
+  margin: 0 4px 4px;
+  border: 0;
+  border-radius: 28px;
+  background: var(--color-surface);
+  box-shadow: 0 0 0 4px var(--library-form-ring);
 }
 
 .title-summary {
@@ -327,6 +332,7 @@ onMounted(() => {
 }
 
 .protocol-tabs {
+  position: relative;
   display: inline-flex;
   gap: 2px;
   padding: 2px;
@@ -335,37 +341,52 @@ onMounted(() => {
   background: var(--color-surface-raised);
 }
 
+.protocol-slider {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 56px;
+  height: calc(100% - 4px);
+  border-radius: 999px;
+  background: var(--color-primary-soft);
+  transition: transform 250ms ease;
+  pointer-events: none;
+}
+
+.protocol-tabs.grpc .protocol-slider {
+  transform: translateX(58px);
+}
+
 .protocol-tab {
+  position: relative;
+  z-index: 1;
   min-width: 56px;
-  height: 24px;
-  border: 1px solid transparent;
+  height: 28px;
+  border: 0;
   border-radius: 999px;
   background: transparent;
   color: var(--color-text-tertiary);
   font-size: var(--font-size-xs);
   cursor: pointer;
-  transition: color var(--transition-fast), border-color var(--transition-fast), background var(--transition-fast);
+  transition: color var(--transition-fast);
 }
 
 .protocol-tab:hover {
-  color: var(--color-text-secondary);
-  background: var(--color-bg-hover);
+  color: var(--color-primary);
 }
 
 .protocol-tab.active {
   color: var(--color-primary);
-  border-color: color-mix(in srgb, var(--color-primary) 32%, var(--color-border));
-  background: var(--color-primary-soft);
 }
 
 .icon-button {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
-  border: 1px solid transparent;
-  border-radius: 6px;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: var(--radius-sm);
   background: transparent;
   color: var(--color-text-tertiary);
   cursor: pointer;
@@ -374,8 +395,7 @@ onMounted(() => {
 
 .icon-button:hover:not(:disabled) {
   color: var(--color-primary);
-  border-color: color-mix(in srgb, var(--color-primary) 32%, var(--color-border));
-  background: var(--color-primary-soft);
+  background: var(--color-primary-softer);
 }
 .icon-button:hover:not(:disabled) :deep(svg) { transform: rotate(90deg); }
 .icon-button :deep(svg) { transition: transform 0.3s; }
@@ -404,7 +424,7 @@ onMounted(() => {
   min-width: 0;
   align-content: start;
   padding: 0;
-  border-radius: 8px;
+  border-radius: 28px;
   overflow: auto;
 }
 
@@ -415,17 +435,10 @@ onMounted(() => {
   align-items: center;
   min-height: 34px;
   padding: 0 var(--space-10);
-  border: 1px solid var(--color-border);
-  border-bottom: 0;
+  border: 0;
   color: var(--color-text-secondary);
   font-size: var(--font-size-xs);
   text-align: left;
-}
-
-.api-row:last-child {
-  border-bottom: 1px solid var(--color-border);
-  border-bottom-right-radius: 8px;
-  border-bottom-left-radius: 8px;
 }
 
 .api-head {
@@ -434,8 +447,7 @@ onMounted(() => {
   z-index: 2;
   color: var(--color-text-muted);
   background: var(--color-surface-raised);
-  border-top-left-radius: 8px;
-  border-top-right-radius: 8px;
+  border-radius: 28px 28px 0 0;
 }
 
 .api-button {
@@ -485,13 +497,12 @@ code {
 .status-pill {
   width: fit-content;
   padding: 2px 8px;
-  border: 1px solid var(--color-border);
+  border: 0;
   border-radius: 999px;
   color: var(--color-text-muted);
 }
 
 .status-pill.running {
-  border-color: color-mix(in srgb, var(--color-primary) 36%, var(--color-border));
   color: var(--color-primary);
 }
 
@@ -500,17 +511,10 @@ code {
   flex-direction: column;
   gap: var(--space-12);
   padding: var(--space-12);
-  border: 1px solid var(--color-border);
-  border-bottom: 0;
+  border: 0;
   background: var(--color-surface-raised);
   color: var(--color-text-secondary);
   font-size: var(--font-size-xs);
-}
-
-.api-detail:last-child {
-  border-bottom: 1px solid var(--color-border);
-  border-bottom-right-radius: 8px;
-  border-bottom-left-radius: 8px;
 }
 
 .detail-grid {
@@ -566,8 +570,8 @@ code {
 
 .mini-table {
   display: grid;
-  border: 1px solid var(--color-border);
-  border-radius: 8px;
+  border: 0;
+  border-radius: 18px;
   overflow: hidden;
 }
 
@@ -577,7 +581,7 @@ code {
   align-items: center;
   min-height: 30px;
   padding: 0 var(--space-8);
-  border-bottom: 1px solid var(--color-border);
+  border-bottom: 0;
 }
 
 .mini-row:last-child {
@@ -626,4 +630,3 @@ code {
   }
 }
 </style>
-

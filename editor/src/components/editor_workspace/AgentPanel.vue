@@ -1329,30 +1329,6 @@ function handleChangeUpdated(event: CustomEvent<AgentChangeSnapshot>) {
   gap: var(--space-4);
 }
 
-.topbar-right :deep(.topbar-tool-button),
-.topbar-right .topbar-tool-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  padding: 0;
-  border: 0;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--color-text-secondary);
-  cursor: pointer;
-}
-
-.topbar-right :deep(.topbar-tool-button:hover:not(:disabled)),
-.topbar-right .topbar-tool-button:hover:not(:disabled),
-.topbar-right .topbar-tool-button.active {
-  border-color: var(--color-primary);
-  background: var(--color-primary-softer);
-  color: var(--color-primary);
-}
-
-
 .mode-indicator {
   position: absolute;
   top: 2px;

@@ -397,18 +397,19 @@ function todayIso(): string {
   min-width: 0;
   border-radius: 999px;
   border: 0;
-  padding: 2px 8px;
+  height: 28px;
+  padding: 0 8px;
   color: var(--color-text-tertiary);
   background: transparent;
   font: inherit;
-  font-size: calc(9px * var(--font-scale));
+  font-size: calc(12px * var(--font-scale));
   cursor: pointer;
   transition: color 140ms ease, transform 120ms var(--ease-out-strong);
 }
 
 .filter-button small {
   color: inherit;
-  font-size: calc(8px * var(--font-scale));
+  font-size: calc(11px * var(--font-scale));
   font-variant-numeric: tabular-nums;
   opacity: 0.62;
 }
@@ -452,14 +453,14 @@ function todayIso(): string {
   min-width: 0;
   overflow: hidden;
   color: var(--color-text-tertiary);
-  font-size: calc(9px * var(--font-scale));
+  font-size: calc(12px * var(--font-scale));
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .metric-item strong {
   color: var(--heat-color);
-  font-size: calc(13px * var(--font-scale));
+  font-size: calc(14px * var(--font-scale));
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.02em;
   animation: metric-in 160ms var(--ease-out-strong);
@@ -492,7 +493,7 @@ function todayIso(): string {
   height: 13px;
   margin-bottom: 4px;
   color: var(--color-text-tertiary);
-  font-size: calc(9px * var(--font-scale));
+  font-size: calc(11px * var(--font-scale));
   line-height: 13px;
   white-space: nowrap;
 }
@@ -514,7 +515,7 @@ function todayIso(): string {
   width: 31px;
   flex: 0 0 31px;
   color: var(--color-text-tertiary);
-  font-size: calc(8px * var(--font-scale));
+  font-size: calc(10px * var(--font-scale));
   line-height: 10px;
 }
 
@@ -526,7 +527,7 @@ function todayIso(): string {
   min-height: 18px;
   margin-top: 7px;
   color: var(--color-text-tertiary);
-  font-size: calc(8px * var(--font-scale));
+  font-size: calc(10px * var(--font-scale));
   line-height: 10px;
 }
 

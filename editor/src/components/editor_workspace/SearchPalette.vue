@@ -423,7 +423,7 @@ defineExpose({ focus })
   width: 28px;
   height: 28px;
   border: 0;
-  border-radius: var(--radius-sm);
+  border-radius: 50%;
   background: transparent;
 }
 
