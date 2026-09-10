@@ -80,7 +80,7 @@ Agent 框架不能消除模型幻觉。MetaWeave 因此优先提供检索、引�
 * 文档编辑器：CodeEditor + MarkdownPreview + PDF/多模态原件预览器，按文件类型切换编辑、LaTeX 编译、图片、视频、表格或 Markdown 中间层预览
 * 反向代理：Vite
 * 智能体编排：LangGraph + LangChain
-* 模型接入：以 `DeepSeek-v4-flash`作为正式测试版, 同时支持用户配置的 OpenAI 兼容大小模型接口，并以内置 CPU 本地大模型`Qwen/Qwen3.5-2B` 提供未配置时的本地回退.
+* 模型接入：以 `DeepSeek-flash`作为正式测试版, 同时支持用户配置的 OpenAI 兼容大小模型接口，并以内置 CPU 本地大模型`Qwen/Qwen3.5-2B` 提供未配置时的本地回退.
 * coding agent子智能体: [deepseek-harness](https://github.com/deepseek-ai/deepseek-harness.git)；
   * MW当前锁定上游提交 [`47f943859bef60e4160492346772ded9b24f765a`](https://github.com/deepseek-ai/deepseek-harness/commit/47f943859bef60e4160492346772ded9b24f765a)，叠加仓库内 MW补丁后生产 `0.1.0-rc.5+mw.1` Runtime SDK，并将成品随 MW仓库和 EXE固定发布。
 * 关联数据库：SQLite
@@ -462,7 +462,7 @@ runtime/                                   # 应用运行时数据根目录
 ##### 模型选型
 项目提供一个`Qwen3.5-2B`多模态模型作为轻量级本地大模型,用户可在"设置-存储管理-模型管理"中手动下载和加载.该模型不依赖GPU和CUDA,可以在中低端设备上兼容.
 
-注: **建议采用`deepseek-v4-flash`作为大模型和小模型API**;不建议使用本地模型作为主要模型,因为其输出很慢,不好用.
+注: **建议采用`deepseek-flash`作为大模型和小模型API**;不建议使用本地模型作为主要模型,因为其输出很慢,不好用.
 ##### 大模型API设置
 用户可在 "设置-LLM配置" 中输入联网大模型的模型名称和URL和API-Key.
 

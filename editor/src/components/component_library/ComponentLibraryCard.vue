@@ -65,7 +65,8 @@ async function copySource(): Promise<void> {
           class="component-favorite"
           target-type="component"
           :target-id="item.component_id"
-          :size="15"
+          :size="17"
+          variant="v1"
         />
         <button class="copy-button" type="button" :title="copied ? '已复制' : '复制代码'" :aria-label="copied ? '已复制' : '复制代码'" @click="copySource">
           <IcIcon :name="copied ? 'check' : 'copy'" :size="15" morph />

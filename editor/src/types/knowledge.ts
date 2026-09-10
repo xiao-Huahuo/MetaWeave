@@ -68,6 +68,7 @@ export type WorkspaceMainView =
   | 'literature-reading'
   | 'ingestion'
   | 'scanner'
+  | 'batch-scanner'
   | 'visualization'
   | 'graph'
   | 'dashboard'

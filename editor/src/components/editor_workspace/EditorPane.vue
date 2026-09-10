@@ -61,7 +61,6 @@ const workspaceStore = useWorkspaceStore()
 const settingsStore = useSettingsStore()
 const sessionStore = useSessionStore()
 const { editorMode } = storeToRefs(workspaceStore)
-const visualizeMenuOpen = ref(false)
 const codeEditorRef = ref<InstanceType<typeof CodeEditor> | null>(null)
 const markdownPreviewRef = ref<InstanceType<typeof MarkdownPreview> | null>(null)
 type EditorScrollSnapshot = {
@@ -255,25 +254,6 @@ const splitBodyStyle = computed(() => {
   const r = Math.max(0.15, Math.min(0.85, splitRatio.value))
   return { gridTemplateColumns: `${r * 100}% 6px ${(1 - r) * 100}%` } as const
 })
-
-const visualizationOptions = [
-  { key: 'strongMotion', label: '强动效' },
-  { key: 'shadow', label: '阴影' },
-  { key: 'rounded', label: '圆角' },
-  { key: 'emoji', label: 'emoji' },
-] as const
-
-function handleVisualizationStart() {
-  visualizeMenuOpen.value = false
-  void workspaceStore.startMarkdownHtmlVisualization()
-}
-
-function handleVisualizationOptionChange(
-  key: typeof visualizationOptions[number]['key'],
-  event: Event,
-) {
-  workspaceStore.setMarkdownHtmlVisualizationOption(key, (event.target as HTMLInputElement).checked)
-}
 
 function setEditorMode(mode: EditorWorkspaceMode) {
   if (!activePipeline.value.modes.some((item) => item.mode === mode)) return
@@ -584,11 +564,8 @@ onErrorCaptured((err, vm, info) => {
       :model-value="effectiveEditorMode"
       :options="activePipeline.modes"
       closable
-      save-label="保存"
-      :save-disabled="workspaceStore.activeFileReadonly"
       @activate="workspaceStore.activateTab(workspaceStore.activeTab.path)"
       @close="workspaceStore.closeTab(workspaceStore.activeTab.path)"
-      @save="saveActiveFileAndRefreshBacklinks"
       @update:model-value="setEditorMode"
     >
       <template #actions>
@@ -598,53 +575,12 @@ onErrorCaptured((err, vm, info) => {
           :class="{ active: outlineOpen }"
           type="button"
           :aria-pressed="outlineOpen"
+          aria-label="目录树"
           title="目录树"
           @click="outlineOpen = !outlineOpen"
         >
           <IcIcon name="view-list" :size="15" />
-          <span>目录树</span>
         </button>
-        <div class="visualize-menu" :class="{ open: visualizeMenuOpen }">
-          <button
-            class="visualize-trigger"
-            type="button"
-            :disabled="!workspaceStore.activeTab || workspaceStore.selectedNode?.isDir"
-            @click="visualizeMenuOpen = !visualizeMenuOpen"
-          >
-            <IcIcon name="auto-awesome" :size="15" />
-          </button>
-          <div v-if="visualizeMenuOpen" class="visualize-popover">
-            <div class="visualize-mode">
-              <button
-                type="button"
-                :class="{ active: workspaceStore.markdownHtmlVisualizationMode === 'structure' }"
-                @click="workspaceStore.setMarkdownHtmlVisualizationMode('structure')"
-              >
-                原结构
-              </button>
-              <button
-                type="button"
-                :class="{ active: workspaceStore.markdownHtmlVisualizationMode === 'insight' }"
-                @click="workspaceStore.setMarkdownHtmlVisualizationMode('insight')"
-              >
-                AI提炼
-              </button>
-            </div>
-            <div class="visualize-options">
-              <label v-for="option in visualizationOptions" :key="option.key">
-                <input
-                  type="checkbox"
-                  :checked="workspaceStore.markdownHtmlVisualizationOptions[option.key]"
-                  @change="handleVisualizationOptionChange(option.key, $event)"
-                />
-                <span>{{ option.label }}</span>
-              </label>
-            </div>
-            <button class="visualize-submit" type="button" @click="handleVisualizationStart">
-              一键可视化
-            </button>
-          </div>
-        </div>
         <EditorSidebarCloseButton v-if="props.sidebar" @close="emit('close')" />
       </template>
     </EditorPaneToolbar>
@@ -779,118 +715,11 @@ onErrorCaptured((err, vm, info) => {
   color: var(--color-primary);
 }
 
-.visualize-menu {
-  position: relative;
-  flex: 0 0 auto;
-}
-
-.visualize-trigger {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 22px;
-  height: 22px;
+.outline-toggle {
+  width: 28px;
+  height: 28px;
   padding: 0;
-  border: 0;
   border-radius: 50%;
-  background: transparent;
-  color: var(--color-text);
-  transition:
-    background var(--transition-fast),
-    color var(--transition-fast);
-}
-
-.visualize-trigger:hover,
-.visualize-menu.open .visualize-trigger {
-  background: var(--color-accent);
-  color: white;
-}
-
-.visualize-submit {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: var(--space-4);
-  height: 22px;
-  border: 0;
-  border-radius: var(--radius-sm);
-  background: transparent;
-  color: var(--color-text);
-  font-size: calc(11px * var(--font-scale));
-  transition:
-    background var(--transition-fast),
-    border-color var(--transition-fast),
-    color var(--transition-fast);
-}
-
-.visualize-trigger:disabled {
-  cursor: not-allowed;
-  opacity: 0.45;
-}
-
-.visualize-popover {
-  position: absolute;
-  top: calc(100% + 6px);
-  right: 0;
-  z-index: 30;
-  display: grid;
-  width: min(280px, 78vw);
-  gap: var(--space-8);
-  padding: var(--space-10);
-  border: 0;
-  border-radius: var(--radius-md);
-  background: var(--color-canvas);
-}
-
-.visualize-mode {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-4);
-}
-
-.visualize-mode button {
-  height: 24px;
-  border: 0;
-  border-radius: var(--radius-sm);
-  background: var(--color-canvas-soft);
-  color: var(--color-text-muted);
-  font-size: calc(11px * var(--font-scale));
-  transition:
-    background var(--transition-fast),
-    border-color var(--transition-fast),
-    color var(--transition-fast);
-}
-
-.visualize-mode button.active {
-  border-color: var(--color-primary);
-  background: var(--color-primary);
-  color: white;
-}
-
-.visualize-options {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: var(--space-6);
-}
-
-.visualize-options label {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-6);
-  min-width: 0;
-  color: var(--color-text);
-  font-size: calc(11px * var(--font-scale));
-}
-
-.visualize-options input {
-  flex: 0 0 auto;
-}
-
-.visualize-submit {
-  width: 100%;
-  border-color: var(--color-primary);
-  background: var(--color-primary);
-  color: white;
 }
 
 @media (hover: hover) and (pointer: fine) {
@@ -985,12 +814,6 @@ onErrorCaptured((err, vm, info) => {
 }
 
 @media (max-width: 920px) {
-  .visualize-trigger span,
-  .save-button span,
-  .outline-toggle span {
-    display: none;
-  }
-
   .editor-body[data-mode='split'] {
     grid-template-columns: minmax(0, 1fr) !important;
     grid-template-rows: minmax(0, 1fr) 6px minmax(0, 1fr);

@@ -1039,7 +1039,7 @@ async function addLiteratureRowAndUpload(): Promise<void> {
   openUpload(row.id)
 }
 
-const TAG_COLORS = ['#7c5cfc', '#eb2463', '#26a269', '#2f88d5', '#e2a72e', '#0ea5b6']
+const TAG_COLORS = Array.from({ length: 6 }, (_, index) => `var(--color-tag-${index + 1})`)
 
 /** Stable tag color derived from the tag text, independent of the theme primary color. */
 function tagColor(value: string): string {
@@ -1051,7 +1051,7 @@ function tagColor(value: string): string {
 function tagPillStyle(value: string): Record<string, string> {
   const color = tagColor(value)
   return {
-    background: `color-mix(in srgb, ${color} 16%, var(--color-surface-raised))`,
+    background: `color-mix(in srgb, ${color} var(--tag-color-smart-strength), var(--color-surface-raised))`,
     color: 'var(--color-tag-pill-text)',
   }
 }
@@ -2017,7 +2017,7 @@ function errorMessage(error: unknown): string {
             </button>
           </div>
         </div>
-        <button v-if="isLiteratureTable" class="toolbar-btn desktop-secondary-action" type="button" @click="generateSmartCells('all')">
+        <button v-if="isLiteratureTable" class="toolbar-btn bulk-action-capsule desktop-secondary-action" type="button" @click="generateSmartCells('all')">
           <IcIcon name="psychology" :size="17" />
           <span>全表智能填充</span>
         </button>
@@ -2075,12 +2075,12 @@ function errorMessage(error: unknown): string {
           <span class="compact-control-label">筛选</span>
         </button>
         </div>
-        <button class="toolbar-btn clear-invalid-btn desktop-secondary-action" type="button" title="清除失败或空字段" @click="clearInvalidFields">
+        <button class="toolbar-btn bulk-action-capsule clear-invalid-btn desktop-secondary-action" type="button" title="清除失败或空字段" @click="clearInvalidFields">
           <IcIcon name="trash" :size="17" />
           <span>清空无效字段</span>
         </button>
         <div class="smart-dropdown export-menu desktop-secondary-action" @click.stop>
-          <button class="icon-btn" type="button" title="导出表格" aria-label="导出表格" @click="toggleDropdown('export')"><IcIcon name="download" :size="17" /></button>
+          <button class="icon-btn v1-icon-button" type="button" title="导出表格" aria-label="导出表格" @click="toggleDropdown('export')"><IcIcon name="download" :size="17" /></button>
           <div v-if="dropdownOpen === 'export'" class="smart-dropdown-menu export-menu-panel">
             <button type="button" :style="{ '--item-index': 0 }" @click="downloadMarkdown">Markdown</button>
             <button type="button" :style="{ '--item-index': 1 }" @click="downloadCsv">CSV</button>
@@ -2817,6 +2817,10 @@ function errorMessage(error: unknown): string {
 .toolbar-btn,
 .new-row-btn {
   padding: 0 var(--space-8);
+}
+
+.bulk-action-capsule {
+  border-radius: 999px;
 }
 
 .new-row-btn {

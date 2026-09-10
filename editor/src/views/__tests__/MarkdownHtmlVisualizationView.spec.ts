@@ -47,6 +47,7 @@ describe('MarkdownHtmlVisualizationView', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
     localStorage.clear()
+    document.body.innerHTML = ''
     vi.clearAllMocks()
   })
 
@@ -55,6 +56,7 @@ describe('MarkdownHtmlVisualizationView', () => {
       global: {
         stubs: {
           Teleport: true,
+          DropdownMenuPortal: { template: '<div><slot /></div>' },
         },
       },
     })
@@ -95,6 +97,7 @@ describe('MarkdownHtmlVisualizationView', () => {
       global: {
         stubs: {
           Teleport: true,
+          DropdownMenuPortal: { template: '<div><slot /></div>' },
         },
       },
     })

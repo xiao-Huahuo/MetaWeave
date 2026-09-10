@@ -496,6 +496,8 @@ class SettingsService:
             "font_size_percent": self._normalize_font_size_percent(record.ui_font_size_percent),
             "theme_primary_color": record.theme_primary_color,
             "theme_soft_color": record.theme_soft_color,
+            "tag_colors": self._effective_tag_colors(record.tag_colors),
+            "tag_colors_translucent": self._effective_tag_colors_translucent(record.tag_colors_translucent),
             "background_cover_url": record.background_cover_url,
             "show_backlinks": bool(record.show_backlinks),
             "graph_node_limit": record.graph_node_limit,
@@ -623,15 +625,45 @@ class SettingsService:
         color = str(value or "").strip()
         if not color:
             return ""
-        if len(color) == 4 and color.startswith("#"):
-            return "#" + "".join(ch * 2 for ch in color[1:])
-        if len(color) == 7 and color.startswith("#"):
+        if len(color) in (4, 7) and color.startswith("#"):
             try:
                 int(color[1:], 16)
             except ValueError as exc:
                 raise ValueError("theme color must be a hex color") from exc
+            if len(color) == 4:
+                return "#" + "".join(ch * 2 for ch in color[1:]).lower()
             return color.lower()
         raise ValueError("theme color must be a hex color")
+
+    def _normalize_tag_colors(self, value: object) -> list[str]:
+        """Validate a complete six-color palette; an empty list resets the override."""
+
+        if value == []:
+            return []
+        if not isinstance(value, list) or len(value) != 6:
+            raise ValueError("tag_colors must contain exactly 6 hex colors")
+        try:
+            colors = [self._normalize_theme_color(item if isinstance(item, str) else None) for item in value]
+        except ValueError as exc:
+            raise ValueError("tag_colors must contain exactly 6 hex colors") from exc
+        if any(not color for color in colors):
+            raise ValueError("tag_colors must contain exactly 6 hex colors")
+        return colors
+
+    def _effective_tag_colors(self, raw_value: str | None) -> list[str]:
+        """Return the persisted palette or the service-level appearance default."""
+
+        if raw_value:
+            try:
+                return self._normalize_tag_colors(json.loads(raw_value))
+            except (json.JSONDecodeError, ValueError):
+                logger.warning("Invalid persisted tag palette; using service defaults")
+        return self._normalize_tag_colors(list(self.config.appearance.tag_colors))
+
+    def _effective_tag_colors_translucent(self, value: bool | None) -> bool:
+        """Resolve the nullable user override against the service default."""
+
+        return self.config.appearance.tag_colors_translucent if value is None else bool(value)
 
     def save_appearance_config(
         self,
@@ -639,6 +671,9 @@ class SettingsService:
         user_id: str,
         theme_primary_color: str | None = None,
         theme_soft_color: str | None = None,
+        tag_colors: list[str] | None = None,
+        tag_colors_translucent: bool | None = None,
+        reset_tag_colors_translucent: bool = False,
         background_cover_url: str | None = None,
         show_backlinks: bool | None = None,
     ) -> dict:
@@ -661,6 +696,15 @@ class SettingsService:
                 record.theme_primary_color = self._normalize_theme_color(theme_primary_color)
             if theme_soft_color is not None:
                 record.theme_soft_color = self._normalize_theme_color(theme_soft_color)
+            if tag_colors is not None:
+                normalized_tag_colors = self._normalize_tag_colors(tag_colors)
+                record.tag_colors = json.dumps(normalized_tag_colors, separators=(",", ":")) if normalized_tag_colors else ""
+            if tag_colors_translucent is not None and not isinstance(tag_colors_translucent, bool):
+                raise ValueError("tag_colors_translucent must be a boolean or null")
+            if reset_tag_colors_translucent:
+                record.tag_colors_translucent = None
+            elif tag_colors_translucent is not None:
+                record.tag_colors_translucent = tag_colors_translucent
             if background_cover_url is not None:
                 record.background_cover_url = self._normalize_background_cover_url(
                     user_id=normalized_user_id,
@@ -676,6 +720,8 @@ class SettingsService:
                 "user_id": record.user_id,
                 "theme_primary_color": record.theme_primary_color,
                 "theme_soft_color": record.theme_soft_color,
+                "tag_colors": self._effective_tag_colors(record.tag_colors),
+                "tag_colors_translucent": self._effective_tag_colors_translucent(record.tag_colors_translucent),
                 "background_cover_url": record.background_cover_url,
                 "show_backlinks": bool(record.show_backlinks),
                 "updated_at": record.updated_at.isoformat(),
@@ -741,6 +787,8 @@ class SettingsService:
             "user_id": profile["user_id"],
             "theme_primary_color": profile["theme_primary_color"],
             "theme_soft_color": profile["theme_soft_color"],
+            "tag_colors": profile["tag_colors"],
+            "tag_colors_translucent": profile["tag_colors_translucent"],
             "background_cover_url": profile["background_cover_url"],
             "show_backlinks": profile["show_backlinks"],
             "updated_at": profile["updated_at"],

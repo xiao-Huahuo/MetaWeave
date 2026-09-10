@@ -20,10 +20,12 @@ const props = withDefaults(defineProps<{
   libraryId?: string
   size?: number
   disabled?: boolean
+  variant?: 'default' | 'v1'
 }>(), {
   libraryId: undefined,
   size: 15,
   disabled: false,
+  variant: 'default',
 })
 
 const favoritesStore = useFavoritesStore()
@@ -31,7 +33,7 @@ const active = computed(() => favoritesStore.isFavorite(props.targetType, props.
 const pending = computed(() => favoritesStore.isPending(props.targetType, props.targetId, props.libraryId))
 const buttonStyle = computed(() => ({
   '--favorite-icon-size': `${props.size}px`,
-  '--favorite-button-size': `${Math.max(props.size + 9, 22)}px`,
+  '--favorite-button-size': props.variant === 'v1' ? '28px' : `${Math.max(props.size + 9, 22)}px`,
 }))
 
 function toggleFavorite() {
@@ -43,7 +45,7 @@ function toggleFavorite() {
 <template>
   <button
     class="favorite-button"
-    :class="{ active, pending }"
+    :class="[{ active, pending }, props.variant === 'v1' ? 'v1-icon-button' : '']"
     type="button"
     :disabled="disabled || pending"
     :title="active ? '取消收藏' : '收藏'"
@@ -115,6 +117,20 @@ function toggleFavorite() {
 .favorite-button:disabled {
   cursor: default;
   opacity: 0.55;
+}
+
+.favorite-button.v1-icon-button .favorite-icon,
+.favorite-button.v1-icon-button.active .favorite-icon {
+  animation: none;
+}
+
+.favorite-button.v1-icon-button:hover:not(:disabled) .favorite-icon {
+  transform: none;
+}
+
+.favorite-button.v1-icon-button.active :deep(.favorite-icon *) {
+  fill: none;
+  stroke-width: revert;
 }
 
 @keyframes favorite-pop-in {

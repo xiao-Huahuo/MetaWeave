@@ -12,6 +12,12 @@ import IcIcon from '@/components/common/IcIcon.vue'
 import LoadingState from '@/components/common/LoadingState.vue'
 import FloatingFileResourcePicker from '@/components/editor_workspace/FloatingFileResourcePicker.vue'
 import { materialFileIconForNode } from '@/components/editor_workspace/materialFileIcons'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuPortal,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu'
 import { useSettingsStore } from '@/stores/settings'
 import { useTaskListStore } from '@/stores/taskList'
 import { useWorkspaceStore } from '@/stores/workspace'
@@ -237,25 +243,19 @@ watch(() => workspaceStore.markdownHtmlVisualization, (visualization) => {
         </button>
       </div>
       <div class="toolbar-actions">
-        <button type="button" class="tool-button" title="选择文件" aria-label="选择文件" @click="pickerOpen = true">
+        <button type="button" class="tool-button v1-icon-button" title="选择文件" aria-label="选择文件" @click="pickerOpen = true">
           <IcIcon name="folder-open" :size="15" />
         </button>
-        <div class="advanced-menu-wrap">
-          <button
-            type="button"
-            class="secondary-action"
-            aria-label="高级选项"
-            title="高级选项"
-            :class="{ active: advancedOptionsOpen }"
-            :aria-expanded="advancedOptionsOpen"
-            aria-haspopup="menu"
-            @click="advancedOptionsOpen = !advancedOptionsOpen"
-          >
-            <IcIcon name="tune" :size="15" />
-            <span>高级选项</span>
-            <IcIcon name="chevron-down" :size="14" />
-          </button>
-          <div v-if="advancedOptionsOpen" class="advanced-menu" role="menu">
+        <DropdownMenu v-model:open="advancedOptionsOpen">
+          <DropdownMenuTrigger as-child>
+            <button class="filter-capsule-btn" type="button" aria-label="高级选项" title="高级选项">
+              <IcIcon name="tune" :size="17" />
+              <span>高级选项</span>
+              <IcIcon class="filter-chevron" name="chevron-down" :size="14" aria-hidden="true" />
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuPortal>
+            <DropdownMenuContent class="md-html-advanced-menu" align="end">
             <section class="advanced-section">
               <span class="advanced-section-title">展示预设</span>
               <div class="preset-grid" aria-label="HTML 可视化展示预设">
@@ -304,8 +304,9 @@ watch(() => workspaceStore.markdownHtmlVisualization, (visualization) => {
                 @click.stop
               ></textarea>
             </label>
-          </div>
-        </div>
+            </DropdownMenuContent>
+          </DropdownMenuPortal>
+        </DropdownMenu>
         <button
           type="button"
           class="visualize-button"
@@ -550,21 +551,6 @@ watch(() => workspaceStore.markdownHtmlVisualization, (visualization) => {
   flex: 0 0 auto;
 }
 
-.toolbar-actions > button.secondary-action {
-  border: 0;
-  background: transparent;
-  color: var(--color-text-secondary);
-  padding: 0 var(--space-8);
-  font: inherit;
-}
-
-.toolbar-actions > button.secondary-action.active,
-.toolbar-actions > button.secondary-action:hover {
-  border-color: transparent;
-  background: var(--color-primary-softer);
-  color: var(--color-primary);
-}
-
 .toolbar-actions > button.visualize-button {
   border-color: var(--color-primary);
   border-radius: 999px;
@@ -600,25 +586,13 @@ watch(() => workspaceStore.markdownHtmlVisualization, (visualization) => {
   opacity: 0.45;
 }
 
-.advanced-menu-wrap {
-  position: relative;
-  display: inline-flex;
-}
-
-.advanced-menu {
-  position: absolute;
-  top: calc(100% + var(--space-8));
-  right: 0;
-  z-index: 30;
+.md-html-advanced-menu {
   display: grid;
   gap: var(--space-12);
   width: 360px;
   padding: var(--space-12);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  background: var(--color-canvas);
-  box-shadow: 0 16px 42px rgba(0, 0, 0, 0.24);
-  animation: advanced-menu-in 160ms ease-out;
+  max-height: min(520px, var(--reka-dropdown-menu-content-available-height));
+  overflow-y: auto;
 }
 
 .advanced-section {
@@ -865,17 +839,6 @@ watch(() => workspaceStore.markdownHtmlVisualization, (visualization) => {
   transform: translateY(-6px);
 }
 
-@keyframes advanced-menu-in {
-  from {
-    opacity: 0;
-    transform: translateY(-6px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
 .visualization-result {
   display: flex;
   flex-direction: column;
@@ -1036,17 +999,9 @@ watch(() => workspaceStore.markdownHtmlVisualization, (visualization) => {
     justify-content: end;
   }
 
-  .advanced-menu-wrap {
-    display: inline-flex;
-  }
-
-  .advanced-menu {
-    position: absolute;
-    right: calc(-100% - var(--space-8));
+  .md-html-advanced-menu {
     width: min(360px, calc(100vw - 100px));
     max-height: calc(100vh - 132px);
-    margin-top: 0;
-    overflow-y: auto;
   }
 
   .toolbar-actions > button {
@@ -1075,15 +1030,15 @@ watch(() => workspaceStore.markdownHtmlVisualization, (visualization) => {
     grid-template-columns: repeat(3, 28px);
   }
 
-  .advanced-menu-wrap .secondary-action,
+  .filter-capsule-btn,
   .toolbar-actions > button.visualize-button {
     width: 28px;
     padding: 0;
   }
 
   .mode-button span,
-  .advanced-menu-wrap .secondary-action span,
-  .advanced-menu-wrap .secondary-action > :last-child,
+  .filter-capsule-btn span,
+  .filter-capsule-btn .filter-chevron,
   .toolbar-actions > button.visualize-button span {
     display: none;
   }

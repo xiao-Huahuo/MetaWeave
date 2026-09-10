@@ -31,6 +31,8 @@ export interface SettingsProfileResponse {
   font_size_percent?: number
   theme_primary_color?: string
   theme_soft_color?: string
+  tag_colors?: string[]
+  tag_colors_translucent?: boolean
   background_cover_url?: string
   show_backlinks?: boolean
   graph_node_limit?: number
@@ -154,6 +156,8 @@ export interface AppearanceConfigResponse {
   user_id: string
   theme_primary_color: string
   theme_soft_color: string
+  tag_colors: string[]
+  tag_colors_translucent: boolean
   background_cover_url: string
   show_backlinks: boolean
   updated_at: string
@@ -161,12 +165,14 @@ export interface AppearanceConfigResponse {
 
 export function saveAppearanceConfig(
   userId: string,
-  params: { themePrimaryColor?: string; themeSoftColor?: string; backgroundCoverUrl?: string; showBacklinks?: boolean },
+  params: { themePrimaryColor?: string; themeSoftColor?: string; tagColors?: string[]; tagColorsTranslucent?: boolean | null; backgroundCoverUrl?: string; showBacklinks?: boolean },
 ): Promise<AppearanceConfigResponse> {
   const body: {
     user_id: string
     theme_primary_color?: string
     theme_soft_color?: string
+    tag_colors?: string[]
+    tag_colors_translucent?: boolean | null
     background_cover_url?: string
     show_backlinks?: boolean
   } = {
@@ -174,6 +180,8 @@ export function saveAppearanceConfig(
   }
   if (params.themePrimaryColor !== undefined) body.theme_primary_color = params.themePrimaryColor
   if (params.themeSoftColor !== undefined) body.theme_soft_color = params.themeSoftColor
+  if (params.tagColors !== undefined) body.tag_colors = params.tagColors
+  if (params.tagColorsTranslucent !== undefined) body.tag_colors_translucent = params.tagColorsTranslucent
   if (params.backgroundCoverUrl !== undefined) body.background_cover_url = params.backgroundCoverUrl
   if (params.showBacklinks !== undefined) body.show_backlinks = params.showBacklinks
   return apiPut<AppearanceConfigResponse>(API_ROUTES.SETTINGS_APPEARANCE_CONFIG, body)

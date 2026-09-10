@@ -43,7 +43,8 @@ test('shows truthful stages and one-decimal progress across all three surfaces',
   })
 
   await page.goto('/')
-  await page.getByRole('button', { name: '扫描器' }).click()
+  await page.getByRole('button', { name: '扫描', exact: true }).click()
+  await page.getByRole('button', { name: '扫描器', exact: true }).click()
   await page.getByText('scan.png', { exact: true }).click()
   await expect(page.getByText('正在运行文字识别模型 · 20/35 行 · 已裁决 6/8', { exact: true })).toBeVisible()
   await expect(page.getByText('67.4%', { exact: true })).toBeVisible()

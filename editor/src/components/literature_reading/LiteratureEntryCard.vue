@@ -103,7 +103,7 @@ watch(() => props.expandable, (value) => {
         <span :title="entry.file_name">{{ entry.file_name }}</span>
         <p>{{ entry.content_excerpt || '暂无文献内容' }}</p>
       </div>
-      <button v-if="expandable" class="expand-button" type="button" :title="expanded ? '收起字段' : '展开全部字段'" @click.stop="toggleExpanded">
+      <button v-if="expandable" class="expand-button v1-icon-button" type="button" :title="expanded ? '收起字段' : '展开全部字段'" :aria-label="expanded ? '收起字段' : '展开全部字段'" @click.stop="toggleExpanded">
         <IcIcon :name="expanded ? 'chevron-down' : 'chevron-right'" :size="15" morph />
       </button>
       <time :datetime="entry.entered_at">{{ new Date(entry.entered_at).toLocaleString([], { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' }) }}</time>
@@ -151,7 +151,7 @@ watch(() => props.expandable, (value) => {
 
 .card-summary {
   display: grid;
-  grid-template-columns: 104px minmax(0, 1fr) 24px;
+  grid-template-columns: 104px minmax(0, 1fr) 28px;
   grid-template-rows: minmax(88px, auto) auto;
   gap: 0 8px;
   min-height: 117px;
@@ -246,7 +246,7 @@ watch(() => props.expandable, (value) => {
 
 @media (max-width: 640px) {
   .literature-card { border-radius: 14px; }
-  .card-summary { grid-template-columns: 76px minmax(0, 1fr) 24px; grid-template-rows: minmax(68px, auto) auto; min-height: 92px; padding: 4px; }
+  .card-summary { grid-template-columns: 76px minmax(0, 1fr) 28px; grid-template-rows: minmax(68px, auto) auto; min-height: 92px; padding: 4px; }
   .card-summary :deep(.recent-file-thumbnail) { width: 76px; height: 84px; border-radius: 11px; }
   .summary-copy { padding-block: 3px; }
 }

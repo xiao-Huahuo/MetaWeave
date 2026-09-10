@@ -64,6 +64,14 @@
   --color-success: #26a269;
   --color-warning: #e2a72e;
   --color-danger: #f05d5e;
+  --color-tag-1: #7c5cfc;
+  --color-tag-2: #eb2463;
+  --color-tag-3: #26a269;
+  --color-tag-4: #2f88d5;
+  --color-tag-5: #e2a72e;
+  --color-tag-6: #0ea5b6;
+  --tag-color-library-strength: 30%;
+  --tag-color-smart-strength: 16%;
   --color-search-files: var(--color-primary);
   --color-search-library: var(--color-warning);
   --color-search-components: var(--color-accent);
@@ -132,6 +140,87 @@
 .settings-resource-page-button:hover,
 .settings-resource-page-button.active {
   color: var(--color-primary);
+}
+
+/* Canonical V1 toolbar icon button, matched to the file-resource toolbar. */
+button.v1-icon-button {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  flex: 0 0 28px !important;
+  width: 28px !important;
+  min-width: 28px !important;
+  height: 28px !important;
+  min-height: 28px !important;
+  gap: 0 !important;
+  padding: 0 !important;
+  border: 0 !important;
+  border-radius: var(--radius-sm) !important;
+  background: transparent !important;
+  color: var(--color-text-secondary) !important;
+  cursor: pointer;
+  transition:
+    background var(--transition-fast),
+    color var(--transition-fast),
+    transform var(--transition-fast) !important;
+}
+
+button.v1-icon-button:hover:not(:disabled),
+button.v1-icon-button.active:not(:disabled),
+button.v1-icon-button[data-state='open']:not(:disabled) {
+  background: var(--color-primary-softer) !important;
+  color: var(--color-primary) !important;
+}
+
+button.v1-icon-button:active:not(:disabled) {
+  transform: scale(0.98);
+}
+
+button.v1-icon-button:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--color-primary) 42%, transparent);
+  outline-offset: 2px;
+}
+
+button.v1-icon-button:disabled {
+  cursor: default;
+  opacity: 0.35;
+}
+
+/* Shared library-filter trigger, including the open-state chevron motion. */
+.filter-capsule-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 28px;
+  padding: 0 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-canvas);
+  color: var(--color-text-secondary);
+  font: inherit;
+  cursor: pointer;
+}
+
+.filter-capsule-btn:hover {
+  border-color: color-mix(in srgb, var(--color-primary) 40%, transparent);
+  color: var(--color-primary);
+}
+
+.filter-capsule-btn.active,
+.filter-capsule-btn[data-state='open'] {
+  border-color: color-mix(in srgb, var(--color-primary) 45%, transparent);
+  background: var(--color-primary-soft);
+  color: var(--color-primary);
+}
+
+.filter-chevron {
+  margin-right: -3px;
+  opacity: 0.62;
+  transition: transform var(--transition-fast);
+}
+
+.filter-capsule-btn[data-state='open'] .filter-chevron {
+  transform: rotate(180deg);
 }
 
 .library-form-surface,

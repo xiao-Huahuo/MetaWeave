@@ -61,8 +61,8 @@ async function rejectInlineImage(): Promise<{ name: string; relativePath: string
     <header class="field-heading">
       <span>{{ column.title }}</span>
       <span class="field-actions">
-        <button v-if="column.editable && !showBody" type="button" title="输入内容" @click="expandEditor"><IcIcon name="add" :size="14" /></button>
-        <button v-if="isSmart" class="smart-fill-button" type="button" title="智能填充" :disabled="pending" @click="emit('smartFill')"><IcIcon name="psychology" :size="14" /></button>
+        <button v-if="column.editable && !showBody" class="v1-icon-button" type="button" title="输入内容" aria-label="输入内容" @click="expandEditor"><IcIcon name="add" :size="14" /></button>
+        <button v-if="isSmart" class="smart-fill-button v1-icon-button" type="button" title="智能填充" aria-label="智能填充" :disabled="pending" @click="emit('smartFill')"><IcIcon name="psychology" :size="14" /></button>
         <span v-if="pending" class="pixel-loader" aria-label="正在智能填充"><i></i><i></i><i></i><i></i><i></i></span>
       </span>
     </header>
@@ -129,7 +129,7 @@ async function rejectInlineImage(): Promise<{ name: string; relativePath: string
 }
 
 .field-actions { display: inline-flex; align-items: center; gap: 2px; margin-left: auto; }
-.field-actions button { display: grid; width: 24px; height: 24px; place-items: center; padding: 0; border: 0; border-radius: 4px; background: transparent; color: var(--color-text-muted); }.field-actions button:hover:not(:disabled) { background: color-mix(in srgb, var(--color-primary) 10%, transparent); color: var(--color-primary); }.smart-fill-button { color: var(--color-primary) !important; }
+.field-actions button { display: grid; width: 24px; height: 24px; place-items: center; padding: 0; border: 0; border-radius: 4px; background: transparent; color: var(--color-text-muted); }.field-actions button:hover:not(:disabled) { background: color-mix(in srgb, var(--color-primary) 10%, transparent); color: var(--color-primary); }
 
 .field-body { min-width: 0; min-height: 36px; overflow: hidden; border: 1px solid transparent; border-radius: var(--radius-md); background: transparent; transition: border-color 160ms ease, background 160ms ease, box-shadow 160ms ease; }
 .field-body:focus-within,.literature-field.editing .field-body { border-color: var(--color-primary); background: var(--color-canvas); box-shadow: 0 0 0 2px color-mix(in srgb, var(--color-primary) 14%, transparent); }

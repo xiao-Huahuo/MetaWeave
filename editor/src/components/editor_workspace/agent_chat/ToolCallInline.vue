@@ -583,11 +583,11 @@ function finalizedPatch(entry: ToolDisplayEntry) {
         :aria-expanded="expanded.has(entry.key)"
         @click="toggleExpand(entry.key)"
       >
-        <IcIcon class="tool-category-icon" :name="toolIconName(entry.toolName)" :size="15" />
+        <IcIcon class="tool-category-icon" :name="toolIconName(entry.toolName)" :data-tool-icon="toolIconName(entry.toolName)" :size="15" />
         <IcIcon class="tool-expand-chevron" name="chevron-down" :size="15" />
       </button>
       <span v-else class="tool-leading-icon tool-static-icon" aria-hidden="true">
-        <IcIcon class="tool-category-icon" :name="toolIconName(entry.toolName)" :size="15" />
+        <IcIcon class="tool-category-icon" :name="toolIconName(entry.toolName)" :data-tool-icon="toolIconName(entry.toolName)" :size="15" />
       </span>
       <span
         class="tool-text"
@@ -782,6 +782,18 @@ function finalizedPatch(entry: ToolDisplayEntry) {
     opacity 150ms ease,
     transform 180ms ease;
 }
+
+.tool-category-icon[data-tool-icon='build'] { color: var(--color-primary); }
+.tool-category-icon[data-tool-icon='git'] { color: var(--color-git-modified); }
+.tool-category-icon[data-tool-icon='auto-awesome'] { color: var(--color-accent); }
+.tool-category-icon[data-tool-icon='psychology'] { color: color-mix(in srgb, var(--color-accent) 52%, var(--color-warning)); }
+.tool-category-icon[data-tool-icon='manage-search'] { color: var(--color-sky); }
+.tool-category-icon[data-tool-icon='document'] { color: var(--color-warning); }
+.tool-category-icon[data-tool-icon='book'] { color: color-mix(in srgb, var(--color-warning) 58%, var(--color-danger)); }
+.tool-category-icon[data-tool-icon='checklist'] { color: var(--color-success); }
+.tool-category-icon[data-tool-icon='todo'] { color: var(--color-danger); }
+.tool-category-icon[data-tool-icon='group'] { color: color-mix(in srgb, var(--color-primary) 54%, var(--color-accent)); }
+.tool-category-icon[data-tool-icon='language'] { color: color-mix(in srgb, var(--color-success) 52%, var(--color-sky)); }
 
 .tool-expand-chevron {
   position: absolute;

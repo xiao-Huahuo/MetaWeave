@@ -9,7 +9,7 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref } from 'vue'
 import {
-  DropdownMenuRoot as DropdownMenu,
+  DropdownMenu,
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuLabel,
@@ -18,7 +18,7 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from 'reka-ui'
+} from '@/components/ui/dropdown-menu'
 
 import { buildApiUrl } from '@/api/client'
 import { addFavorite, deleteFavorite, listFavorites } from '@/api/favorites'
@@ -609,8 +609,8 @@ onBeforeUnmount(() => {
                 </DropdownMenuContent>
               </DropdownMenuPortal>
             </DropdownMenu>
-            <button class="toolbar-command" type="button" title="刷新" @click="load"><IcIcon name="refresh" :size="15" /><span>刷新</span></button>
-            <button class="toolbar-command" type="button" title="新建" @click="openCreate()"><IcIcon name="add" :size="16" /><span>新建</span></button>
+            <button class="toolbar-command icon-only" type="button" title="刷新" aria-label="刷新文献库" @click="load"><IcIcon name="refresh" :size="15" /></button>
+            <button class="toolbar-command icon-only" type="button" title="新建" aria-label="新建文献" @click="openCreate()"><IcIcon name="add" :size="16" /></button>
           </div>
         </div>
       </header>
@@ -679,6 +679,7 @@ onBeforeUnmount(() => {
 .toolbar-primary-row { justify-content: space-between; }
 .toolbar-actions { display: inline-flex; align-items: center; gap: 2px; margin-left: auto; }
 .toolbar-command { display: inline-flex; align-items: center; justify-content: center; gap: 4px; height: 28px; padding: 0 7px; border: 1px solid transparent; border-radius: 999px; background: transparent; color: var(--color-text-muted); font: inherit; font-size: calc(12px * var(--font-scale)); font-weight: 400; white-space: nowrap; cursor: pointer; }
+.toolbar-command.icon-only { width: 28px; padding: 0; border-radius: 0; }
 .toolbar-command:hover { color: var(--color-primary); }
 .toolbar-command.menu-trigger { border-color: var(--color-border); background: var(--color-canvas); color: var(--color-text-secondary); }
 .toolbar-command.menu-trigger:hover { border-color: color-mix(in srgb, var(--color-primary) 40%, transparent); color: var(--color-primary); }

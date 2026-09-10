@@ -98,6 +98,22 @@ class AgentConfig:
         )
 
     @dataclass(slots=True)
+    class AppearanceConfig:
+        """Manage service-level defaults for user-overridable appearance colors."""
+
+        tag_colors: list[str] = field(
+            default_factory=lambda: [
+                "#7c5cfc",
+                "#eb2463",
+                "#26a269",
+                "#2f88d5",
+                "#e2a72e",
+                "#0ea5b6",
+            ]
+        )
+        tag_colors_translucent: bool = True
+
+    @dataclass(slots=True)
     class StorageConfig:
         """
         管理运行目录、知识库文件以及关系库/向量库连接地址。
@@ -1454,6 +1470,7 @@ class AgentConfig:
                 raise ValueError("dsh.idle_timeout_seconds 必须为正数")
 
     constants: Constants = field(default_factory=Constants)
+    appearance: AppearanceConfig = field(default_factory=AppearanceConfig)
     storage: StorageConfig = field(default_factory=StorageConfig)
     model: ModelConfig = field(default_factory=ModelConfig)
     prompts: PromptConfig = field(default_factory=PromptConfig)
@@ -1498,6 +1515,7 @@ class AgentConfig:
 
         config = cls(
             constants=cls.Constants(**data["constants"]),
+            appearance=cls.AppearanceConfig(**data["appearance"]),
             storage=cls.StorageConfig(**data["storage"]),
             model=cls.ModelConfig(**data["model"]),
             prompts=cls.PromptConfig(**data["prompts"]),
@@ -1592,6 +1610,12 @@ class AgentConfig:
             "AGENT_MEMORY_TAG": ("constants", "memory_tag", str),
             "AGENT_KNOWLEDGE_TAG": ("constants", "knowledge_tag", str),
             "AGENT_DISPLAY_MODE": ("constants", "default_display_mode", str),
+            "AGENT_APPEARANCE_TAG_COLORS": ("appearance", "tag_colors", AgentConfig._parse_comma_list),
+            "AGENT_APPEARANCE_TAG_COLORS_TRANSLUCENT": (
+                "appearance",
+                "tag_colors_translucent",
+                AgentConfig._parse_bool,
+            ),
             "AGENT_KNOWLEDGE_SUPPORTED_SUFFIXES": (
                 "constants",
                 "knowledge_supported_suffixes",

@@ -109,6 +109,7 @@ def test_scanner_scheduler_runs_two_tasks_and_keeps_overflow_queued(tmp_path: Pa
         knowledge_library_service=_KnowledgeStub(root),  # type: ignore[arg-type]
         autostart=False,
     )
+    assert service.max_concurrency == 2
     started: list[str] = []
 
     def fake_start(job: dict[str, object]) -> None:

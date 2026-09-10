@@ -44,7 +44,8 @@ test('links image and markdown blocks only while panes are in preview', async ({
   })
 
   await page.goto('/')
-  await page.getByRole('button', { name: '扫描器' }).click()
+  await page.getByRole('button', { name: '扫描', exact: true }).click()
+  await page.getByRole('button', { name: '扫描器', exact: true }).click()
   await page.getByText('page.png', { exact: true }).click()
   const leftBlock = page.locator('.scanner-source-pane rect[data-block-id="1:1"]')
   const rightBlock = page.locator('.scanner-markdown-pane [data-ocr-block-id="1:1"]')

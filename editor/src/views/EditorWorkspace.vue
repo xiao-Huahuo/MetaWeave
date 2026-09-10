@@ -39,6 +39,7 @@ const DashboardView = defineAsyncComponent(() => import('@/views/DashboardView.v
 const DebugView = defineAsyncComponent(() => import('@/views/DebugView.vue'))
 const IngestionProgressView = defineAsyncComponent(() => import('@/views/IngestionProgressView.vue'))
 const ScannerView = defineAsyncComponent(() => import('@/views/ScannerView.vue'))
+const BatchScannerView = defineAsyncComponent(() => import('@/views/BatchScannerView.vue'))
 const LibraryView = defineAsyncComponent(() => import('@/views/LibraryView.vue'))
 const ComponentLibraryView = defineAsyncComponent(() => import('@/views/ComponentLibraryView.vue'))
 const VaultView = defineAsyncComponent(() => import('@/views/VaultView.vue'))
@@ -90,6 +91,7 @@ let resizePointerTarget: HTMLElement | null = null
 let resizePointerId: number | null = null
 const isAgentPage = computed(() => workspaceStore.mainView === 'agent')
 const isAgentQueuePage = computed(() => workspaceStore.mainView === 'agent-queue')
+const isBatchScannerPage = computed(() => workspaceStore.mainView === 'batch-scanner')
 const isGraphPage = computed(() => workspaceStore.mainView === 'graph')
 const isHomePage = computed(() => workspaceStore.mainView === 'home')
 const isBrowserPage = computed(() => workspaceStore.mainView === 'browser')
@@ -106,6 +108,7 @@ const editorSidebarVisible = computed(() => (
 const sidebarHidden = computed(() => (
   isAgentPage.value
   || isAgentQueuePage.value
+  || isBatchScannerPage.value
   || isGraphPage.value
   || isHomePage.value
   || isBrowserPage.value
@@ -496,6 +499,13 @@ function openScanner() {
   }
 }
 
+/** Open the persistent multi-source scanner board as a full-width queue page. */
+function openBatchScanner() {
+  workspaceStore.setMainView('batch-scanner')
+  fileSidebarOpen.value = false
+  agentSidebarOpen.value = false
+}
+
 function openVisualization() {
   const next = workspaceStore.mainView === 'visualization' ? 'editor' : 'visualization'
   workspaceStore.setMainView(next)
@@ -797,6 +807,7 @@ watch(
         :literature-active="workspaceStore.mainView === 'literature-reading'"
         :ingestion-active="workspaceStore.mainView === 'ingestion'"
         :scanner-active="workspaceStore.mainView === 'scanner'"
+        :batch-scanner-active="workspaceStore.mainView === 'batch-scanner'"
         :visualization-active="workspaceStore.mainView === 'visualization'"
         :agent-active="workspaceStore.mainView === 'agent'"
         :agent-queue-active="workspaceStore.mainView === 'agent-queue'"
@@ -822,6 +833,7 @@ watch(
         @open-literature="openLiterature"
         @open-ingestion="openIngestion"
         @open-scanner="openScanner"
+        @open-batch-scanner="openBatchScanner"
         @open-visualization="openVisualization"
         @toggle-agent="openAgentPage"
         @open-agent-queue="openAgentQueue"
@@ -894,6 +906,7 @@ watch(
         <LiteratureReadingView v-else-if="workspaceStore.mainView === 'literature-reading'" class="main-shell-content" />
         <IngestionProgressView v-else-if="workspaceStore.mainView === 'ingestion'" class="main-shell-content" />
         <ScannerView v-else-if="workspaceStore.mainView === 'scanner'" class="main-shell-content" />
+        <BatchScannerView v-else-if="workspaceStore.mainView === 'batch-scanner'" class="main-shell-content" />
         <MarkdownHtmlVisualizationView v-else-if="workspaceStore.mainView === 'visualization'" class="main-shell-content" />
         <AgentPage
           v-else-if="workspaceStore.mainView === 'agent'"

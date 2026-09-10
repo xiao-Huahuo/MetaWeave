@@ -17,6 +17,8 @@ const uiFontSizePercentDraft = defineModel<number>('uiFontSizePercentDraft', { r
 const textFontSizePercentDraft = defineModel<number>('textFontSizePercentDraft', { required: true })
 const themePrimaryColorDraft = defineModel<string>('themePrimaryColorDraft', { required: true })
 const themeSoftColorDraft = defineModel<string>('themeSoftColorDraft', { required: true })
+const tagColorsDraft = defineModel<string[]>('tagColorsDraft', { required: true })
+const tagColorsTranslucentDraft = defineModel<boolean>('tagColorsTranslucentDraft', { required: true })
 
 const props = defineProps<{
   themeOptions: Array<{ value: ThemeMode; label: string }>
@@ -34,8 +36,11 @@ const emit = defineEmits<{
   saveFontFamilies: [payload: { target: 'ui' | 'text'; families: string[] }]
   saveFontSize: [payload: { target: 'ui' | 'text'; percent: number }]
   previewThemeColors: []
+  previewTagColors: []
   saveThemeColors: []
+  saveTagColors: []
   resetThemeColors: []
+  resetTagColors: []
   setSidebarDisplayMode: [mode: SidebarDisplayMode]
   setShowBacklinks: [value: boolean]
   setBackgroundCover: [url: string]
@@ -76,6 +81,20 @@ function handleThemeColorPickerInput(target: 'primary' | 'soft', value: string) 
     themeSoftColorDraft.value = value
   }
   emit('previewThemeColors')
+}
+
+function handleTagColorInput(index: number, value: string) {
+  const normalized = normalizeThemeColor(value)
+  if (!normalized) return
+  const nextColors = [...tagColorsDraft.value]
+  nextColors[index] = normalized
+  tagColorsDraft.value = nextColors
+  emit('previewTagColors')
+}
+
+function handleTagTranslucencyInput(value: boolean) {
+  tagColorsTranslucentDraft.value = value
+  emit('previewTagColors')
 }
 
 function activeFamilies(target: 'ui' | 'text'): string[] {
@@ -252,6 +271,48 @@ onBeforeUnmount(() => {
     <div class="model-actions appearance-actions">
       <button class="save-model-btn" type="button" @click="$emit('saveThemeColors')">保存主题色</button>
       <button class="cancel-model-btn" type="button" @click="$emit('resetThemeColors')">重置默认色</button>
+    </div>
+
+    <h3 style="margin-top: 20px">标签</h3>
+    <div v-for="(color, index) in tagColorsDraft" :key="index" class="color-control">
+      <div class="color-control-header">
+        <label>标签色 {{ index + 1 }}</label>
+      </div>
+      <div class="color-row">
+        <input
+          :value="color"
+          class="color-picker"
+          type="color"
+          :aria-label="`标签色 ${index + 1}`"
+          @input="handleTagColorInput(index, ($event.target as HTMLInputElement).value)"
+        />
+        <input
+          :value="color"
+          class="color-text"
+          spellcheck="false"
+          :aria-label="`标签色 ${index + 1} 十六进制值`"
+          @change="handleTagColorInput(index, ($event.target as HTMLInputElement).value)"
+        />
+      </div>
+    </div>
+
+    <div class="page-display-control tag-translucency-control">
+      <div class="page-display-header">
+        <label for="tag-colors-translucent-setting">半透明效果</label>
+      </div>
+      <div class="toggle-row">
+        <input
+          id="tag-colors-translucent-setting"
+          type="checkbox"
+          :checked="tagColorsTranslucentDraft"
+          @change="handleTagTranslucencyInput(($event.target as HTMLInputElement).checked)"
+        />
+      </div>
+    </div>
+
+    <div class="model-actions appearance-actions">
+      <button class="save-model-btn" type="button" @click="$emit('saveTagColors')">保存标签色</button>
+      <button class="cancel-model-btn" type="button" @click="$emit('resetTagColors')">重置标签色</button>
     </div>
 
     <div class="background-cover-control">

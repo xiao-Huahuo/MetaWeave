@@ -311,7 +311,7 @@ onMounted(() => {
           <Transition name="component-sidebar-toggle">
             <button
               v-if="mobile && !sidebarOpen"
-              class="component-sidebar-toggle"
+              class="component-sidebar-toggle v1-icon-button"
               type="button"
               title="展开组件库侧边栏"
               aria-label="展开组件库侧边栏"
@@ -322,7 +322,7 @@ onMounted(() => {
           </Transition>
           <button
             v-if="selectedComponent"
-            class="detail-back"
+            class="detail-back v1-icon-button"
             type="button"
             title="返回组件列表"
             aria-label="返回组件列表"

@@ -1,7 +1,7 @@
 /* Scanner API construction tests. */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { cancelScan, createFileScan, createUrlScan, saveScanToKnowledge, updateScanDraft } from '@/api/scanner'
+import { cancelScan, createFileScan, createUrlScan, listScans, saveScanToKnowledge, updateScanDraft } from '@/api/scanner'
 
 describe('scanner API', () => {
   beforeEach(() => vi.restoreAllMocks())
@@ -34,5 +34,13 @@ describe('scanner API', () => {
 
     expect(fetchMock.mock.calls[0]?.[0]).toContain('/scanner/scan%2Fa/cancel')
     expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({ user_id: 'user/1' })
+  })
+
+  it('reads scanner capacity from the persistent list response', async () => {
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response(JSON.stringify({ scans: [], max_concurrency: 3 }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+
+    const response = await listScans('user/1')
+
+    expect(response.max_concurrency).toBe(3)
   })
 })

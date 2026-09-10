@@ -853,7 +853,7 @@ function handleChangeUpdated(event: CustomEvent<AgentChangeSnapshot>) {
       <span class="topbar-title">{{ sessionTitle }}</span>
       <div class="topbar-right">
         <button
-          class="topbar-tool-button"
+          class="topbar-tool-button v1-icon-button"
           :class="{ active: environmentWorkspaceOpen }"
           type="button"
           title="环境变更"

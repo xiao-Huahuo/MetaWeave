@@ -47,9 +47,9 @@ from agent_service.core.context_budget import ModelCapacity
 
 
 _DSML_TOOL_BLOCK_RE = re.compile(
-    r"<[|｜]{1,2}DSML[|｜]{1,2}(?:tool_calls|function_calls)>"
+    r"<[|｜]{1,2}DSML[|｜]{1,2}(?:tool_calls|function_calls|calls)>"
     r"(?P<body>.*?)"
-    r"</[|｜]{1,2}DSML[|｜]{1,2}(?:tool_calls|function_calls)>",
+    r"</[|｜]{1,2}DSML[|｜]{1,2}(?:tool_calls|function_calls|calls)>",
     re.DOTALL,
 )
 _DSML_INVOKE_RE = re.compile(
@@ -74,6 +74,10 @@ _DSML_TOOL_OPEN_MARKERS = (
     "<｜｜DSML｜｜function_calls>",
     "<|DSML|function_calls>",
     "<||DSML||function_calls>",
+    "<｜DSML｜calls>",
+    "<｜｜DSML｜｜calls>",
+    "<|DSML|calls>",
+    "<||DSML||calls>",
 )
 
 

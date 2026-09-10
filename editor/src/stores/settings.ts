@@ -33,6 +33,7 @@ const DEFAULT_UI_FONT_STACK = 'var(--font-ui-default)'
 const DEFAULT_TEXT_FONT_STACK = 'var(--font-text-default)'
 const DEFAULT_THEME_PRIMARY_COLOR = '#476bf7'
 const DEFAULT_THEME_SOFT_COLOR = '#476bf7'
+export const DEFAULT_TAG_COLORS = ['#7c5cfc', '#eb2463', '#26a269', '#2f88d5', '#e2a72e', '#0ea5b6'] as const
 const APPEARANCE_PREVIEW_EVENT = 'metaweave:appearance-preview'
 
 const DEFAULT_PROFILE: UserSettingsProfile = {
@@ -57,6 +58,8 @@ const DEFAULT_PROFILE: UserSettingsProfile = {
   textFontSizePercent: 100,
   themePrimaryColor: '',
   themeSoftColor: '',
+  tagColors: [...DEFAULT_TAG_COLORS],
+  tagColorsTranslucent: true,
   backgroundCoverUrl: '',
   showBacklinks: false,
   graphNodeLimit: 2000,
@@ -74,6 +77,14 @@ function normalizeThemeColor(value: string | undefined): string {
     return color.toLowerCase()
   }
   return ''
+}
+
+function normalizeTagColors(values: string[] | undefined): string[] {
+  if (!Array.isArray(values) || values.length !== DEFAULT_TAG_COLORS.length) {
+    return [...DEFAULT_TAG_COLORS]
+  }
+  const colors = values.map((value) => normalizeThemeColor(value))
+  return colors.every(Boolean) ? colors : [...DEFAULT_TAG_COLORS]
 }
 
 function hexToRgb(value: string): { r: number; g: number; b: number } {
@@ -170,6 +181,8 @@ function normalizeProfile(profile: UserSettingsProfile): UserSettingsProfile {
     textFontSizePercent: normalizeFontSizePercent(profile.textFontSizePercent ?? profile.fontSizePercent),
     themePrimaryColor: normalizeThemeColor(profile.themePrimaryColor),
     themeSoftColor: normalizeThemeColor(profile.themeSoftColor),
+    tagColors: normalizeTagColors(profile.tagColors),
+    tagColorsTranslucent: profile.tagColorsTranslucent !== false,
     backgroundCoverUrl: normalizeBackgroundCoverUrl(profile.backgroundCoverUrl),
     editorImageAssetsDir: normalizeEditorImageAssetsDir(profile.editorImageAssetsDir),
     knowledgeSupportedSuffixes: [...new Set(profile.knowledgeSupportedSuffixes ?? [])],
@@ -213,6 +226,8 @@ function mapBackendProfile(profileResponse: SettingsProfileResponse): Partial<Us
     ),
     themePrimaryColor: profileResponse.theme_primary_color ?? '',
     themeSoftColor: profileResponse.theme_soft_color ?? '',
+    tagColors: normalizeTagColors(profileResponse.tag_colors),
+    tagColorsTranslucent: profileResponse.tag_colors_translucent !== false,
     backgroundCoverUrl: profileResponse.background_cover_url ?? '',
     showBacklinks: Boolean(profileResponse.show_backlinks),
     graphNodeLimit: profileResponse.graph_node_limit ?? 2000,
@@ -345,7 +360,7 @@ export const useSettingsStore = defineStore('settings', () => {
     )
   }
 
-  function applyAppearanceColorValues(themePrimaryColor?: string, themeSoftColor?: string) {
+  function applyAppearanceColorValues(themePrimaryColor?: string, themeSoftColor?: string, tagColors?: string[], tagColorsTranslucent?: boolean) {
     const rootStyle = document.documentElement.style
     const primaryColor = normalizeThemeColor(themePrimaryColor)
     const softColor = normalizeThemeColor(themeSoftColor)
@@ -381,10 +396,21 @@ export const useSettingsStore = defineStore('settings', () => {
       rootStyle.removeProperty('--color-agent-bubble-border')
       rootStyle.removeProperty('--color-agent-bubble-glow')
     }
+    normalizeTagColors(tagColors ?? profile.value.tagColors).forEach((color, index) => {
+      rootStyle.setProperty(`--color-tag-${index + 1}`, color)
+    })
+    const translucent = tagColorsTranslucent ?? profile.value.tagColorsTranslucent !== false
+    rootStyle.setProperty('--tag-color-library-strength', translucent ? '30%' : '100%')
+    rootStyle.setProperty('--tag-color-smart-strength', translucent ? '16%' : '100%')
   }
 
   function applyAppearanceColors() {
-    applyAppearanceColorValues(profile.value.themePrimaryColor, profile.value.themeSoftColor)
+    applyAppearanceColorValues(
+      profile.value.themePrimaryColor,
+      profile.value.themeSoftColor,
+      profile.value.tagColors,
+      profile.value.tagColorsTranslucent,
+    )
     window.dispatchEvent(new CustomEvent(APPEARANCE_PREVIEW_EVENT))
   }
 
@@ -400,8 +426,13 @@ export const useSettingsStore = defineStore('settings', () => {
     }
   }
 
-  function previewAppearanceColors(params: { themePrimaryColor?: string; themeSoftColor?: string }) {
-    applyAppearanceColorValues(params.themePrimaryColor, params.themeSoftColor)
+  function previewAppearanceColors(params: { themePrimaryColor?: string; themeSoftColor?: string; tagColors?: string[]; tagColorsTranslucent?: boolean }) {
+    applyAppearanceColorValues(
+      params.themePrimaryColor ?? profile.value.themePrimaryColor,
+      params.themeSoftColor ?? profile.value.themeSoftColor,
+      params.tagColors ?? profile.value.tagColors,
+      params.tagColorsTranslucent ?? profile.value.tagColorsTranslucent,
+    )
     window.dispatchEvent(new CustomEvent(APPEARANCE_PREVIEW_EVENT))
   }
 
@@ -561,14 +592,23 @@ export const useSettingsStore = defineStore('settings', () => {
   async function saveAppearanceSettings(params: {
     themePrimaryColor?: string
     themeSoftColor?: string
+    tagColors?: string[]
+    tagColorsTranslucent?: boolean | null
     backgroundCoverUrl?: string
     showBacklinks?: boolean
   }) {
     const nextThemePrimaryColor = normalizeThemeColor(params.themePrimaryColor ?? profile.value.themePrimaryColor)
     const nextThemeSoftColor = normalizeThemeColor(params.themeSoftColor ?? profile.value.themeSoftColor)
+    const resetTagColors = params.tagColors?.length === 0
+    const nextTagColors = normalizeTagColors(resetTagColors ? undefined : (params.tagColors ?? profile.value.tagColors))
+    const nextTagColorsTranslucent = params.tagColorsTranslucent === null
+      ? true
+      : (params.tagColorsTranslucent ?? profile.value.tagColorsTranslucent !== false)
     updateProfile({
       themePrimaryColor: nextThemePrimaryColor,
       themeSoftColor: nextThemeSoftColor,
+      tagColors: nextTagColors,
+      tagColorsTranslucent: nextTagColorsTranslucent,
       backgroundCoverUrl: params.backgroundCoverUrl ?? profile.value.backgroundCoverUrl,
       showBacklinks: params.showBacklinks ?? profile.value.showBacklinks,
     })
@@ -579,12 +619,16 @@ export const useSettingsStore = defineStore('settings', () => {
       const result = await saveAppearanceConfig(profile.value.userId, {
         themePrimaryColor: nextThemePrimaryColor,
         themeSoftColor: nextThemeSoftColor,
+        tagColors: params.tagColors === undefined ? undefined : (resetTagColors ? [] : nextTagColors),
+        tagColorsTranslucent: params.tagColorsTranslucent,
         backgroundCoverUrl: params.backgroundCoverUrl,
         showBacklinks: params.showBacklinks,
       })
       updateProfile({
         themePrimaryColor: result.theme_primary_color,
         themeSoftColor: result.theme_soft_color,
+        tagColors: result.tag_colors,
+        tagColorsTranslucent: result.tag_colors_translucent,
         backgroundCoverUrl: result.background_cover_url,
         showBacklinks: result.show_backlinks,
       })

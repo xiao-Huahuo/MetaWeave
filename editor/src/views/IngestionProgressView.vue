@@ -214,7 +214,7 @@ function historySummary(row: IngestionHistoryItem): string {
       <div class="heading-actions">
         <button
           v-if="activeTab === 'queue'"
-          class="view-button topbar-action-clone"
+          class="view-button topbar-action-clone v1-icon-button"
           :class="{ refreshing: workspaceStore.refreshing }"
           type="button"
           :disabled="workspaceStore.refreshing"
@@ -226,7 +226,7 @@ function historySummary(row: IngestionHistoryItem): string {
         </button>
         <button
           v-else-if="activeTab === 'graph-queue'"
-          class="view-button topbar-action-clone"
+          class="view-button topbar-action-clone v1-icon-button"
           :class="{ refreshing: graphQueueRows.length > 0 }"
           type="button"
           :disabled="graphQueueRows.length > 0"
@@ -236,12 +236,12 @@ function historySummary(row: IngestionHistoryItem): string {
         >
           <IcIcon name="hub" :size="14" />
         </button>
-        <button class="view-button refresh-btn" type="button" title="刷新" aria-label="刷新" @click="refresh">
+        <button class="view-button refresh-btn v1-icon-button" type="button" title="刷新" aria-label="刷新" @click="refresh">
           <IcIcon name="refresh" :size="16" class="refresh-svg" />
         </button>
         <button
           v-if="activeTab === 'history' && historyRows.length > 0"
-          class="view-button icon-button"
+          class="view-button icon-button v1-icon-button"
           type="button"
           title="清空历史"
           aria-label="清空历史"
@@ -612,10 +612,6 @@ function historySummary(row: IngestionHistoryItem): string {
   border-color: var(--color-primary);
   background: var(--color-surface-raised);
   color: var(--color-text);
-}
-
-.topbar-action-clone:hover:not(:disabled) :deep(svg) {
-  transform: rotate(90deg);
 }
 
 .topbar-action-clone.refreshing :deep(svg) {

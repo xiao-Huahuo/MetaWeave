@@ -62,6 +62,7 @@ async function mockScannerWorkspace(page: Page, autoFinish = true): Promise<void
 
 /** Open scanner through its real top-level activity entry below Agent. */
 async function openScanner(page: Page): Promise<void> {
+  await page.getByRole('button', { name: '扫描', exact: true }).click()
   await page.getByRole('button', { name: '扫描器', exact: true }).click()
   await expect(page.locator('.scanner-view')).toBeVisible()
 }

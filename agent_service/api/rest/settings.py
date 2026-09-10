@@ -499,6 +499,11 @@ async def save_appearance_config(body: dict[str, Any]) -> dict[str, Any]:
             user_id=user_id,
             theme_primary_color=body.get("theme_primary_color"),
             theme_soft_color=body.get("theme_soft_color"),
+            tag_colors=body.get("tag_colors"),
+            tag_colors_translucent=body.get("tag_colors_translucent"),
+            reset_tag_colors_translucent=(
+                "tag_colors_translucent" in body and body["tag_colors_translucent"] is None
+            ),
             background_cover_url=body.get("background_cover_url"),
             show_backlinks=body.get("show_backlinks"),
         )

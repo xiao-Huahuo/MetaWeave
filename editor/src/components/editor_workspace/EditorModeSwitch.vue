@@ -90,7 +90,7 @@ function selectMode(mode: EditorWorkspaceMode) {
   left: 2px;
   width: calc((100% - 4px) / var(--mode-count));
   pointer-events: none;
-  border-radius: var(--radius-sm);
+  border-radius: 999px;
   background: var(--color-primary);
   transform: translateX(calc(var(--mode-index) * 100%));
   transition: transform 180ms ease;
@@ -107,12 +107,21 @@ function selectMode(mode: EditorWorkspaceMode) {
   gap: var(--space-4);
   padding: 0 var(--space-6);
   border: 0;
-  border-radius: var(--radius-sm);
+  border-radius: 999px;
   background: transparent;
   color: var(--color-text-muted);
   font-size: calc(11px * var(--font-scale));
   cursor: pointer;
-  transition: color var(--transition-fast);
+  transition: background var(--transition-fast), color var(--transition-fast), transform 140ms ease;
+}
+
+.editor-mode-switch button:not(.active):not(:disabled):hover {
+  background: var(--color-primary-softer);
+  color: var(--color-primary);
+}
+
+.editor-mode-switch button:not(:disabled):active {
+  transform: scale(.96);
 }
 
 .editor-mode-switch button.active {
@@ -131,6 +140,10 @@ function selectMode(mode: EditorWorkspaceMode) {
 
 @media (prefers-reduced-motion: reduce) {
   .editor-mode-indicator {
+    transition: none;
+  }
+
+  .editor-mode-switch button {
     transition: none;
   }
 }

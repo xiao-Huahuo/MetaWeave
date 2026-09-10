@@ -132,12 +132,12 @@ function handleKeydown(event: KeyboardEvent) {
 .tag-input-wrap button[aria-expanded="true"] { color: var(--color-primary); transform: rotate(180deg); }
 .tag-list { display: grid; gap: 10px; }
 .tag-group { display: flex; flex-wrap: wrap; gap: 6px; }
-.tag-pill { display: inline-flex; align-items: center; gap: 5px; max-width: 160px; min-height: 24px; border: 0; border-radius: 999px; background: color-mix(in srgb, var(--color-primary) 30%, transparent); color: var(--color-tag-pill-text); padding: 0 9px; font-size: calc(12px * var(--font-scale)); cursor: pointer; }
-.tag-pill:nth-child(6n + 2) { background: color-mix(in srgb, var(--color-accent) 30%, transparent); color: var(--color-tag-pill-text); }
-.tag-pill:nth-child(6n + 3) { background: color-mix(in srgb, var(--color-success) 30%, transparent); color: var(--color-tag-pill-text); }
-.tag-pill:nth-child(6n + 4) { background: color-mix(in srgb, var(--color-warning) 30%, transparent); color: var(--color-tag-pill-text); }
-.tag-pill:nth-child(6n + 5) { background: rgba(113, 70, 214, 0.30); color: var(--color-tag-pill-text); }
-.tag-pill:nth-child(6n) { background: rgba(0, 155, 166, 0.30); color: var(--color-tag-pill-text); }
+.tag-pill { display: inline-flex; align-items: center; gap: 5px; max-width: 160px; min-height: 24px; border: 0; border-radius: 999px; background: color-mix(in srgb, var(--color-tag-1) var(--tag-color-library-strength), transparent); color: var(--color-tag-pill-text); padding: 0 9px; font-size: calc(12px * var(--font-scale)); cursor: pointer; }
+.tag-pill:nth-child(6n + 2) { background: color-mix(in srgb, var(--color-tag-2) var(--tag-color-library-strength), transparent); color: var(--color-tag-pill-text); }
+.tag-pill:nth-child(6n + 3) { background: color-mix(in srgb, var(--color-tag-3) var(--tag-color-library-strength), transparent); color: var(--color-tag-pill-text); }
+.tag-pill:nth-child(6n + 4) { background: color-mix(in srgb, var(--color-tag-4) var(--tag-color-library-strength), transparent); color: var(--color-tag-pill-text); }
+.tag-pill:nth-child(6n + 5) { background: color-mix(in srgb, var(--color-tag-5) var(--tag-color-library-strength), transparent); color: var(--color-tag-pill-text); }
+.tag-pill:nth-child(6n) { background: color-mix(in srgb, var(--color-tag-6) var(--tag-color-library-strength), transparent); color: var(--color-tag-pill-text); }
 .tag-pill span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .tag-divider { height: 1px; background: var(--color-border-strong); margin: 6px 0; }
 </style>

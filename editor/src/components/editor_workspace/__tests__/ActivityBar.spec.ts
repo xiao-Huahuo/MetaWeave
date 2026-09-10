@@ -68,6 +68,7 @@ describe('ActivityBar', () => {
     formsActive: false,
     literatureActive: false,
     ingestionActive: false,
+    batchScannerActive: false,
     visualizationActive: false,
     agentActive: false,
     agentQueueActive: false,
@@ -191,6 +192,28 @@ describe('ActivityBar', () => {
 
     expect(wrapper.emitted('openAgentQueue')).toHaveLength(1)
     expect(wrapper.find('[aria-label="娱乐功能菜单"]').exists()).toBe(false)
+  })
+
+  it('groups the scanner and scanner queue beneath one scan entry', async () => {
+    const wrapper = mount(ActivityBar, { props })
+
+    expect(wrapper.find('.activity-bar > button[aria-label="扫描器"]').exists()).toBe(false)
+    expect(wrapper.find('.activity-bar > button[aria-label="扫描队列"]').exists()).toBe(false)
+    await wrapper.get('button[aria-label="扫描"]').trigger('click')
+    const menu = wrapper.get('[aria-label="扫描菜单"]')
+    expect(menu.findAll('button')).toHaveLength(2)
+    await menu.get('button[aria-label="扫描队列"]').trigger('click')
+
+    expect(wrapper.emitted('openBatchScanner')).toHaveLength(1)
+    expect(wrapper.find('[aria-label="扫描菜单"]').exists()).toBe(false)
+  })
+
+  it('marks the shared scan entry active for either child page', () => {
+    const scanner = mount(ActivityBar, { props: { ...props, scannerActive: true } })
+    const queue = mount(ActivityBar, { props: { ...props, batchScannerActive: true } })
+
+    expect(scanner.get('button[aria-label="扫描"]').classes()).toContain('active')
+    expect(queue.get('button[aria-label="扫描"]').classes()).toContain('active')
   })
 
   it('moves one shared hover indicator to the pointed navigation button', async () => {

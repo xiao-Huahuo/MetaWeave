@@ -16,10 +16,25 @@ import type { ScannerRecord } from '@/api/scanner'
 import lightLogo from '@/assets/images/亮色无底图标.png'
 import darkLogo from '@/assets/images/暗色无底图标.png'
 
-defineProps<{ running: ScannerRecord | null }>()
+const props = withDefaults(defineProps<{
+  running: ScannerRecord | null
+  batch?: boolean
+  embedded?: boolean
+  busy?: boolean
+  busyLabel?: string
+  error?: string
+}>(), {
+  batch: false,
+  embedded: false,
+  busy: false,
+  busyLabel: '正在创建扫描任务',
+  error: '',
+})
 const emit = defineEmits<{
   upload: [file: File, sourceKind?: string]
+  uploadBatch: [files: File[]]
   crawl: [url: string]
+  crawlBatch: [urls: string[]]
 }>()
 
 const settingsStore = useSettingsStore()
@@ -28,6 +43,7 @@ const exampleViewport = ref<HTMLElement | null>(null)
 const dragging = ref(false)
 const urlOpen = ref(false)
 const urlDraft = ref('')
+const urlError = ref('')
 const visibleCount = ref(3)
 const carouselOffset = ref(0)
 const ocrEnabled = defineModel<boolean>('ocrEnabled', { required: true })
@@ -60,33 +76,56 @@ function openPicker(): void {
   picker.value?.click()
 }
 
-/** Forward one unrestricted selected file into the shared upload flow. */
+/** Open the shared URL form with stale validation feedback cleared. */
+function openUrlDialog(): void {
+  urlError.value = ''
+  urlOpen.value = true
+}
+
+/** Forward selected files through the single or batch scanner contract. */
 function onPick(event: Event): void {
-  const file = (event.target as HTMLInputElement).files?.[0]
-  if (file) emit('upload', file)
+  const files = Array.from((event.target as HTMLInputElement).files ?? [])
+  if (props.batch && files.length) emit('uploadBatch', files)
+  else if (files[0]) emit('upload', files[0])
   if (picker.value) picker.value.value = ''
 }
 
-/** Accept one dropped file and clear the visual drag state. */
+/** Accept dropped files through the single or batch scanner contract. */
 function onDrop(event: DragEvent): void {
   dragging.value = false
-  const file = event.dataTransfer?.files?.[0]
-  if (file) emit('upload', file)
+  const files = Array.from(event.dataTransfer?.files ?? [])
+  if (props.batch && files.length) emit('uploadBatch', files)
+  else if (files[0]) emit('upload', files[0])
 }
 
-/** Submit one non-empty URL through the crawler task endpoint. */
+/** Submit one URL or a newline-separated batch through the scanner contract. */
 function submitUrl(): void {
-  const value = urlDraft.value.trim()
-  if (!value) return
-  emit('crawl', value)
+  const values = [...new Set(urlDraft.value.split(/\r?\n/u).map(value => value.trim()).filter(Boolean))]
+  if (!values.length) return
+  const invalid = values.find((value) => {
+    try {
+      return !['http:', 'https:'].includes(new URL(value).protocol)
+    } catch {
+      return true
+    }
+  })
+  if (invalid) {
+    urlError.value = `无效网页地址：${invalid}`
+    return
+  }
+  if (props.batch) emit('crawlBatch', values)
+  else emit('crawl', values[0] as string)
   urlDraft.value = ''
+  urlError.value = ''
   urlOpen.value = false
 }
 
 /** Fetch a bundled asset and submit it through exactly the same upload API. */
 async function parseExample(example: { filename: string; src: string }): Promise<void> {
   const response = await fetch(example.src)
-  emit('upload', new File([await response.blob()], example.filename, { type: response.headers.get('Content-Type') ?? 'image/png' }), 'example')
+  const file = new File([await response.blob()], example.filename, { type: response.headers.get('Content-Type') ?? 'image/png' })
+  if (props.batch) emit('uploadBatch', [file])
+  else emit('upload', file, 'example')
 }
 
 /** Advance by one complete responsive page, wrapping each requested slot. */
@@ -119,17 +158,18 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <section v-if="running" class="scanner-running" aria-live="polite">
+  <section v-if="running || busy" class="scanner-running" :class="{ embedded }" aria-live="polite">
     <PixelLoader class="scanner-pixel-loader" />
-    <strong>解析中</strong>
-    <span>{{ running.stage_label }}</span>
-    <div class="scanner-progress" role="progressbar" :aria-valuenow="running.progress" aria-valuemin="0" aria-valuemax="100">
+    <strong>{{ running ? '解析中' : '正在创建' }}</strong>
+    <span v-if="running">{{ running.stage_label }}</span>
+    <span v-else>{{ busyLabel }}</span>
+    <div v-if="running" class="scanner-progress" role="progressbar" :aria-valuenow="running.progress" aria-valuemin="0" aria-valuemax="100">
       <i :style="{ transform: `scaleX(${running.progress / 100})` }"></i>
     </div>
-    <small>{{ formatProgress(running.progress) }}%</small>
+    <small v-if="running">{{ formatProgress(running.progress) }}%</small>
   </section>
 
-  <div v-else class="scanner-start">
+  <div v-else class="scanner-start" :class="{ embedded }">
     <section
       class="scanner-drop-zone"
       :class="{ dragging }"
@@ -161,10 +201,11 @@ onBeforeUnmount(() => {
       <img class="scanner-logo" :src="logo" alt="" />
       <div class="scanner-upload-actions">
         <button type="button" @click.stop="openPicker"><IcIcon name="paperclip" :size="15" />上传文件</button>
-        <button type="button" @click.stop="urlOpen = true"><IcIcon name="language" :size="15" />网页链接</button>
+        <button type="button" @click.stop="openUrlDialog"><IcIcon name="language" :size="15" />网页链接</button>
       </div>
-      <input ref="picker" hidden type="file" @change="onPick" />
-      <p>拖拽文件到此处开始解析</p>
+      <input ref="picker" hidden type="file" :multiple="batch" @change="onPick" />
+      <p>拖拽{{ batch ? '多个' : '' }}文件到此处开始解析</p>
+      <p v-if="error" class="scanner-action-error" role="alert">{{ error }}</p>
     </section>
 
     <section class="scanner-examples" aria-labelledby="scanner-examples-title">
@@ -186,7 +227,8 @@ onBeforeUnmount(() => {
     <div v-if="urlOpen" class="scanner-url-backdrop" @click.self="urlOpen = false">
       <form class="scanner-url-dialog library-form-surface" role="dialog" aria-modal="true" aria-label="解析网页链接" @submit.prevent="submitUrl">
         <header><strong>网页链接</strong><button type="button" aria-label="关闭" @click="urlOpen = false"><IcIcon name="close" :size="16" /></button></header>
-        <label>链接地址<input v-model="urlDraft" class="form-input-surface" type="url" required autofocus placeholder="https://example.com/article" /></label>
+        <label>链接地址<textarea v-if="batch" v-model="urlDraft" class="form-input-surface" rows="5" required autofocus placeholder="每行输入一个 HTTP 或 HTTPS 地址"></textarea><input v-else v-model="urlDraft" class="form-input-surface" type="url" required autofocus placeholder="https://example.com/article" /></label>
+        <p v-if="urlError" class="scanner-url-error" role="alert">{{ urlError }}</p>
         <footer><button type="button" @click="urlOpen = false">取消</button><button class="primary" type="submit">开始解析</button></footer>
       </form>
     </div>
@@ -195,7 +237,8 @@ onBeforeUnmount(() => {
 
 <style scoped>
 .scanner-start { position: absolute; inset: 0; box-sizing: border-box; display: grid; grid-template-rows: minmax(220px, 3fr) minmax(190px, 2fr); gap: clamp(12px,2.4vh,24px); width: auto; max-width: 1040px; min-width: 0; min-height: 0; margin: 0 auto; padding: clamp(14px,3vw,36px); overflow: hidden; }
-.scanner-drop-zone { position: relative; display: flex; max-width: 100%; min-width: 0; min-height: 0; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; border: 1px dashed var(--color-border-strong); border-radius: var(--workspace-card-radius); background: var(--color-canvas); cursor: pointer; transition: border-color 180ms ease, background 180ms ease, box-shadow 180ms ease, transform 140ms ease; }
+.scanner-start.embedded { position:relative; inset:auto; width:100%; height:min(620px,calc(100dvh - 96px)); padding:16px; }
+.scanner-drop-zone { position: relative; display: flex; max-width: 100%; min-width: 0; min-height: 0; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; border: 1px dashed var(--color-border-strong); border-radius: 28px; background: var(--color-canvas); cursor: pointer; transition: border-color 180ms ease, background 180ms ease, box-shadow 180ms ease, transform 140ms ease; }
 .scanner-drop-zone:hover { border-color: color-mix(in srgb,var(--color-primary) 55%,var(--color-border-strong)); box-shadow: 0 10px 24px color-mix(in srgb,var(--color-text) 10%,transparent); }
 .scanner-drop-zone:active { transform: scale(.995); }
 .scanner-drop-zone.dragging { border-color: var(--color-primary); background: var(--color-primary-softer); }
@@ -209,11 +252,12 @@ onBeforeUnmount(() => {
 .scanner-upload-actions button:hover { border-color: var(--color-primary); background: var(--color-primary-softer); }
 .scanner-upload-actions button:active { transform: scale(.97); }
 .scanner-drop-zone p { margin: 10px 0 0; color: var(--color-text-muted); font-size: calc(11px * var(--font-scale)); }
+.scanner-drop-zone .scanner-action-error { position:absolute; right:18px; bottom:14px; left:18px; overflow:hidden; color:var(--color-danger); text-align:center; text-overflow:ellipsis; white-space:nowrap; }
 .scanner-examples { display: grid; grid-template-rows: auto minmax(0,1fr); max-width: 100%; min-width: 0; min-height: 0; }
 .scanner-examples h2 { display: flex; align-items: center; gap: 7px; margin: 0 0 8px; font-size: calc(14px * var(--font-scale)); }
 .scanner-example-viewport { position: relative; min-width: 0; min-height: 0; overflow: hidden; padding: 2px; }
 .scanner-example-page { display: grid; width: 100%; height: 100%; min-width: 0; grid-template-columns: repeat(var(--visible-count),minmax(0,1fr)); gap: 12px; }
-.scanner-example { display: grid; grid-template-rows: minmax(0,1fr) auto; min-width: 0; min-height: 0; padding: 0; overflow: hidden; border: 1px solid var(--color-border); border-radius: var(--workspace-card-radius); background: var(--color-canvas); color: var(--color-text); font: inherit; text-align: left; transition: border-color 200ms ease, box-shadow 200ms ease, transform 180ms cubic-bezier(.16,1,.3,1); }
+.scanner-example { display: grid; grid-template-rows: minmax(0,1fr) auto; min-width: 0; min-height: 0; padding: 0; overflow: hidden; border: 1px solid var(--color-border); border-radius: 28px; background: var(--color-canvas); color: var(--color-text); font: inherit; text-align: left; transition: border-color 200ms ease, box-shadow 200ms ease, transform 180ms cubic-bezier(.16,1,.3,1); }
 .scanner-example:hover { border-color: color-mix(in srgb,var(--color-primary) 56%,var(--color-border)); box-shadow: 0 10px 24px color-mix(in srgb,var(--color-text) 11%,transparent); transform: translateY(-2px); }
 .scanner-example-image { position: relative; z-index: 0; display: grid; place-items: center; min-height: 0; padding: 10px 12px 0; overflow: visible; }
 .scanner-example-image img { width: 100%; height: 100%; max-height: 150px; object-fit: contain; border-radius: 7px; background: white; box-shadow: 0 10px 22px color-mix(in srgb,var(--color-text) 14%,transparent); transform: translateY(5px) translateZ(0); transition: transform 240ms cubic-bezier(.16,1,.3,1), box-shadow 240ms ease; }
@@ -231,6 +275,7 @@ onBeforeUnmount(() => {
 .scanner-carousel-enter-from { opacity: 0; transform: translateX(32px); }
 .scanner-carousel-leave-to { opacity: 0; transform: translateX(-32px); }
 .scanner-running { position: absolute; inset: 0; display: grid; place-items: center; align-content: center; min-height: 0; color: var(--color-text); }
+.scanner-running.embedded { position:relative; inset:auto; height:min(620px,calc(100dvh - 96px)); }
 .scanner-pixel-loader { transform: scale(1.7); margin-bottom: 28px; }
 .scanner-running strong { font-family: 'MinecraftAE Pixel', var(--font-ui); font-size: calc(18px * var(--font-scale)); }
 .scanner-running span { margin-top: 8px; color: var(--color-text-muted); font-size: calc(12px * var(--font-scale)); }
@@ -243,11 +288,14 @@ onBeforeUnmount(() => {
 .scanner-url-dialog header button { display: grid; place-items: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--color-text-muted); }
 .scanner-url-dialog header button:hover { background: color-mix(in srgb,var(--color-text-secondary) 10%,transparent); color: var(--color-text); }
 .scanner-url-dialog label { display: grid; gap: 7px; font-size: calc(12px * var(--font-scale)); }
-.scanner-url-dialog input { height: 42px; padding: 0 14px; border-radius: 999px; outline: 0; color: var(--color-text); font: inherit; }
+.scanner-url-dialog input,.scanner-url-dialog textarea { padding:0 14px; border-radius:18px; outline:0; color:var(--color-text); font:inherit; }
+.scanner-url-dialog input { height:42px; border-radius:999px; }
+.scanner-url-dialog textarea { min-height:112px; padding-top:12px; resize:vertical; }
+.scanner-url-error { margin:0; color:var(--color-danger); font-size:calc(12px * var(--font-scale)); }
 .scanner-url-dialog footer { justify-content: flex-end; }
 .scanner-url-dialog footer button { min-height: 32px; padding: 0 16px; border: 1px solid var(--color-border); border-radius: 999px; background: var(--color-surface-raised); color: var(--color-text); }
 .scanner-url-dialog footer .primary { border-color: var(--color-primary); background: var(--color-primary); color: white; }
 @media (max-width: 768px) { .scanner-start { grid-template-rows: minmax(210px,3fr) minmax(180px,2fr); padding: 12px; } }
-@media (max-width: 480px) { .scanner-start { gap: 10px; padding: 8px; } .scanner-drop-zone { border-radius: var(--workspace-card-radius); } .scanner-drop-title { top: 12px; left: 14px; } .scanner-settings { top: 9px; right: 9px; } .scanner-upload-actions { gap: 6px; } .scanner-upload-actions button { padding: 0 10px; } .scanner-drop-zone p { display: none; } .scanner-example-copy { min-height: 50px; padding: 6px 9px; } }
+@media (max-width: 480px) { .scanner-start { gap: 10px; padding: 8px; } .scanner-start.embedded { height:calc(100dvh - 80px); }.scanner-running.embedded { height:calc(100dvh - 80px); }.scanner-drop-title { top: 12px; left: 14px; } .scanner-settings { top: 9px; right: 9px; } .scanner-upload-actions { gap: 6px; } .scanner-upload-actions button { padding: 0 10px; } .scanner-drop-zone p { display: none; } .scanner-example-copy { min-height: 50px; padding: 6px 9px; } }
 @media (prefers-reduced-motion: reduce) { .scanner-drop-zone,.scanner-example,.scanner-example-image img,.scanner-progress i,.scanner-carousel-enter-active,.scanner-carousel-leave-active { transition: none; } .scanner-example:hover,.scanner-example:hover img { transform: none; } }
 </style>

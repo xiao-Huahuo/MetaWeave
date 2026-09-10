@@ -20,7 +20,7 @@ import SafetySettingsSection from '@/components/settings_view/SafetySettingsSect
 import StorageSettingsSection from '@/components/settings_view/StorageSettingsSection.vue'
 import FloatingSettingsSection from '@/components/settings_view/FloatingSettingsSection.vue'
 import SkillView from '@/views/SkillView.vue'
-import { useSettingsStore } from '@/stores/settings'
+import { DEFAULT_TAG_COLORS, useSettingsStore } from '@/stores/settings'
 import { useWorkspaceStore } from '@/stores/workspace'
 import type { ThemeMode } from '@/types/settings'
 
@@ -78,6 +78,8 @@ const uiFontSizePercentDraft = ref(settingsStore.profile.uiFontSizePercent ?? 10
 const textFontSizePercentDraft = ref(settingsStore.profile.textFontSizePercent ?? 100)
 const themePrimaryColorDraft = ref(settingsStore.profile.themePrimaryColor || '#476bf7')
 const themeSoftColorDraft = ref(settingsStore.profile.themeSoftColor || '#476bf7')
+const tagColorsDraft = ref<string[]>([...(settingsStore.profile.tagColors ?? DEFAULT_TAG_COLORS)])
+const tagColorsTranslucentDraft = ref(settingsStore.profile.tagColorsTranslucent !== false)
 const graphNodeLimitDraft = ref(settingsStore.profile.graphNodeLimit ?? 2000)
 const availableFontFamilies = ref<string[]>([])
 const fontsLoading = ref(false)
@@ -169,6 +171,16 @@ watch(
 watch(
   () => settingsStore.profile.themeSoftColor,
   (value) => { themeSoftColorDraft.value = value || '#476bf7' },
+)
+
+watch(
+  () => settingsStore.profile.tagColors,
+  (value) => { tagColorsDraft.value = [...(value ?? DEFAULT_TAG_COLORS)] },
+)
+
+watch(
+  () => settingsStore.profile.tagColorsTranslucent,
+  (value) => { tagColorsTranslucentDraft.value = value !== false },
 )
 
 async function loadAvailableFonts() {
@@ -296,6 +308,39 @@ async function handleResetThemeColors() {
   await handleSaveThemeColors()
   themePrimaryColorDraft.value = '#476bf7'
   themeSoftColorDraft.value = '#476bf7'
+}
+
+function handlePreviewTagColors() {
+  settingsStore.previewAppearanceColors({
+    tagColors: tagColorsDraft.value,
+    tagColorsTranslucent: tagColorsTranslucentDraft.value,
+  })
+}
+
+async function handleSaveTagColors() {
+  try {
+    await settingsStore.saveAppearanceSettings({
+      tagColors: tagColorsDraft.value,
+      tagColorsTranslucent: tagColorsTranslucentDraft.value,
+    })
+    saveError.value = ''
+    saveMessage.value = '标签色已保存'
+  } catch (error) {
+    saveError.value = error instanceof Error ? error.message : '保存标签色失败'
+  }
+}
+
+async function handleResetTagColors() {
+  tagColorsDraft.value = [...DEFAULT_TAG_COLORS]
+  tagColorsTranslucentDraft.value = true
+  handlePreviewTagColors()
+  try {
+    await settingsStore.saveAppearanceSettings({ tagColors: [], tagColorsTranslucent: null })
+    saveError.value = ''
+    saveMessage.value = '标签色已重置'
+  } catch (error) {
+    saveError.value = error instanceof Error ? error.message : '重置标签色失败'
+  }
 }
 
 async function saveProfile() {
@@ -792,6 +837,8 @@ onBeforeUnmount(() => {
         v-model:text-font-families-draft="textFontFamiliesDraft"
         v-model:theme-primary-color-draft="themePrimaryColorDraft"
         v-model:theme-soft-color-draft="themeSoftColorDraft"
+        v-model:tag-colors-draft="tagColorsDraft"
+        v-model:tag-colors-translucent-draft="tagColorsTranslucentDraft"
         v-model:ui-font-families-draft="uiFontFamiliesDraft"
         v-model:ui-font-size-percent-draft="uiFontSizePercentDraft"
         :available-font-families="availableFontFamilies"
@@ -803,10 +850,13 @@ onBeforeUnmount(() => {
         :theme-options="themeOptions"
         :user-id="settingsStore.profile.userId"
         @preview-theme-colors="handlePreviewThemeColors"
+        @preview-tag-colors="handlePreviewTagColors"
+        @reset-tag-colors="handleResetTagColors"
         @reset-theme-colors="handleResetThemeColors"
         @save-font-families="handleSaveFontFamilies"
         @save-font-size="handleSaveFontSize"
         @save-theme-colors="handleSaveThemeColors"
+        @save-tag-colors="handleSaveTagColors"
         @set-sidebar-display-mode="settingsStore.setSidebarDisplayMode"
         @set-background-cover="handleSetBackgroundCover"
         @set-show-backlinks="handleSetShowBacklinks"

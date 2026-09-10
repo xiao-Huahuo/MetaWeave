@@ -921,17 +921,17 @@ onUnmounted(() => {
         </div>
         <span class="toolbar-separator"></span>
         <div class="nav-controls" aria-label="Folder navigation">
-        <button class="tool-button" type="button" title="回退" :disabled="!canGoBack" @click="goBackDirectory">
+        <button class="tool-button v1-icon-button" type="button" title="回退" :disabled="!canGoBack" @click="goBackDirectory">
           <IcIcon name="arrow-left" :size="17" />
         </button>
-        <button class="tool-button" type="button" title="反回退" :disabled="!canGoForward" @click="goForwardDirectory">
+        <button class="tool-button v1-icon-button" type="button" title="反回退" :disabled="!canGoForward" @click="goForwardDirectory">
           <IcIcon name="arrow-right" :size="17" />
         </button>
-        <button class="tool-button" type="button" title="去上级文件夹" :disabled="!canGoUp" @click="goUpDirectory">
+        <button class="tool-button v1-icon-button" type="button" title="去上级文件夹" :disabled="!canGoUp" @click="goUpDirectory">
           <IcIcon name="arrow-up" :size="17" />
         </button>
         <button
-          class="tool-button"
+          class="tool-button v1-icon-button"
           :class="{ loading: workspaceStore.treeLoading || workspaceStore.trashLoading, 'refresh-btn': true }"
           type="button"
           title="刷新"
@@ -943,7 +943,7 @@ onUnmounted(() => {
         </div>
         <span class="toolbar-separator"></span>
         <button
-        class="root-button"
+        class="root-button v1-icon-button"
         type="button"
         :disabled="switchingRoot"
         :title="rootError || 'Switch knowledge root'"
@@ -970,7 +970,7 @@ onUnmounted(() => {
       <div class="toolbar-actions">
         <button
         v-if="resourcePage === 'files'"
-        class="tool-button"
+        class="tool-button v1-icon-button"
         :class="{ active: settingsStore.showIndexColumn || settingsStore.showGraphColumn || settingsStore.showFavoriteColumn || settingsStore.showPrivacyColumn }"
         type="button"
         :title="(settingsStore.showIndexColumn || settingsStore.showGraphColumn || settingsStore.showFavoriteColumn || settingsStore.showPrivacyColumn) ? '隐藏索引、图谱、收藏与隐私状态' : '显示索引、图谱、收藏与隐私状态'"
@@ -981,7 +981,7 @@ onUnmounted(() => {
         </button>
         <button
         v-if="resourcePage === 'files'"
-        class="tool-button"
+        class="tool-button v1-icon-button"
         :class="{ active: effectiveFavoritesOnly }"
         type="button"
         title="我的收藏"
@@ -994,7 +994,7 @@ onUnmounted(() => {
         </button>
         <button
         v-if="resourcePage === 'files'"
-        class="tool-button"
+        class="tool-button v1-icon-button"
         :class="{ active: effectivePrivacyOnly }"
         type="button"
         title="我的隐私"
@@ -1007,7 +1007,7 @@ onUnmounted(() => {
         </button>
         <button
         v-if="resourcePage === 'files'"
-        class="tool-button"
+        class="tool-button v1-icon-button"
         :class="{ active: multiSelectMode }"
         type="button"
         title="多选"
@@ -1019,7 +1019,7 @@ onUnmounted(() => {
         <DropdownMenu v-if="resourcePage === 'files'" v-model:open="sortMenuOpen">
         <DropdownMenuTrigger as-child>
           <button
-            class="tool-button"
+            class="tool-button v1-icon-button"
             :class="{ active: sortMenuOpen }"
             type="button"
             title="排序"

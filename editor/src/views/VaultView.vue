@@ -339,9 +339,9 @@ async function contextDelete() {
         <button :class="{ active: inTrash }" type="button" @click="inTrash = true"><IcIcon name="trash" :size="17" /><span>回收站</span></button>
       </div>
       <div class="top-actions">
-        <button class="tool-button" type="button" title="导出" @click="exportSelected([])"><IcIcon name="upload" :size="17" /></button>
-        <button class="tool-button" type="button" title="导入" @click="importJson"><IcIcon name="download" :size="17" /></button>
-        <button class="tool-button" :class="{ active: multiSelect }" type="button" :title="multiSelect ? '退出多选' : '多选'" @click="multiSelect = !multiSelect"><IcIcon name="multi-select" :size="17" /></button>
+        <button class="tool-button v1-icon-button" type="button" title="导出" aria-label="导出" @click="exportSelected([])"><IcIcon name="upload" :size="17" /></button>
+        <button class="tool-button v1-icon-button" type="button" title="导入" aria-label="导入" @click="importJson"><IcIcon name="download" :size="17" /></button>
+        <button class="tool-button v1-icon-button" :class="{ active: multiSelect }" type="button" :title="multiSelect ? '退出多选' : '多选'" :aria-label="multiSelect ? '退出多选' : '多选'" @click="multiSelect = !multiSelect"><IcIcon name="multi-select" :size="17" /></button>
         <template v-if="multiSelect">
           <button class="selection-action danger" type="button" :disabled="selectedIds.size === 0" @click="deleteSelected"><IcIcon name="trash" :size="17" /><span>{{ inTrash ? '永久删除' : '删除' }}</span></button>
           <button v-if="inTrash" class="selection-action" type="button" :disabled="selectedIds.size === 0" @click="restoreSelected"><IcIcon name="replay" :size="17" /><span>恢复</span></button>

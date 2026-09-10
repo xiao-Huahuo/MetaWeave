@@ -79,6 +79,7 @@ class ScannerOut(BaseModel):
 
 
 class ScannerListOut(BaseModel):
-    """Chronologically ordered scanner history response."""
+    """Chronologically ordered scanner history and scheduler capacity response."""
 
     scans: list[ScannerOut]
+    max_concurrency: int = Field(ge=1)

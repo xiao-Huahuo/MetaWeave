@@ -326,6 +326,19 @@ class SettingsGrpcHandlerMixin:
                     if "theme_soft_color" in payload
                     else None
                 ),
+                tag_colors=(
+                    payload["tag_colors"]
+                    if "tag_colors" in payload
+                    else None
+                ),
+                tag_colors_translucent=(
+                    payload["tag_colors_translucent"]
+                    if "tag_colors_translucent" in payload
+                    else None
+                ),
+                reset_tag_colors_translucent=(
+                    "tag_colors_translucent" in payload and payload["tag_colors_translucent"] is None
+                ),
                 background_cover_url=(
                     str(payload["background_cover_url"])
                     if "background_cover_url" in payload

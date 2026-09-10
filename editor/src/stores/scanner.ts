@@ -27,6 +27,7 @@ export const useScannerStore = defineStore('scanner', () => {
   const activeId = ref('')
   const loading = ref(false)
   const actionError = ref('')
+  const maxConcurrency = ref(1)
   const active = computed(() => records.value.find((record) => record.scan_id === activeId.value) ?? null)
   const hasRunning = computed(() => records.value.some((record) => record.status === 'queued' || record.status === 'running'))
 
@@ -47,7 +48,9 @@ export const useScannerStore = defineStore('scanner', () => {
     loading.value = true
     try {
       const previous = new Map(records.value.map((record) => [record.scan_id, record]))
-      records.value = (await listScans(userId())).scans.map((record) => {
+      const response = await listScans(userId())
+      maxConcurrency.value = Math.max(1, response.max_concurrency || 1)
+      records.value = response.scans.map((record) => {
         const cached = previous.get(record.scan_id)
         if (!cached) return record
         return {
@@ -109,5 +112,22 @@ export const useScannerStore = defineStore('scanner', () => {
     upsert(await cancelScan(userId(), scanId))
   }
 
-  return { records, activeId, active, loading, actionError, hasRunning, load, upload, crawl, refreshActive, saveDraft, saveSource, remove, cancel, upsert }
+  return {
+    records,
+    activeId,
+    active,
+    loading,
+    actionError,
+    maxConcurrency,
+    hasRunning,
+    load,
+    upload,
+    crawl,
+    refreshActive,
+    saveDraft,
+    saveSource,
+    remove,
+    cancel,
+    upsert,
+  }
 })

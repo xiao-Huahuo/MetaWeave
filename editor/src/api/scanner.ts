@@ -48,6 +48,12 @@ export interface ScannerRecord {
   finished_at: string | null
 }
 
+/** Persistent scanner records plus the normalized backend scheduler capacity. */
+export interface ScannerListResponse {
+  scans: ScannerRecord[]
+  max_concurrency: number
+}
+
 /** Upload one selected or dropped file without restricting its extension. */
 export function createFileScan(userId: string, file: File, ocrEnabled: boolean, sourceKind = 'file'): Promise<ScannerRecord> {
   const form = new FormData()
@@ -64,7 +70,7 @@ export function createUrlScan(userId: string, url: string, ocrEnabled: boolean):
 }
 
 /** List scanner history in the active knowledge library. */
-export function listScans(userId: string): Promise<{ scans: ScannerRecord[] }> {
+export function listScans(userId: string): Promise<ScannerListResponse> {
   return apiGet(API_ROUTES.SCANNER, { user_id: userId })
 }
 

@@ -13,9 +13,10 @@ import uploadSource from '@/components/scanner_view/ScannerUploadPanel.vue?raw'
 import scannerViewSource from '@/views/ScannerView.vue?raw'
 
 describe('scanner experience contracts', () => {
-  it('places the scanner directly after Agent with a scan-specific icon', () => {
-    expect(activityBarSource).toMatch(/title="Agent"[\s\S]*?title="扫描器"/u)
+  it('places one grouped scan entry directly after Agent', () => {
+    expect(activityBarSource).toMatch(/title="Agent"[\s\S]*?title="扫描"/u)
     expect(activityBarSource).toContain('<IcIcon name="center-focus" :size="18" />')
+    expect(activityBarSource).toContain('aria-label="扫描菜单"')
   })
 
   it('matches the Agent drawer shell and provides matching collapse controls', () => {

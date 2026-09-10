@@ -370,10 +370,16 @@ class ScannerService:
                 raise RuntimeError("scanner service is stopped")
         self._wake_event.set()
 
+    @property
+    def max_concurrency(self) -> int:
+        """Return the normalized process capacity owned by this scanner scheduler."""
+
+        return max(1, int(self.config.limits.scanner_worker_count))
+
     def _scheduler_loop(self) -> None:
         """Fill free process slots from the durable FIFO queue and reap exits."""
 
-        capacity = max(1, int(self.config.limits.scanner_worker_count))
+        capacity = self.max_concurrency
         while not self._stop_event.is_set():
             try:
                 self._reap_finished_processes()

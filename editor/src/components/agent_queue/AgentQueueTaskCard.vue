@@ -46,7 +46,7 @@ const priorityLabel = { critical: '极高', high: '高', medium: '中', low: '�
   </article>
 </template>
 <style scoped>
-.queue-task-card { position:relative; width:100%; min-height:88px; border:1px solid var(--color-border); border-radius:18px; background:var(--color-surface); color:var(--color-text); transition:background var(--transition-fast), border-color var(--transition-fast); }
+.queue-task-card { position:relative; width:100%; min-height:88px; border:1px solid var(--color-border); border-radius:20px; background:var(--color-surface); color:var(--color-text); transition:background var(--transition-fast), border-color var(--transition-fast); }
 .queue-task-card:hover { background:var(--color-surface-raised); }
 .queue-task-open { display:grid; gap:12px; width:100%; min-height:86px; padding:14px; border:0; border-radius:inherit; background:transparent; color:inherit; text-align:left; cursor:pointer; }
 .queue-task-title { display:flex; align-items:flex-start; gap:8px; padding-right:44px; }.queue-task-title strong { flex:0 1 auto; min-width:0; font:600 calc(13px * var(--font-scale))/1.45 var(--font-ui); overflow:hidden; display:-webkit-box; -webkit-box-orient:vertical; -webkit-line-clamp:2; }.queue-task-title .loading-state { flex:0 0 auto; margin-top:5px; gap:10px; }

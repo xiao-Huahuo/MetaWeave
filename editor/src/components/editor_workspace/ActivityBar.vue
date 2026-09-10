@@ -30,6 +30,7 @@ const props = defineProps<{
   literatureActive: boolean
   ingestionActive: boolean
   scannerActive?: boolean
+  batchScannerActive?: boolean
   visualizationActive: boolean
   agentActive: boolean
   agentQueueActive: boolean
@@ -57,6 +58,7 @@ const emit = defineEmits<{
   openLiterature: []
   openIngestion: []
   openScanner: []
+  openBatchScanner: []
   openVisualization: []
   toggleAgent: []
   openAgentQueue: []
@@ -85,7 +87,7 @@ const agentIconSrc = computed(() => {
   if (props.agentActive && props.displayMode === 'management') return lightLogo
   return darkLogo
 })
-type ActivityMenu = 'knowledge' | 'entertainment' | 'mine'
+type ActivityMenu = 'knowledge' | 'scanner' | 'entertainment' | 'mine'
 
 /** Only one rail submenu stays open so every grouped entry shares the library interaction model. */
 const activeMenu = ref<ActivityMenu | null>(null)
@@ -98,6 +100,7 @@ const knowledgeActive = computed(() => (
   || props.literatureActive
 ))
 const entertainmentActive = computed(() => props.visualizationActive || props.agentQueueActive)
+const scannerGroupActive = computed(() => props.scannerActive || props.batchScannerActive)
 const mineActive = computed(() => props.favoritesActive || props.privacyActive || props.feedbackOpen)
 const activityBarRef = ref<HTMLElement | null>(null)
 const hoverIndicatorTop = ref(0)
@@ -356,18 +359,67 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', closeActivityM
       <img :src="agentIconSrc" class="activity-agent-icon" alt="" />
       <span class="activity-label">Agent</span>
     </button>
-    <button
-      class="activity-button"
-      :class="{ active: scannerActive }"
-      type="button"
-      title="扫描器"
-      aria-label="扫描器"
-      @mousedown.prevent="handleRipple"
-      @click="emit('openScanner')"
-    >
-      <IcIcon name="center-focus" :size="18" />
-      <span class="activity-label">扫描器</span>
-    </button>
+    <div class="knowledge-group">
+      <button
+        class="activity-button knowledge-button"
+        :class="{ active: scannerGroupActive }"
+        type="button"
+        title="扫描"
+        aria-label="扫描"
+        :aria-expanded="activeMenu === 'scanner'"
+        @mousedown="handleRipple"
+        @click.stop="toggleActivityMenu('scanner')"
+      >
+        <IcIcon name="center-focus" :size="18" />
+        <span class="activity-label">扫描</span>
+        <IcIcon class="knowledge-chevron" :class="{ 'is-open': activeMenu === 'scanner' }" name="chevron-right" :size="14" />
+      </button>
+      <Transition name="knowledge-submenu">
+        <div
+          v-if="activeMenu === 'scanner'"
+          ref="knowledgeSubmenuRef"
+          class="knowledge-submenu"
+          aria-label="扫描菜单"
+          @mouseover="moveKnowledgeHoverIndicator"
+          @mouseleave="hideKnowledgeHoverIndicator"
+          @focusin="moveKnowledgeHoverIndicator"
+          @focusout="hideKnowledgeHoverIndicator"
+        >
+          <span
+            class="knowledge-hover-indicator"
+            aria-hidden="true"
+            :style="{
+              transform: `translate3d(0, ${knowledgeHoverIndicatorTop}px, 0)`,
+              opacity: knowledgeHoverIndicatorVisible ? 1 : 0,
+            }"
+          ></span>
+          <button
+            class="activity-button"
+            :class="{ active: scannerActive }"
+            type="button"
+            title="扫描器"
+            aria-label="扫描器"
+            @mousedown.prevent="handleRipple"
+            @click="emit('openScanner'); closeActivityMenu()"
+          >
+            <IcIcon name="center-focus" :size="18" />
+            <span class="activity-label">扫描器</span>
+          </button>
+          <button
+            class="activity-button"
+            :class="{ active: batchScannerActive }"
+            type="button"
+            title="扫描队列"
+            aria-label="扫描队列"
+            @mousedown.prevent="handleRipple"
+            @click="emit('openBatchScanner'); closeActivityMenu()"
+          >
+            <IcIcon name="checklist" :size="18" />
+            <span class="activity-label">扫描队列</span>
+          </button>
+        </div>
+      </Transition>
+    </div>
     <button
       class="activity-button"
       :class="{ active: searchActive }"

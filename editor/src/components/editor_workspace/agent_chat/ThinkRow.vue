@@ -120,7 +120,7 @@ function toggle() {
 }
 
 .think-row__icon {
-  color: var(--color-text-secondary);
+  color: var(--color-accent);
 }
 
 .think-row__title {

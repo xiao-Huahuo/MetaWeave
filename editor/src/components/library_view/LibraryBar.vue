@@ -397,7 +397,7 @@ function handleDrop(event: DragEvent) {
   max-width: 120px;
   min-height: 20px;
   border-radius: 999px;
-  background: color-mix(in srgb, var(--color-primary) 30%, transparent);
+  background: color-mix(in srgb, var(--color-tag-1) var(--tag-color-library-strength), transparent);
   color: var(--color-tag-pill-text);
   padding: 0 8px;
   font-size: 11px;
@@ -407,17 +407,17 @@ function handleDrop(event: DragEvent) {
 }
 
 .tag-pill:nth-child(6n + 2) {
-  background: color-mix(in srgb, var(--color-accent) 30%, transparent);
+  background: color-mix(in srgb, var(--color-tag-2) var(--tag-color-library-strength), transparent);
   color: var(--color-tag-pill-text);
 }
 
 .tag-pill:nth-child(6n + 3) {
-  background: color-mix(in srgb, var(--color-success) 30%, transparent);
+  background: color-mix(in srgb, var(--color-tag-3) var(--tag-color-library-strength), transparent);
   color: var(--color-tag-pill-text);
 }
-.tag-pill:nth-child(6n + 4) { background: color-mix(in srgb, var(--color-warning) 30%, transparent); color: var(--color-tag-pill-text); }
-.tag-pill:nth-child(6n + 5) { background: rgba(113, 70, 214, 0.30); color: var(--color-tag-pill-text); }
-.tag-pill:nth-child(6n) { background: rgba(0, 155, 166, 0.30); color: var(--color-tag-pill-text); }
+.tag-pill:nth-child(6n + 4) { background: color-mix(in srgb, var(--color-tag-4) var(--tag-color-library-strength), transparent); color: var(--color-tag-pill-text); }
+.tag-pill:nth-child(6n + 5) { background: color-mix(in srgb, var(--color-tag-5) var(--tag-color-library-strength), transparent); color: var(--color-tag-pill-text); }
+.tag-pill:nth-child(6n) { background: color-mix(in srgb, var(--color-tag-6) var(--tag-color-library-strength), transparent); color: var(--color-tag-pill-text); }
 
 .bar-badge {
   flex: 0 0 auto;

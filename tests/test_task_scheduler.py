@@ -584,7 +584,7 @@ def test_deepseek_dsml_is_hidden_while_streaming_and_recovered(monkeypatch: obje
         task_id="dsml-stream",
         task_type=FOREGROUND_AGENT_TASK,
         messages=[HumanMessage(content="展示日月前事")],
-        tool_names=["read_knowledge_file"],
+        tool_names=["get_current_time"],
         timeout_seconds=3,
         max_retries=0,
         model_name="deepseek-v4-flash",
@@ -600,9 +600,8 @@ def test_deepseek_dsml_is_hidden_while_streaming_and_recovered(monkeypatch: obje
             yield AIMessageChunk(content="正在生成挂载地址。\n<｜｜DS")
             yield AIMessageChunk(
                 content=(
-                    'ML｜｜tool_calls>\n<｜｜DSML｜｜invoke name="read_knowledge_file">\n'
-                    '<｜｜DSML｜｜parameter name="path" string="true">游戏资料/原神/日月前事_来源存档_BWIKI.md'
-                    '</｜｜DSML｜｜parameter>\n</｜｜DSML｜｜invoke>\n</｜｜DSML｜｜tool_calls>'
+                    'ML｜｜calls>\n<｜｜DSML｜｜invoke name="get_current_time">\n'
+                    '</｜｜DSML｜｜invoke>\n</｜｜DSML｜｜calls>'
                 )
             )
 
@@ -615,8 +614,8 @@ def test_deepseek_dsml_is_hidden_while_streaming_and_recovered(monkeypatch: obje
 
     assert visible == "正在生成挂载地址。\n"
     assert final_message.content == "正在生成挂载地址。\n"
-    assert final_message.tool_calls[0]["name"] == "read_knowledge_file"
-    assert final_message.tool_calls[0]["args"] == {"path": "游戏资料/原神/日月前事_来源存档_BWIKI.md"}
+    assert final_message.tool_calls[0]["name"] == "get_current_time"
+    assert final_message.tool_calls[0]["args"] == {}
 
 
 def test_namespaced_deepseek_model_uses_reasoning_adapter() -> None:

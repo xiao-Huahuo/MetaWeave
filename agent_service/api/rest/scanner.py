@@ -65,8 +65,9 @@ async def list_scans(user_id: str = Query(..., min_length=1)) -> ScannerListOut:
     """List scanner history for the user's active knowledge library."""
 
     try:
-        scans = await run_in_threadpool(_require_scanner_service().list_scans, user_id=user_id)
-        return ScannerListOut(scans=scans)
+        service = _require_scanner_service()
+        scans = await run_in_threadpool(service.list_scans, user_id=user_id)
+        return ScannerListOut(scans=scans, max_concurrency=service.max_concurrency)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
 
