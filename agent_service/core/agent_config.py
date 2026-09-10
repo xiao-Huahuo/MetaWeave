@@ -84,6 +84,7 @@ class AgentConfig:
                 ".xml",
                 ".tex",
                 ".docx",
+                ".xls",
                 ".xlsx",
                 ".pptx",
                 ".pdf",
@@ -634,6 +635,8 @@ class AgentConfig:
         device: PaddleOCR 推理设备,默认 cpu。
         min_confidence: OCR 文本行最低置信度。
         timeout_seconds: 单张图片 OCR 超时时间。
+        input_max_side_pixels: 进入 OCR 原生流水线前允许的最长边像素数。
+        recovery_input_max_side_pixels: 原生访问冲突后安全重试的最长边像素数。
         """
 
         enabled: bool = False
@@ -663,6 +666,8 @@ class AgentConfig:
         device: str = "cpu"
         min_confidence: float = 0.5
         timeout_seconds: int = 30
+        input_max_side_pixels: int = 3072
+        recovery_input_max_side_pixels: int = 1024
 
         @property
         def pipeline_model_names(self) -> dict[str, str]:
@@ -1105,7 +1110,11 @@ class AgentConfig:
         download_timeout_seconds: 文件下载请求超时秒数。
         scanner_source_max_bytes: 扫描器允许保存的单个源文件最大字节数。
         scanner_web_max_bytes: 扫描器网页正文和单张远程图片的最大字节数。
-        scanner_worker_count: 扫描器后台解析线程数。
+        scanner_worker_count: 扫描器允许同时运行的独立工作进程数。
+        scanner_ocr_worker_count: 扫描器允许同时占用 OCR 原生模型的工作进程数。
+        scanner_process_join_timeout_seconds: 扫描器终止子进程后等待退出的秒数。
+        scanner_scheduler_join_timeout_seconds: 扫描器关闭时等待调度线程退出的秒数。
+        scanner_process_poll_seconds: 扫描器调度器检查子进程状态的间隔秒数。
         scanner_redirect_limit: 扫描器网页抓取允许跟随的最大重定向次数。
         tool_attachment_match_preview_count: 附件匹配歧义提示展示的最大候选数。
         tool_registry_description_chars: 工具清单中单项描述的最大字符数。
@@ -1315,7 +1324,11 @@ class AgentConfig:
         download_timeout_seconds: int = 60
         scanner_source_max_bytes: int = 100 * 1024 * 1024
         scanner_web_max_bytes: int = 12 * 1024 * 1024
-        scanner_worker_count: int = 1
+        scanner_worker_count: int = 2
+        scanner_ocr_worker_count: int = 1
+        scanner_process_join_timeout_seconds: float = 0.5
+        scanner_scheduler_join_timeout_seconds: float = 3.0
+        scanner_process_poll_seconds: float = 0.05
         scanner_redirect_limit: int = 5
         tool_attachment_match_preview_count: int = 8
         tool_registry_description_chars: int = 100
@@ -1639,6 +1652,8 @@ class AgentConfig:
             "AGENT_PADDLEOCR_DEVICE": ("ocr", "device", str),
             "AGENT_OCR_MIN_CONFIDENCE": ("ocr", "min_confidence", float),
             "AGENT_OCR_TIMEOUT_SECONDS": ("ocr", "timeout_seconds", int),
+            "AGENT_OCR_INPUT_MAX_SIDE_PIXELS": ("ocr", "input_max_side_pixels", int),
+            "AGENT_OCR_RECOVERY_INPUT_MAX_SIDE_PIXELS": ("ocr", "recovery_input_max_side_pixels", int),
             "AGENT_IMPORTANT_FACT_SUMMARY_SYSTEM_PROMPT": (
                 "prompts",
                 "important_fact_summary_system_prompt",

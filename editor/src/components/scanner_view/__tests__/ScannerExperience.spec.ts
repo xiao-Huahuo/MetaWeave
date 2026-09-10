@@ -49,6 +49,14 @@ describe('scanner experience contracts', () => {
     expect(historySource).toContain("'is-empty': visibleRecords.length === 0")
   })
 
+  it('places a red square stop action on each active history task', () => {
+    expect(historySource).toContain('class="scanner-stop-button"')
+    expect(historySource).toContain("emit('cancel', record)")
+    expect(historySource).toContain('<IcIcon name="stop"')
+    expect(historySource).toContain('background: var(--color-danger)')
+    expect(historySource).toContain('border-radius: 50%')
+  })
+
   it('reuses editor mode switches on both panes and moves OCR to the page toolbar', () => {
     expect(resultSource.match(/<EditorPaneToolbar/gu)).toHaveLength(2)
     expect(resultSource).toContain('settings-resource-page-switch')
@@ -59,10 +67,16 @@ describe('scanner experience contracts', () => {
   })
 
   it('renders OCR blocks only inside left or right preview surfaces', () => {
-    expect(resultSource).toContain(`:blocks="sourceViewMode === 'preview' ? previewBlocks : []"`)
+    expect(resultSource).toContain(`:blocks="sourceViewMode === 'preview' ? sourceOverlayBlocks : []"`)
     expect(resultSource).toContain(`v-if="viewMode === 'preview' || viewMode === 'split'"`)
     expect(resultSource).toContain(':blocks="previewBlocks"')
     expect(resultSource).not.toContain('<CodeEditor v-if="viewMode === \'edit\'" :blocks=')
+  })
+
+  it('uses the OCR-preprocessed image whenever source overlay boxes are visible', () => {
+    expect(resultSource).toContain('const sourceOverlayBlocks = computed(() => props.record.ocr_preview_path ? previewBlocks.value : [])')
+    expect(resultSource).toContain("variant.value === 'ocr' && props.record.ocr_preview_path")
+    expect(resultSource).toContain("watch(() => [props.record.scan_id, variant.value]")
   })
 
   it('shows backend stage text and one-decimal progress without inventing client progress', () => {

@@ -148,8 +148,12 @@ class MultimodalDocumentCleaner:
                 result = self._clean_xml(source_path=source_path, title=title)
             elif suffix == ".docx":
                 result = self._clean_docx(source_path=source_path, title=title)
-            elif suffix == ".xlsx":
-                result = self._clean_xlsx(source_path=source_path, title=title)
+            elif suffix in {".xlsx", ".xls"}:
+                result = (
+                    self._clean_xlsx(source_path=source_path, title=title)
+                    if zipfile.is_zipfile(source_path)
+                    else self._clean_xls(source_path=source_path, title=title)
+                )
             elif suffix == ".pptx":
                 result = self._clean_pptx(source_path=source_path, title=title)
             elif suffix == ".pdf":
@@ -329,6 +333,28 @@ class MultimodalDocumentCleaner:
                 heading = f"{title} Sheet {sheet_index}"
                 sections.append(_make_section(index=len(sections), heading=heading, content=_format_table_rows(rows)))
                 self._emit_progress(stage="sheets", label=f"正在解析工作表 {sheet_index} / {len(sheet_paths)}", current=sheet_index, total=len(sheet_paths), start=8, end=42)
+        return CleanedDocument(source_type="spreadsheet", sections=sections, metadata={"modality": "table", "sheet_count": len(sections)})
+
+    def _clean_xls(self, *, source_path: Path, title: str) -> CleanedDocument:
+        """使用项目既有 xlrd 依赖读取旧版二进制 XLS 工作簿。"""
+
+        import xlrd  # type: ignore[import-untyped]
+
+        workbook = xlrd.open_workbook(source_path, on_demand=True)
+        sections: list[StructuredKnowledgeSection] = []
+        try:
+            for sheet_index, sheet in enumerate(workbook.sheets(), start=1):
+                rows: list[list[str]] = []
+                for row_index in range(min(sheet.nrows, self.max_table_rows)):
+                    row = [_format_xls_value(sheet.cell_value(row_index, column_index)) for column_index in range(sheet.ncols)]
+                    if any(row):
+                        rows.append(row)
+                if rows:
+                    heading = f"{title} Sheet {sheet_index}"
+                    sections.append(_make_section(index=len(sections), heading=heading, content=_format_table_rows(rows)))
+                self._emit_progress(stage="sheets", label=f"正在解析工作表 {sheet_index} / {workbook.nsheets}", current=sheet_index, total=workbook.nsheets, start=8, end=42)
+        finally:
+            workbook.release_resources()
         return CleanedDocument(source_type="spreadsheet", sections=sections, metadata={"modality": "table", "sheet_count": len(sections)})
 
     def _clean_pptx(self, *, source_path: Path, title: str) -> CleanedDocument:
@@ -653,14 +679,32 @@ def _renumber_sections(sections: list[StructuredKnowledgeSection]) -> list[Struc
 
 
 def _format_table_rows(rows: list[list[str]]) -> str:
-    """将表格行转换为 Markdown 风格文本,保留列语义。"""
+    """将表格行转换为可渲染的 GitHub Flavored Markdown 表格。"""
 
     if not rows:
         return ""
     width = max(len(row) for row in rows)
     padded = [row + [""] * (width - len(row)) for row in rows]
-    lines = [" | ".join(row).strip() for row in padded]
-    return "\n".join(line for line in lines if line)
+
+    def format_row(row: list[str]) -> str:
+        """转义单元格并为一行补齐 Markdown 外围管道。"""
+
+        cells = ["<br>".join(cell.splitlines()).replace("|", "\\|") for cell in row]
+        return "| " + " | ".join(cells) + " |"
+
+    return "\n".join([
+        format_row(padded[0]),
+        "| " + " | ".join(["---"] * width) + " |",
+        *(format_row(row) for row in padded[1:]),
+    ])
+
+
+def _format_xls_value(value: Any) -> str:
+    """把 xlrd 标量转换为稳定文本，避免整数被展示为带 `.0` 的浮点数。"""
+
+    if isinstance(value, float) and value.is_integer():
+        return str(int(value))
+    return str(value).strip()
 
 
 def _read_zip_text(archive: zipfile.ZipFile, name: str) -> str:
@@ -941,9 +985,23 @@ def _extract_docx_table(table: ElementTree.Element) -> list[list[str]]:
         for cell in row:
             if _local_name(cell.tag) == "tc":
                 cells.append(_join_text_nodes(cell))
+                cells.extend([""] * (_docx_grid_span(cell) - 1))
         if any(cells):
             rows.append(cells)
     return rows
+
+
+def _docx_grid_span(cell: ElementTree.Element) -> int:
+    """读取 DOCX `w:gridSpan`，返回单元格实际横跨的列数。"""
+
+    for node in cell.iter():
+        if _local_name(node.tag) != "gridSpan":
+            continue
+        try:
+            return max(1, int(_attr_text(node, "val")))
+        except ValueError:
+            return 1
+    return 1
 
 
 def _read_xlsx_shared_strings(archive: zipfile.ZipFile) -> list[str]:
@@ -974,7 +1032,12 @@ def _extract_xlsx_rows(
         for cell in row:
             if _local_name(cell.tag) != "c":
                 continue
-            values.append(_xlsx_cell_value(cell=cell, shared_strings=shared_strings))
+            reference = str(cell.attrib.get("r") or "")
+            match = re.match(r"([A-Z]+)", reference, flags=re.IGNORECASE)
+            column_index = _xlsx_column_index(match.group(1)) if match else len(values)
+            if column_index >= len(values):
+                values.extend([""] * (column_index - len(values) + 1))
+            values[column_index] = _xlsx_cell_value(cell=cell, shared_strings=shared_strings)
         if any(values):
             rows.append(values)
         if len(rows) >= max_rows:
@@ -1000,3 +1063,12 @@ def _xlsx_cell_value(*, cell: ElementTree.Element, shared_strings: list[str]) ->
         except (ValueError, IndexError):
             return value
     return value
+
+
+def _xlsx_column_index(column_name: str) -> int:
+    """把 XLSX 的 A/AA 列引用转换为从零开始的列索引。"""
+
+    index = 0
+    for character in column_name.upper():
+        index = index * 26 + ord(character) - ord("A") + 1
+    return index - 1

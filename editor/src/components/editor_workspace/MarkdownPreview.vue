@@ -90,7 +90,7 @@ const tableOverlay = ref<{
   showTopEdge: boolean
   showRightEdge: boolean
   showBottomEdge: boolean
-  insetBottomEdge: boolean
+  addRowButtonBottom: number
   left: number
   top: number
   width: number
@@ -108,7 +108,7 @@ const tableOverlay = ref<{
   showTopEdge: false,
   showRightEdge: false,
   showBottomEdge: false,
-  insetBottomEdge: false,
+  addRowButtonBottom: -TABLE_EDGE_BUTTON_SIZE,
   left: 0,
   top: 0,
   width: 0,
@@ -514,6 +514,7 @@ function tableFromPointerEvent(event: MouseEvent) {
   const tables = [...previewElement.querySelectorAll<HTMLTableElement>(EDITABLE_PREVIEW_TABLE_SELECTOR)]
   const table = tables.find((candidate) => (
     rectContainsPoint(tableContentRect(candidate), event.clientX, event.clientY, TABLE_EDGE_BUTTON_SIZE)
+    || rectContainsPoint(candidate.getBoundingClientRect(), event.clientX, event.clientY, TABLE_EDGE_BUTTON_SIZE)
   ))
   if (!table) {
     return null
@@ -620,8 +621,8 @@ function updateTableOverlayFromEvent(event: MouseEvent) {
     return
   }
   const tableRect = tableContentRect(tableHit.table)
-  const previewElement = getPreviewElement()
-  const previewRect = previewElement?.getBoundingClientRect()
+  const tableElementRect = tableHit.table.getBoundingClientRect()
+  const tableBottomGutter = Math.max(0, tableElementRect.bottom - tableRect.bottom)
   const withinHorizontalEdgeBand = event.clientX >= tableRect.left - TABLE_EDGE_BUTTON_SIZE
     && event.clientX <= tableRect.right + TABLE_EDGE_BUTTON_SIZE
   const withinVerticalEdgeBand = event.clientY >= tableRect.top - TABLE_EDGE_BUTTON_SIZE
@@ -637,7 +638,7 @@ function updateTableOverlayFromEvent(event: MouseEvent) {
     && event.clientX <= tableRect.right + TABLE_EDGE_BUTTON_SIZE
   const showBottomEdge = withinHorizontalEdgeBand
     && event.clientY >= tableRect.bottom - TABLE_EDGE_HIT_ZONE
-    && event.clientY <= tableRect.bottom + TABLE_EDGE_BUTTON_SIZE
+    && event.clientY <= tableElementRect.bottom + TABLE_EDGE_BUTTON_SIZE
   if (!showLeftEdge && !showTopEdge && !showRightEdge && !showBottomEdge) {
     tableOverlay.value.visible = false
     return
@@ -650,8 +651,7 @@ function updateTableOverlayFromEvent(event: MouseEvent) {
     showTopEdge,
     showRightEdge,
     showBottomEdge,
-    insetBottomEdge: Boolean(previewElement && previewRect
-      && tableRect.bottom + TABLE_EDGE_BUTTON_SIZE > previewRect.top + previewElement.clientHeight),
+    addRowButtonBottom: -(tableBottomGutter + TABLE_EDGE_BUTTON_SIZE),
     left: tableRect.left - hostRect.left,
     top: tableRect.top - hostRect.top,
     width: tableRect.width,
@@ -1200,7 +1200,7 @@ onBeforeUnmount(() => {
       <button
         v-if="tableOverlay.showBottomEdge"
         class="preview-table-add-row-button"
-        :class="{ 'is-inset': tableOverlay.insetBottomEdge }"
+        :style="{ bottom: `${tableOverlay.addRowButtonBottom}px` }"
         type="button"
         title="添加空行"
         @click="addPreviewTableRow"
@@ -1299,10 +1299,6 @@ onBeforeUnmount(() => {
   right: 0;
   bottom: -9px;
   height: 9px;
-}
-
-.preview-table-add-row-button.is-inset {
-  bottom: 0;
 }
 
 .preview-table-add-column-button {

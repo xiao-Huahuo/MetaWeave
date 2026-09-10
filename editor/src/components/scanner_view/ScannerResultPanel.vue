@@ -61,6 +61,7 @@ const resultGridStyle = computed(() => ({
   '--scanner-markdown-ratio': `${1 - paneSplitRatio.value}fr`,
 }))
 const previewBlocks = computed(() => variant.value === 'ocr' ? (props.record.ocr_blocks ?? []) : [])
+const sourceOverlayBlocks = computed(() => props.record.ocr_preview_path ? previewBlocks.value : [])
 const activeBlockId = computed(() => hoveredBlockId.value || lockedBlockId.value)
 
 /** Share hover state between both preview surfaces without touching editors. */
@@ -116,7 +117,10 @@ async function loadSourcePreview(): Promise<void> {
   sourcePreview.value = null
   if (sourceEditable.value || !props.record.source_path) return
   try {
-    sourcePreview.value = await previewKnowledgeFile(settingsStore.profile.userId, props.record.source_path)
+    const previewPath = variant.value === 'ocr' && props.record.ocr_preview_path
+      ? props.record.ocr_preview_path
+      : props.record.source_path
+    sourcePreview.value = await previewKnowledgeFile(settingsStore.profile.userId, previewPath)
   } catch (error) {
     workspaceStore.showToast(error instanceof Error ? error.message : '原文件预览失败', 5000)
   }
@@ -235,7 +239,7 @@ async function copyText(value: string, label: string): Promise<void> {
 }
 
 watch(() => [props.record.scan_id, variant.value, props.record.updated_at], syncDrafts, { immediate: true })
-watch(() => props.record.scan_id, () => {
+watch(() => [props.record.scan_id, variant.value], () => {
   hoveredBlockId.value = ''
   lockedBlockId.value = ''
   void loadSourcePreview()
@@ -288,7 +292,7 @@ onBeforeUnmount(() => {
         <MultimodalPreview
           v-else
           :preview="sourcePreview"
-          :blocks="sourceViewMode === 'preview' ? previewBlocks : []"
+          :blocks="sourceViewMode === 'preview' ? sourceOverlayBlocks : []"
           :active-block-id="activeBlockId"
           :locked-block-id="lockedBlockId"
           @block-hover="hoverBlock"

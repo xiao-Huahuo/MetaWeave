@@ -149,10 +149,63 @@ def test_cleaner_extracts_docx_and_xlsx_sections(tmp_path: Path) -> None:
 
     assert docx_doc.source_type == "docx"
     assert any("项目说明段落" in section.content for section in docx_doc.sections)
-    assert any("值1 | 值2" in section.content for section in docx_doc.sections)
+    assert any("| 值1 | 值2 |" in section.content for section in docx_doc.sections)
+    assert any("| --- | --- |" in section.content for section in docx_doc.sections)
     assert any(event.get("stage") == "document_blocks" and event.get("stage_total") == 2 for event in docx_progress)
     assert xlsx_doc.source_type == "spreadsheet"
-    assert "璃月 | 95" in xlsx_doc.sections[0].content
+    assert "| 城市 | 分数 |" in xlsx_doc.sections[0].content
+    assert "| --- | --- |" in xlsx_doc.sections[0].content
+    assert "| 璃月 | 95 |" in xlsx_doc.sections[0].content
+
+
+def test_cleaner_extracts_legacy_xls_as_markdown_table() -> None:
+    """旧版 XLS 文件也必须进入真实表格解析，不能退化为二进制占位。"""
+
+    source = next(Path("tests/测试文件/多模态转md测试").rglob("*.xls"))
+    assert not zipfile.is_zipfile(source)
+    assert ".xls" in AgentConfig().constants.knowledge_supported_suffixes
+
+    cleaned = MultimodalDocumentCleaner().clean(source_path=source, title=source.stem)
+
+    assert cleaned.source_type == "spreadsheet"
+    assert cleaned.sections
+    assert "| ---" in cleaned.sections[0].content
+
+
+def test_xlsx_preserves_empty_columns_from_cell_references(tmp_path: Path) -> None:
+    """XLSX 未序列化的空单元格仍应按坐标保留，避免后续列向左错位。"""
+
+    source = tmp_path / "gapped.xlsx"
+    with zipfile.ZipFile(source, "w") as archive:
+        archive.writestr(
+            "xl/worksheets/sheet1.xml",
+            '<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>'
+            '<row><c r="A1" t="inlineStr"><is><t>左列</t></is></c><c r="C1" t="inlineStr"><is><t>右列</t></is></c></row>'
+            '</sheetData></worksheet>',
+        )
+
+    cleaned = MultimodalDocumentCleaner().clean(source_path=source, title="gapped")
+
+    assert cleaned.sections[0].content == "| 左列 |  | 右列 |\n| --- | --- | --- |"
+
+
+def test_docx_grid_span_preserves_merged_cell_width(tmp_path: Path) -> None:
+    """DOCX 横向合并单元格应占据真实列数，避免下一单元格发生错列。"""
+
+    source = _build_docx(
+        directory=tmp_path,
+        name="merged.docx",
+        body_xml=(
+            '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main"><w:body><w:tbl><w:tr>'
+            '<w:tc><w:tcPr><w:gridSpan w:val="2"/></w:tcPr><w:p><w:r><w:t>跨两列</w:t></w:r></w:p></w:tc>'
+            '<w:tc><w:p><w:r><w:t>第三列</w:t></w:r></w:p></w:tc>'
+            '</w:tr></w:tbl></w:body></w:document>'
+        ),
+    )
+
+    cleaned = MultimodalDocumentCleaner().clean(source_path=source, title="merged")
+
+    assert cleaned.sections[0].content == "| 跨两列 |  | 第三列 |\n| --- | --- | --- |"
 
 
 def _build_docx(*, directory: Path, name: str, body_xml: str, rels_xml: str | None = None) -> Path:
@@ -223,7 +276,7 @@ def test_cleaner_docx_preserves_order_and_avoids_table_duplication(tmp_path: Pat
 
     assert [section.content for section in cleaned.sections] == [
         "表格前段落",
-        "单元格A | 单元格B",
+        "| 单元格A | 单元格B |\n| --- | --- |",
         "表格后段落",
     ]
 

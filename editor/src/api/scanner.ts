@@ -32,13 +32,14 @@ export interface ScannerRecord {
   source_url: string
   size: number
   ocr_enabled: boolean
-  status: 'queued' | 'running' | 'finished' | 'failed'
+  status: 'queued' | 'running' | 'cancelling' | 'cancelled' | 'finished' | 'failed'
   stage: string
   stage_label: string
   progress: number
   no_ocr_markdown: string
   ocr_markdown: string
   ocr_blocks?: ScannerOcrBlock[]
+  ocr_preview_path?: string
   assets: string[]
   error: string
   source_text: string | null
@@ -80,6 +81,11 @@ export function updateScanDraft(userId: string, scanId: string, variant: Scanner
 /** Persist edits to a text original stored in the managed scanner directory. */
 export function updateScanSource(userId: string, scanId: string, content: string): Promise<ScannerRecord> {
   return apiPatch(`${API_ROUTES.SCANNER}/${encodeURIComponent(scanId)}/source`, { user_id: userId, content })
+}
+
+/** Hard-stop one queued or running scanner task without affecting siblings. */
+export function cancelScan(userId: string, scanId: string): Promise<ScannerRecord> {
+  return apiPost(`${API_ROUTES.SCANNER}/${encodeURIComponent(scanId)}/cancel`, { user_id: userId })
 }
 
 /** Save one scanner projection into the active knowledge library. */

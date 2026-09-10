@@ -101,6 +101,15 @@ async function remove(record: ScannerRecord): Promise<void> {
   }
 }
 
+/** Immediately terminate one queued or running task without confirmation delay. */
+async function cancel(record: ScannerRecord): Promise<void> {
+  try {
+    await scannerStore.cancel(record.scan_id)
+  } catch (error) {
+    scannerStore.actionError = error instanceof Error ? error.message : '终止失败'
+  }
+}
+
 /** Poll only while at least one scanner task remains active. */
 async function poll(): Promise<void> {
   if (!scannerStore.hasRunning) return
@@ -145,6 +154,7 @@ onBeforeUnmount(() => {
         @select="selectRecord"
         @reveal="reveal"
         @remove="remove"
+        @cancel="cancel"
       />
     </aside>
 

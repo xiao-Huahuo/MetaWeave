@@ -31,6 +31,7 @@ from agent_service.services.memory.rag.image_ocr import ImageOcrService
 from agent_service.services.memory.rag.multimodal_cleaner import MultimodalDocumentCleaner
 
 TEXT_FALLBACK_ENCODINGS = ("utf-8", "utf-8-sig", "gb18030")
+DOCX_IMAGE_REFERENCE_RE = re.compile(r"\[DOCX 图片引用:\s*([^\]]+)\]")
 
 
 @dataclass(slots=True)
@@ -53,7 +54,7 @@ class FrontmatterBootstrapService:
     config: 全局配置对象,用于读取原始知识目录和结构化输出目录。
     """
 
-    def __init__(self, *, config: AgentConfig, ocr_enabled: bool | None = None) -> None:
+    def __init__(self, *, config: AgentConfig, ocr_enabled: bool | None = None, ocr_inline: bool = False) -> None:
         """初始化原始知识源结构化服务。"""
 
         self.config = config
@@ -61,7 +62,7 @@ class FrontmatterBootstrapService:
         self.multimodal_cleaner = MultimodalDocumentCleaner(
             config=config,
             ocr_enabled=self.ocr_enabled,
-            image_ocr_service=ImageOcrService(config=config, enabled=self.ocr_enabled) if self.ocr_enabled else None,
+            image_ocr_service=ImageOcrService(config=config, enabled=self.ocr_enabled, run_inline=ocr_inline) if self.ocr_enabled else None,
         )
 
     def build_frontmatter_dir(
@@ -458,19 +459,27 @@ class FrontmatterBootstrapService:
             )
             if embedded_assets:
                 extra_metadata["embedded_assets"] = embedded_assets
+                inlined_asset_urls = (
+                    self._inline_docx_images(sections, embedded_assets)
+                    if source_path.suffix.lower() == ".docx"
+                    else set()
+                )
                 links = "\n".join(
-                    f"![{asset['name']}]({asset['public_url']})" for asset in embedded_assets
+                    f"![{asset['name']}]({asset['public_url']})"
+                    for asset in embedded_assets
+                    if asset["public_url"] not in inlined_asset_urls
                 )
-                sections.append(
-                    StructuredKnowledgeSection(
-                        section_id=f"sec_{len(sections):04d}",
-                        heading="内置图片",
-                        title_path=[title, "内置图片"],
-                        content=links,
-                        start_char=0,
-                        end_char=len(links),
+                if links:
+                    sections.append(
+                        StructuredKnowledgeSection(
+                            section_id=f"sec_{len(sections):04d}",
+                            heading="内置图片",
+                            title_path=[title, "内置图片"],
+                            content=links,
+                            start_char=0,
+                            end_char=len(links),
+                        )
                     )
-                )
             summary = cleaned.summary
         markdown = self._build_canonical_markdown(title=title, source_type=source_type, sections=sections)
         sections = self._build_markdown_sections(title=title, body_text=markdown)
@@ -595,6 +604,34 @@ class FrontmatterBootstrapService:
         except (OSError, zipfile.BadZipFile):
             return []
         return assets
+
+    @staticmethod
+    def _inline_docx_images(
+        sections: list[StructuredKnowledgeSection],
+        embedded_assets: list[dict[str, Any]],
+    ) -> set[str]:
+        """Replace DOCX relationship placeholders with their extracted image nodes."""
+
+        assets_by_reference: dict[str, dict[str, Any]] = {}
+        for asset in embedded_assets:
+            archive_path = str(asset.get("archive_path") or "").replace("\\", "/").lstrip("/")
+            assets_by_reference[archive_path] = asset
+            assets_by_reference[archive_path.removeprefix("word/")] = asset
+        used_urls: set[str] = set()
+
+        def replace_reference(match: re.Match[str]) -> str:
+            reference = match.group(1).strip().replace("\\", "/").lstrip("/")
+            asset = assets_by_reference.get(reference) or assets_by_reference.get(f"word/{reference}")
+            if not asset:
+                return match.group(0)
+            public_url = str(asset["public_url"])
+            used_urls.add(public_url)
+            return f"![{asset['name']}]({public_url})"
+
+        for section in sections:
+            section.content = DOCX_IMAGE_REFERENCE_RE.sub(replace_reference, section.content)
+            section.end_char = section.start_char + len(section.content)
+        return used_urls
 
     def _build_sections(
         self,

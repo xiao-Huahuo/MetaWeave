@@ -36,6 +36,12 @@ class ScannerSourceUpdate(BaseModel):
     content: str
 
 
+class ScannerCancelRequest(BaseModel):
+    """Cancel one queued or running scanner task owned by the user."""
+
+    user_id: str = Field(min_length=1, max_length=DEFAULT_BUSINESS_LIMITS.medium_name_max_length)
+
+
 class ScannerSaveRequest(BaseModel):
     """Save the chosen scanner projection into the active knowledge root."""
 
@@ -63,6 +69,7 @@ class ScannerOut(BaseModel):
     no_ocr_markdown: str
     ocr_markdown: str
     ocr_blocks: list[dict[str, Any]]
+    ocr_preview_path: str = ""
     assets: list[str]
     error: str
     source_text: str | None = None

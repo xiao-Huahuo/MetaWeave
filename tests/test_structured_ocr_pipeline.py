@@ -8,10 +8,14 @@ MetaWeave 选择的组件、关闭的能力以及结构化 Markdown/块输出合
 
 from __future__ import annotations
 
+import io
 import threading
 import time
 from pathlib import Path
 from typing import Any
+
+from PIL import Image
+import numpy as np
 
 from agent_service.core.agent_config import AgentConfig
 from agent_service.scripts.download_model import _build_paddleocr_pipeline
@@ -191,6 +195,24 @@ def test_structure_result_preserves_markdown_blocks_and_counts(tmp_path: Path, m
     assert pipeline.kwargs["use_seal_recognition"] is False
 
 
+def test_structure_result_preserves_the_preprocessed_page_used_by_layout_boxes() -> None:
+    """Overlay consumers must receive the exact page image used for bbox coordinates."""
+
+    output_img = np.zeros((3, 5, 3), dtype=np.uint8)
+    raw_result = [{
+        "markdown": {"markdown_texts": "正文"},
+        "json": {"res": {"page_index": 0, "width": 5, "height": 3, "parsing_res_list": []}},
+        "doc_preprocessor_res": {"output_img": output_img},
+    }]
+
+    result = ImageOcrService(config=_config(), enabled=True)._collect_structured_result(raw_result)
+
+    with Image.open(io.BytesIO(result.preview_image_png)) as preview:
+        assert preview.format == "PNG"
+        assert preview.mode == "RGB"
+        assert preview.size == (5, 3)
+
+
 def test_real_ocr_lifecycle_reports_loading_inference_and_result_stages(tmp_path: Path, monkeypatch) -> None:
     """扫描器应看到 OCR 当前在加载、推理还是整理结果，而不是停在一个笼统状态。"""
 
@@ -209,6 +231,50 @@ def test_real_ocr_lifecycle_reports_loading_inference_and_result_stages(tmp_path
     assert result.has_text is True
     assert [event["stage"] for event in stages] == ["ocr_model_loading", "ocr_decision", "ocr_result"]
     assert stages[1]["stage_label"] == "模型裁决完成 · 完成 0 / 跳过 8"
+
+
+def test_image_ocr_returns_when_pipeline_exceeds_configured_timeout(tmp_path: Path, monkeypatch) -> None:
+    """无文字图片的流水线未返回时，OCR 必须按服务配置结束等待。"""
+
+    release_pipeline = threading.Event()
+
+    class BlockingPipeline:
+        """模拟空白图片触发的长时间无结果推理。"""
+
+        def predict(self, **kwargs: Any) -> list[dict[str, Any]]:  # noqa: ARG002
+            release_pipeline.wait(timeout=1)
+            return []
+
+    source = tmp_path / "blank.png"
+    source.write_bytes(b"fake")
+    config = _config()
+    config.ocr.timeout_seconds = 0.05  # type: ignore[assignment]
+    service = ImageOcrService(config=config, enabled=True)
+    monkeypatch.setattr(service, "_get_pipeline", lambda: BlockingPipeline())
+
+    started = time.monotonic()
+    try:
+        result = service.extract_image_text(source)
+    finally:
+        release_pipeline.set()
+
+    assert time.monotonic() - started < 0.5
+    assert result == ImageOcrResult(engine_available=False)
+
+
+def test_image_ocr_skips_uniform_image_without_loading_pipeline(tmp_path: Path, monkeypatch) -> None:
+    """纯色空白图片应直接得到无文字终态，不加载结构化模型。"""
+
+    source = tmp_path / "blank.png"
+    Image.new("RGB", (512, 512), "white").save(source)
+    service = ImageOcrService(config=_config(), enabled=True)
+    monkeypatch.setattr(service, "_get_pipeline", lambda: (_ for _ in ()).throw(AssertionError("pipeline should not load")))
+
+    started = time.monotonic()
+    result = service.extract_image_text(source)
+
+    assert time.monotonic() - started < 0.5
+    assert result == ImageOcrResult(engine_available=True)
 
 
 def test_model_observer_advances_only_after_real_child_model_calls_and_restores_objects() -> None:

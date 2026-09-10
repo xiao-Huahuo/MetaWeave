@@ -13,11 +13,18 @@ result = service.extract_image_text(Path("demo.png"))
 
 from __future__ import annotations
 
+import io
 import logging
+import tempfile
 import threading
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass, field
 from pathlib import Path
+from queue import Empty, Queue
 from typing import Any
+
+from PIL import Image, ImageOps
 
 from agent_service.core.agent_config import AgentConfig
 from agent_service.scripts.download_model import (
@@ -59,6 +66,7 @@ class ImageOcrResult:
     table_count: int = 0
     formula_count: int = 0
     layout_labels: list[str] = field(default_factory=list)
+    preview_image_png: bytes = b""
 
 
 class ImageOcrService:
@@ -73,11 +81,12 @@ class ImageOcrService:
     _pipeline_lock = threading.Lock()
     _inference_lock = threading.Lock()
 
-    def __init__(self, *, config: AgentConfig, enabled: bool | None = None) -> None:
-        """保存配置；enabled 用于承载用户级 OCR 开关覆盖进程默认值。"""
+    def __init__(self, *, config: AgentConfig, enabled: bool | None = None, run_inline: bool = False) -> None:
+        """保存配置；进程隔离调用可同步推理，避免遗留原生守护线程。"""
 
         self.config = config
         self.enabled = config.ocr.enabled if enabled is None else bool(enabled)
+        self.run_inline = run_inline
 
     def extract_image_text(
         self,
@@ -92,24 +101,70 @@ class ImageOcrService:
 
         if not self.enabled:
             return ImageOcrResult()
+        if _is_uniform_image(source_path):
+            return ImageOcrResult(engine_available=True)
+        timeout_seconds = max(float(self.config.ocr.timeout_seconds), 0.001)
+        if self.run_inline:
+            try:
+                with _normalized_ocr_image(source_path, max_side_pixels=self.config.ocr.input_max_side_pixels) as normalized_source:
+                    return self._extract_image_text(normalized_source, progress_callback, timeout_seconds)
+            except (OSError, ValueError, Image.DecompressionBombError) as exc:
+                logger.warning("OCR 图片规范化失败: %s | path=%s", exc, source_path)
+                return ImageOcrResult(engine_available=False)
+        active = threading.Event()
+        active.set()
+        result_queue: Queue[ImageOcrResult] = Queue(maxsize=1)
+
+        def emit_progress(payload: dict[str, Any]) -> None:
+            """停止等待后丢弃迟到进度，避免后台推理继续改写已终止任务。"""
+
+            if active.is_set() and progress_callback:
+                progress_callback(payload)
+
+        def run() -> None:
+            """在守护线程中隔离可能不返回的第三方原生推理。"""
+
+            result_queue.put(self._extract_image_text(source_path, emit_progress, timeout_seconds))
+
+        threading.Thread(target=run, daemon=True, name="paddleocr-inference").start()
         try:
-            with self._inference_lock:
-                if progress_callback:
-                    progress_callback({
-                        "status": "loading", "progress": 0.0, "completed": 0, "skipped": 0,
-                        "total": OCR_MODEL_STAGE_COUNT, "stage": "ocr_model_loading", "stage_label": "正在加载结构化 OCR 模型",
-                    })
-                pipeline = self._get_pipeline()
-                if pipeline is None:
-                    return ImageOcrResult()
-                raw_result = self._run_pipeline(
-                    pipeline=pipeline,
-                    source_path=source_path,
-                    progress_callback=progress_callback,
-                )
+            return result_queue.get(timeout=timeout_seconds)
+        except Empty:
+            logger.warning("PaddleOCR 图片推理超时: %.3fs | path=%s", timeout_seconds, source_path)
+            return ImageOcrResult(engine_available=False)
+        finally:
+            active.clear()
+
+    def _extract_image_text(
+        self,
+        source_path: Path,
+        progress_callback: OcrProgressCallback | None,
+        timeout_seconds: float,
+    ) -> ImageOcrResult:
+        """执行一次 OCR；锁等待与外层调用共享同一个有界时限。"""
+
+        acquired = self._inference_lock.acquire(timeout=timeout_seconds)
+        if not acquired:
+            return ImageOcrResult(engine_available=False)
+        try:
+            if progress_callback:
+                progress_callback({
+                    "status": "loading", "progress": 0.0, "completed": 0, "skipped": 0,
+                    "total": OCR_MODEL_STAGE_COUNT, "stage": "ocr_model_loading", "stage_label": "正在加载结构化 OCR 模型",
+                })
+            pipeline = self._get_pipeline()
+            if pipeline is None:
+                return ImageOcrResult()
+            raw_result = self._run_pipeline(
+                pipeline=pipeline,
+                source_path=source_path,
+                progress_callback=progress_callback,
+            )
         except Exception as exc:
             logger.warning("PaddleOCR 图片推理失败: %s | path=%s", exc, source_path)
             return ImageOcrResult(engine_available=False)
+        finally:
+            self._inference_lock.release()
 
         if progress_callback:
             progress_callback({
@@ -122,7 +177,7 @@ class ImageOcrService:
         items = self._collect_items(raw_result)
         trusted_items = [item for item in items if item["confidence"] >= self.config.ocr.min_confidence]
         if not trusted_items:
-            return ImageOcrResult(engine_available=True)
+            return ImageOcrResult(engine_available=True, preview_image_png=structured.preview_image_png)
         content = self._format_items_as_lines(trusted_items)
         average_confidence = sum(float(item["confidence"]) for item in trusted_items) / len(trusted_items)
         return ImageOcrResult(
@@ -131,6 +186,7 @@ class ImageOcrService:
             word_count=len(trusted_items),
             average_confidence=average_confidence,
             engine_available=True,
+            preview_image_png=structured.preview_image_png,
         )
 
     def warmup(self) -> None:
@@ -242,6 +298,7 @@ class ImageOcrService:
     def _collect_structured_result(self, raw_result: Any) -> ImageOcrResult:
         """将 PP-StructureV3 页面结果规整为 Markdown、版面块与统计。"""
 
+        preview_image_png = _preprocessed_preview_png(raw_result)
         markdown_pages: list[str] = []
         blocks: list[dict[str, Any]] = []
         confidences: list[float] = []
@@ -279,7 +336,7 @@ class ImageOcrService:
             markdown_pages = [str(block["content"]) for block in blocks if str(block["content"]).strip()]
         content = "\n\n".join(part for part in markdown_pages if part).strip()
         if not content:
-            return ImageOcrResult(engine_available=True)
+            return ImageOcrResult(engine_available=True, preview_image_png=preview_image_png)
         labels = sorted({str(block["type"]) for block in blocks})
         return ImageOcrResult(
             content=content,
@@ -292,6 +349,7 @@ class ImageOcrService:
             table_count=table_count,
             formula_count=formula_count,
             layout_labels=labels,
+            preview_image_png=preview_image_png,
         )
 
     def _collect_items(self, raw_result: Any) -> list[dict[str, Any]]:
@@ -398,6 +456,28 @@ def _result_markdown(node: Any) -> str:
     if isinstance(raw, dict):
         return str(raw.get("markdown_texts") or raw.get("text") or "")
     return str(raw or "")
+
+
+def _preprocessed_preview_png(raw_result: Any) -> bytes:
+    """Encode the first PaddleX preprocessed page used by layout coordinates."""
+
+    for node in _iter_result_nodes(raw_result):
+        try:
+            preprocessor = node.get("doc_preprocessor_res")
+            output_img = preprocessor.get("output_img") if preprocessor is not None else None
+        except (AttributeError, TypeError):
+            continue
+        if output_img is None or not hasattr(output_img, "shape"):
+            continue
+        pixels = output_img[:, :, :3][:, :, ::-1] if len(output_img.shape) == 3 and output_img.shape[2] >= 3 else output_img
+        image = Image.fromarray(pixels).convert("RGB")
+        try:
+            buffer = io.BytesIO()
+            image.save(buffer, format="PNG")
+            return buffer.getvalue()
+        finally:
+            image.close()
+    return b""
 
 
 def _normalize_structure_block(
@@ -507,3 +587,41 @@ def _box_geometry(box: Any) -> tuple[float, float, float]:
     xs = [point[0] for point in points]
     ys = [point[1] for point in points]
     return min(xs), min(ys), max(1.0, max(ys) - min(ys))
+
+
+def _is_uniform_image(source_path: Path) -> bool:
+    """识别纯色或全透明空白图，避免为确定无内容的输入加载 OCR。"""
+
+    try:
+        with Image.open(source_path) as image:
+            rgba = image.convert("RGBA")
+            if rgba.getchannel("A").getextrema() == (0, 0):
+                return True
+            return all(low == high for low, high in rgba.convert("RGB").getextrema())
+    except (OSError, ValueError):
+        return False
+
+
+@contextmanager
+def _normalized_ocr_image(source_path: Path, *, max_side_pixels: int) -> Iterator[Path]:
+    """Decode, orient, and bound one RGB PNG before native OCR receives it."""
+
+    with tempfile.TemporaryDirectory(prefix="metaweave-ocr-") as directory:
+        target = Path(directory) / "input.png"
+        with Image.open(source_path) as image:
+            oriented = ImageOps.exif_transpose(image)
+            limit = max(1, int(max_side_pixels))
+            if max(oriented.size) > limit:
+                oriented.thumbnail((limit, limit), Image.Resampling.LANCZOS)
+            if "A" in oriented.getbands():
+                rgba = oriented.convert("RGBA")
+                normalized = Image.new("RGB", rgba.size, "white")
+                normalized.paste(rgba, mask=rgba.getchannel("A"))
+                rgba.close()
+            else:
+                normalized = oriented.convert("RGB")
+            try:
+                normalized.save(target, format="PNG")
+            finally:
+                normalized.close()
+        yield target

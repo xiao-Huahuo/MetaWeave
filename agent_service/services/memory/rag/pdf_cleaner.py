@@ -55,11 +55,11 @@ def extract_pdf_text(
         page_count = int(document.page_count)
         for page_index, page in enumerate(document, start=1):
             lines: list[str] = []
-            page_text = (page.get_text("text") or "").strip()
+            table_lines, page_table_count, table_regions = _extract_page_tables(page)
+            page_text = _extract_page_text(page, table_regions)
             if page_text:
                 lines.append(page_text)
                 semantic_text_parts.append(page_text)
-            table_lines, page_table_count = _extract_page_tables(page)
             if table_lines:
                 table_count += page_table_count
                 table_text = "\n".join(table_lines)
@@ -92,30 +92,84 @@ def extract_pdf_text(
     )
 
 
-def _extract_page_tables(page: Any) -> tuple[list[str], int]:
-    """Extract basic table text when the installed PyMuPDF supports it."""
+def _extract_page_tables(page: Any) -> tuple[list[str], int, list[tuple[float, float, float, float]]]:
+    """Extract renderable Markdown tables and their page regions."""
 
     if not hasattr(page, "find_tables"):
-        return [], 0
+        return [], 0, []
     try:
         table_finder = page.find_tables()
     except Exception:
-        return [], 0
+        return [], 0, []
     tables = list(getattr(table_finder, "tables", []) or [])
     lines: list[str] = []
+    regions: list[tuple[float, float, float, float]] = []
     for table_index, table in enumerate(tables, start=1):
         try:
             rows = table.extract()
         except Exception:
             continue
-        formatted_rows = [
-            " | ".join(str(cell or "").strip() for cell in row).strip()
-            for row in rows
-            if any(str(cell or "").strip() for cell in row)
-        ]
-        if formatted_rows:
-            lines.append(f"表格 {table_index}:\n" + "\n".join(formatted_rows))
-    return lines, len(lines)
+        formatted_table = _format_markdown_table(rows)
+        if not formatted_table:
+            continue
+        lines.append(f"表格 {table_index}:\n\n{formatted_table}")
+        bbox = getattr(table, "bbox", None)
+        if bbox is not None:
+            try:
+                regions.append(tuple(float(value) for value in bbox))
+            except (TypeError, ValueError):
+                pass
+    return lines, len(lines), regions
+
+
+def _format_markdown_table(rows: list[list[Any]]) -> str:
+    """Convert extracted cells into a rectangular GitHub-flavored Markdown table."""
+
+    populated = [row for row in rows if any(str(cell or "").strip() for cell in row)]
+    if not populated:
+        return ""
+    column_count = max(len(row) for row in populated)
+
+    def format_cell(cell: Any) -> str:
+        """Escape Markdown delimiters while preserving wrapped cell lines."""
+
+        return "<br>".join(part.strip() for part in str(cell or "").splitlines()).replace("|", "\\|")
+
+    def format_row(row: list[Any]) -> str:
+        """Pad one extracted row to the detected table width."""
+
+        cells = [format_cell(cell) for cell in row]
+        cells.extend([""] * (column_count - len(cells)))
+        return "| " + " | ".join(cells) + " |"
+
+    return "\n".join([
+        format_row(populated[0]),
+        "| " + " | ".join(["---"] * column_count) + " |",
+        *(format_row(row) for row in populated[1:]),
+    ])
+
+
+def _extract_page_text(page: Any, table_regions: list[tuple[float, float, float, float]]) -> str:
+    """Keep prose blocks while excluding text already represented by detected tables."""
+
+    if not table_regions:
+        return (page.get_text("text") or "").strip()
+    try:
+        blocks = page.get_text("blocks") or []
+    except Exception:
+        return ""
+    prose: list[str] = []
+    for block in blocks:
+        if len(block) < 5:
+            continue
+        center_x = (float(block[0]) + float(block[2])) / 2
+        center_y = (float(block[1]) + float(block[3])) / 2
+        if any(left <= center_x <= right and top <= center_y <= bottom for left, top, right, bottom in table_regions):
+            continue
+        text = str(block[4] or "").strip()
+        if text:
+            prose.append(text)
+    return "\n\n".join(prose)
 
 
 def _extract_page_image_refs(

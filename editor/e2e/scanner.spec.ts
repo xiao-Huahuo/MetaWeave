@@ -9,19 +9,21 @@ import { expect, test, type Page } from '@playwright/test'
 const screenshotDirectory = '../docs/screenshots/scanner'
 
 /** Install the smallest stable backend contract needed by the scanner page. */
-async function mockScannerWorkspace(page: Page): Promise<void> {
+async function mockScannerWorkspace(page: Page, autoFinish = true): Promise<void> {
   let uploadedAt = 0
-  const record = (status: 'running' | 'finished') => ({
+  let cancelled = false
+  const record = (status: 'running' | 'cancelled' | 'finished') => ({
     scan_id: 'scan-smoke', user_id: 'scanner-smoke', library_id: 'default', source_kind: 'file',
-    source_name: '课堂笔记.txt', source_path: '.mw/scan/scan-smoke/source/课堂笔记.txt', source_url: '', size: 28,
-    ocr_enabled: true, status, stage: status === 'running' ? 'extract' : 'completed',
-    stage_label: status === 'running' ? '正在解析文件内容' : '解析完成', progress: status === 'running' ? 44 : 100,
-    no_ocr_markdown: status === 'finished' ? '# No OCR\n\n原始文字' : '',
+    source_name: '课堂笔记.docx', source_path: '.mw/scan/scan-smoke/source/课堂笔记.docx', source_url: '', size: 28,
+    ocr_enabled: true, status, stage: status === 'running' ? 'extract' : status === 'cancelled' ? 'cancelled' : 'completed',
+    stage_label: status === 'running' ? '正在解析文件内容' : status === 'cancelled' ? '已终止' : '解析完成', progress: status === 'running' ? 44 : status === 'cancelled' ? 0 : 100,
+    no_ocr_markdown: status === 'finished' ? '# No OCR\n\n原始文字\n\n![image1.png](./assets/image1.png)' : '',
     ocr_markdown: status === 'finished' ? '# OCR\n\n识别文字' : '', assets: [], error: '',
-    source_text: status === 'finished' ? '课堂原始内容' : null,
+    source_text: null,
     created_at: '2026-09-08T06:20:00Z', updated_at: '2026-09-08T06:21:00Z',
-    finished_at: status === 'finished' ? '2026-09-08T06:21:00Z' : null,
+    finished_at: status === 'running' ? null : '2026-09-08T06:21:00Z',
   })
+  const currentStatus = (): 'running' | 'cancelled' | 'finished' => cancelled ? 'cancelled' : autoFinish && Date.now() - uploadedAt > 1_000 ? 'finished' : 'running'
 
   await page.route('**/*', async (route) => {
     const request = route.request()
@@ -34,13 +36,20 @@ async function mockScannerWorkspace(page: Page): Promise<void> {
       knowledge_libraries: [{ library_id: 'default', name: '扫描验收库', knowledge_dir: 'D:/Knowledge', library_storage_dir: '.mw/library', is_active: true }],
     })
     if (url.pathname === '/knowledge/files') return json({ tree: [] })
+    if (url.pathname === '/knowledge/files/preview') return json({ kind: 'document', path: '.mw/scan/scan-smoke/source/课堂笔记.docx', html: '<p>课堂原始内容</p>', readonly: true })
+    if (url.pathname === '/knowledge/files/raw') return route.fulfill({
+      status: 200,
+      contentType: 'image/png',
+      body: Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=', 'base64'),
+    })
     if (url.pathname === '/knowledge/files/events') return route.fulfill({ status: 200, contentType: 'text/event-stream', body: ': smoke\n\n' })
     if (url.pathname === '/sessions' || url.pathname === '/todo/list' || url.pathname === '/automation/list') return json([])
     if (url.pathname === '/favorites') return json({ favorites: uploadedAt ? [{ favorite_id: 'fav-scan', user_id: 'scanner-smoke', library_id: 'default', target_type: 'scanner', target_id: 'scan-smoke', created_at: '2026-09-08T06:22:00Z' }] : [] })
     if (url.pathname === '/privacy') return json({ privacy: [] })
     if (url.pathname === '/scanner/files' && request.method() === 'POST') { uploadedAt = Date.now(); return json(record('running')) }
-    if (url.pathname === '/scanner' && request.method() === 'GET') return json({ scans: uploadedAt ? [record(Date.now() - uploadedAt > 1_000 ? 'finished' : 'running')] : [] })
-    if (url.pathname === '/scanner/scan-smoke' && request.method() === 'GET') return json(record(Date.now() - uploadedAt > 1_000 ? 'finished' : 'running'))
+    if (url.pathname === '/scanner' && request.method() === 'GET') return json({ scans: uploadedAt ? [record(currentStatus())] : [] })
+    if (url.pathname === '/scanner/scan-smoke/cancel' && request.method() === 'POST') { cancelled = true; return json(record('cancelled')) }
+    if (url.pathname === '/scanner/scan-smoke' && request.method() === 'GET') return json(record(currentStatus()))
     if (url.pathname.endsWith('/draft') || url.pathname.endsWith('/source')) return json(record('finished'))
     if (request.resourceType() === 'fetch' || request.resourceType() === 'xhr') return json({})
     return route.continue()
@@ -145,7 +154,7 @@ test('scanner upload, result editing, examples, and responsive layouts', async (
   if (await page.getByRole('button', { name: '展开侧边栏' }).isVisible()) await page.getByRole('button', { name: '展开侧边栏' }).click()
   await page.getByRole('button', { name: '上传解析', exact: true }).click()
   const chooser = await chooserPromise
-  await chooser.setFiles({ name: '课堂笔记.txt', mimeType: 'text/plain', buffer: Buffer.from('课堂原始内容') })
+  await chooser.setFiles({ name: '课堂笔记.docx', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', buffer: Buffer.from('docx-smoke') })
   await expect(page.locator('.scanner-running')).toBeVisible()
   await expect(page.locator('.scanner-history-card .scanner-history-status')).toHaveText('解析中')
   expect(await page.locator('.scanner-history-card').evaluate((element) => getComputedStyle(element).animationName)).toContain('scanner-history-enter')
@@ -200,7 +209,10 @@ test('scanner upload, result editing, examples, and responsive layouts', async (
   await expectNoScannerOverflow(page)
 
   await page.getByRole('button', { name: 'No OCR', exact: true }).click()
-  await expect(page.locator('.scanner-markdown-pane textarea').first()).toHaveValue(/No OCR/u)
+  const docxImage = page.locator('.scanner-markdown-pane img[alt="image1.png"]')
+  await expect(docxImage).toBeVisible()
+  await expect.poll(() => docxImage.evaluate((image: HTMLImageElement) => [image.complete, image.naturalWidth, image.naturalHeight])).toEqual([true, 1, 1])
+  await expect(page.locator('.scanner-markdown-pane')).not.toContainText('DOCX 图片引用')
   await page.setViewportSize({ width: 768, height: 820 })
   await expectNoScannerOverflow(page)
   await page.screenshot({ path: `${screenshotDirectory}/result-768.png`, fullPage: true })
@@ -215,4 +227,55 @@ test('scanner upload, result editing, examples, and responsive layouts', async (
   await page.getByLabel('收藏分类').getByRole('button', { name: '扫描器', exact: true }).click()
   await expect(page.locator('.scanner-favorites-panel .scanner-history-card')).toHaveCount(1)
   await page.screenshot({ path: `${screenshotDirectory}/favorites-1024.png`, fullPage: true })
+})
+
+test('scanner running task exposes a responsive immediate stop control', async ({ page }) => {
+  test.setTimeout(30_000)
+  await mockScannerWorkspace(page, false)
+  await page.setViewportSize({ width: 1024, height: 820 })
+  await page.goto('/')
+  await openScanner(page)
+
+  const chooserPromise = page.waitForEvent('filechooser')
+  await page.getByRole('button', { name: '上传解析', exact: true }).click()
+  await (await chooserPromise).setFiles({ name: '并发任务.docx', mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', buffer: Buffer.from('queue-smoke') })
+  const stopButton = page.locator('.scanner-stop-button')
+  await expect(stopButton).toBeVisible()
+
+  for (const viewport of [{ name: '1024', width: 1024 }, { name: '768', width: 768 }, { name: '480', width: 480 }]) {
+    await page.setViewportSize({ width: viewport.width, height: 820 })
+    if (!await page.locator('.scanner-history-rail').evaluate((element) => element.classList.contains('open'))) {
+      await page.getByRole('button', { name: '展开侧边栏' }).click()
+    }
+    await page.waitForTimeout(250)
+    await expect(stopButton).toBeInViewport()
+    await expectNoScannerOverflow(page)
+    await page.screenshot({ path: `${screenshotDirectory}/queue-running-${viewport.name}.png`, fullPage: true })
+  }
+
+  await page.setViewportSize({ width: 1024, height: 820 })
+  await stopButton.click()
+  await expect(page.locator('.scanner-history-status')).toHaveText('已终止')
+  await expect(stopButton).toHaveCount(0)
+})
+
+test('blank-image-docx-upload-reaches-finished-result', async ({ page }) => {
+  await mockScannerWorkspace(page)
+  await page.setViewportSize({ width: 1024, height: 820 })
+  await page.goto('/')
+  await openScanner(page)
+
+  const chooserPromise = page.waitForEvent('filechooser')
+  await page.getByRole('button', { name: '上传解析', exact: true }).click()
+  const chooser = await chooserPromise
+  await chooser.setFiles({
+    name: '空白图片.docx',
+    mimeType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    buffer: Buffer.from('blank-image-docx-smoke'),
+  })
+
+  await expect(page.locator('.scanner-running')).toBeVisible()
+  await expect(page.locator('.scanner-result')).toBeVisible({ timeout: 8_000 })
+  await expect(page.getByRole('button', { name: 'OCR', exact: true })).toBeVisible()
+  await page.screenshot({ path: `${screenshotDirectory}/blank-image-result-1024.png`, fullPage: true })
 })

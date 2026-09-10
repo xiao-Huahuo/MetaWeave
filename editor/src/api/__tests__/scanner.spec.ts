@@ -1,7 +1,7 @@
 /* Scanner API construction tests. */
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 
-import { createFileScan, createUrlScan, saveScanToKnowledge, updateScanDraft } from '@/api/scanner'
+import { cancelScan, createFileScan, createUrlScan, saveScanToKnowledge, updateScanDraft } from '@/api/scanner'
 
 describe('scanner API', () => {
   beforeEach(() => vi.restoreAllMocks())
@@ -25,5 +25,14 @@ describe('scanner API', () => {
     expect(fetchMock.mock.calls[0]?.[0]).toContain('/scanner/scan-1/draft')
     await saveScanToKnowledge('u1', 'scan-1', 'no_ocr', 'rename')
     expect(JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body))).toEqual({ user_id: 'u1', variant: 'no_ocr', conflict_strategy: 'rename' })
+  })
+
+  it('posts cancellation for only the selected scan', async () => {
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response(JSON.stringify({ scan_id: 'scan/a', status: 'cancelled' }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
+
+    await cancelScan('user/1', 'scan/a')
+
+    expect(fetchMock.mock.calls[0]?.[0]).toContain('/scanner/scan%2Fa/cancel')
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({ user_id: 'user/1' })
   })
 })

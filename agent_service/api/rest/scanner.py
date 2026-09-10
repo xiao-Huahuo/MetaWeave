@@ -9,6 +9,7 @@ from starlette.concurrency import run_in_threadpool
 
 from agent_service.api.rest.deps import _require_scanner_service
 from agent_service.schemas.scanner import (
+    ScannerCancelRequest,
     ScannerDraftUpdate,
     ScannerListOut,
     ScannerOut,
@@ -109,6 +110,20 @@ async def update_scan_source(scan_id: str, payload: ScannerSourceUpdate) -> Scan
         )
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post("/{scan_id}/cancel", response_model=ScannerOut)
+async def cancel_scan(scan_id: str, payload: ScannerCancelRequest) -> ScannerOut:
+    """Immediately terminate one isolated scanner worker process."""
+
+    try:
+        return await run_in_threadpool(
+            _require_scanner_service().cancel,
+            user_id=payload.user_id,
+            scan_id=scan_id,
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
 
 
 @router.post("/{scan_id}/save")

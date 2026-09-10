@@ -31,6 +31,12 @@ def create_database_engine(config: AgentConfig) -> Engine:
     return create_engine(database_url(config), pool_pre_ping=True)
 
 
+def create_database_engine_from_url(url: str) -> Engine:
+    """Create an isolated worker-process engine through the central factory."""
+
+    return create_engine(url, pool_pre_ping=True)
+
+
 def get_database_engine(config: AgentConfig) -> Engine:
     """返回按数据库 URL 缓存的兼容 engine，供尚未显式注入的调用方复用。"""
 

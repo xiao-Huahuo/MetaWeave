@@ -12,15 +12,14 @@ import ipaddress
 import json
 import logging
 import mimetypes
+import multiprocessing
 import re
 import shutil
 import socket
 import zipfile
-from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime, timezone
-from html.parser import HTMLParser
 from pathlib import Path
-from threading import Lock
+from threading import Event, Lock, Thread
 from typing import Any
 from urllib.parse import urljoin, urlparse
 from uuid import uuid4
@@ -30,6 +29,7 @@ from sqlalchemy.engine import Engine
 from sqlmodel import Session, select
 
 from agent_service.core.agent_config import AgentConfig
+from agent_service.core.db.engine import create_database_engine_from_url
 from agent_service.models.scanner import ScannerRecord
 from agent_service.models.favorite import FavoriteRecord
 from agent_service.schemas.scanner import ScannerConflictStrategy, ScannerOut, ScannerVariant
@@ -37,136 +37,98 @@ from agent_service.services.knowledge_library import KnowledgeLibraryService
 from agent_service.services.memory.rag.frontmatter_bootstrap import FrontmatterBootstrapService
 from agent_service.services.memory.rag.image_ocr import ImageOcrService
 from agent_service.services.settings.service import SettingsService
+from agent_service.services.scanner.web_parser import HtmlMarkdownParser
 
 logger = logging.getLogger(__name__)
 
 TEXT_SUFFIXES = {".md", ".markdown", ".txt", ".json", ".jsonl", ".csv", ".tsv", ".html", ".htm", ".xml", ".tex", ".py", ".js", ".ts", ".css", ".yaml", ".yml"}
 IMAGE_SUFFIXES = {".jpg", ".jpeg", ".png", ".webp", ".gif", ".svg"}
 IMAGE_MARKDOWN_RE = re.compile(r"!\[[^\]]*\]\([^\n)]*\)")
+WINDOWS_ACCESS_VIOLATION_EXIT_CODE = 0xC0000005
 
 
-class _HtmlMarkdownParser(HTMLParser):
-    """Convert the readable structural subset of HTML into Markdown."""
+def _run_scanner_worker(database_url: str, config: AgentConfig, scan_id: str, context: dict[str, Any], safe_mode: bool) -> None:
+    """Run one scan in a process that the parent scheduler can terminate safely."""
 
-    def __init__(self) -> None:
-        """Initialize block, link, image, and page-title state."""
-
-        super().__init__(convert_charrefs=True)
-        self.parts: list[str] = []
-        self.images: list[tuple[str, str]] = []
-        self.title_parts: list[str] = []
-        self._skip_depth = 0
-        self._title_depth = 0
-        self._link_href = ""
-        self._pre_depth = 0
-
-    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
-        """Open Markdown blocks and retain link/image metadata."""
-
-        name = tag.lower()
-        values = {key.lower(): value or "" for key, value in attrs}
-        if name in {"script", "style", "noscript", "template"}:
-            self._skip_depth += 1
-            return
-        if self._skip_depth:
-            return
-        if name == "title":
-            self._title_depth += 1
-        elif name in {"p", "div", "section", "article", "header", "footer", "table", "tr", "blockquote"}:
-            self.parts.append("\n\n")
-        elif re.fullmatch(r"h[1-6]", name):
-            self.parts.append(f"\n\n{'#' * int(name[1])} ")
-        elif name == "li":
-            self.parts.append("\n- ")
-        elif name == "br":
-            self.parts.append("\n")
-        elif name == "a":
-            self._link_href = values.get("href", "").strip()
-            if self._link_href:
-                self.parts.append("[")
-        elif name == "pre":
-            self._pre_depth += 1
-            self.parts.append("\n\n```\n")
-        elif name == "code" and not self._pre_depth:
-            self.parts.append("`")
-        elif name == "img" and values.get("src"):
-            alt = values.get("alt", "").strip() or "image"
-            src = values["src"].strip()
-            self.images.append((src, alt))
-            self.parts.append(f"\n\n![{alt}]({src})\n\n")
-
-    def handle_endtag(self, tag: str) -> None:
-        """Close Markdown links, code spans, and fenced blocks."""
-
-        name = tag.lower()
-        if name in {"script", "style", "noscript", "template"}:
-            self._skip_depth = max(0, self._skip_depth - 1)
-            return
-        if self._skip_depth:
-            return
-        if name == "title":
-            self._title_depth = max(0, self._title_depth - 1)
-        elif name == "a" and self._link_href:
-            self.parts.append(f"]({self._link_href})")
-            self._link_href = ""
-        elif name == "pre":
-            self._pre_depth = max(0, self._pre_depth - 1)
-            self.parts.append("\n```\n")
-        elif name == "code" and not self._pre_depth:
-            self.parts.append("`")
-
-    def handle_data(self, data: str) -> None:
-        """Append visible text while preserving preformatted whitespace."""
-
-        if self._skip_depth or not data:
-            return
-        if self._title_depth:
-            self.title_parts.append(data.strip())
-            return
-        self.parts.append(data if self._pre_depth else re.sub(r"\s+", " ", data))
-
-    def markdown(self) -> str:
-        """Return normalized Markdown without excessive blank lines."""
-
-        value = "".join(self.parts).replace(" \n", "\n")
-        return re.sub(r"\n{3,}", "\n\n", value).strip()
-
-    def title(self) -> str:
-        """Return the HTML title accumulated from visible title text."""
-
-        return " ".join(part for part in self.title_parts if part).strip()
+    if safe_mode:
+        config.ocr.input_max_side_pixels = config.ocr.recovery_input_max_side_pixels
+    engine = create_database_engine_from_url(database_url)
+    worker = ScannerService(
+        engine=engine,
+        config=config,
+        settings_service=None,
+        knowledge_library_service=None,
+        autostart=False,
+        reconcile=False,
+    )
+    try:
+        worker._process(scan_id, context)
+    finally:
+        engine.dispose()
 
 
 class ScannerService:
-    """Own scanner persistence, one bounded worker pool, and managed artifacts."""
+    """Own scanner persistence, one bounded process queue, and managed artifacts."""
 
     def __init__(
         self,
         *,
         engine: Engine,
         config: AgentConfig,
-        settings_service: SettingsService,
-        knowledge_library_service: KnowledgeLibraryService,
+        settings_service: SettingsService | None,
+        knowledge_library_service: KnowledgeLibraryService | None,
+        autostart: bool = True,
+        reconcile: bool = True,
     ) -> None:
-        """Bind shared application services and recover interrupted records."""
+        """Bind services, recover interrupted records, and start one scheduler."""
 
         self.engine = engine
         self.config = config
         self.settings_service = settings_service
         self.knowledge_library_service = knowledge_library_service
-        self._executor = ThreadPoolExecutor(max_workers=config.limits.scanner_worker_count, thread_name_prefix="scanner")
+        self._stop_event = Event()
+        self._wake_event = Event()
         self._lock = Lock()
+        self._scheduler_thread: Thread | None = None
+        self._processes: dict[str, multiprocessing.Process] = {}
+        self._safe_mode_scans: set[str] = set()
         self._closed = False
-        self._fail_interrupted_records()
+        if reconcile:
+            self._reconcile_interrupted_records()
+        if autostart:
+            self.start()
+
+    def start(self) -> None:
+        """Start the single queue dispatcher with configured process capacity."""
+
+        with self._lock:
+            if self._scheduler_thread and self._scheduler_thread.is_alive():
+                return
+            if self._closed:
+                raise RuntimeError("scanner service is stopped")
+            self._stop_event.clear()
+            self._scheduler_thread = Thread(target=self._scheduler_loop, daemon=True, name="scanner-scheduler")
+            thread = self._scheduler_thread
+        thread.start()
 
     def stop(self) -> None:
-        """Reject new tasks and release the scanner-owned worker pool."""
+        """Reject new tasks, stop dispatching, and terminate owned processes."""
 
         with self._lock:
             if self._closed:
                 return
             self._closed = True
-        self._executor.shutdown(wait=True, cancel_futures=True)
+            thread = self._scheduler_thread
+        self._stop_event.set()
+        self._wake_event.set()
+        if thread is not None:
+            thread.join(timeout=self.config.limits.scanner_scheduler_join_timeout_seconds)
+        with self._lock:
+            running = list(self._processes.items())
+            self._processes.clear()
+        for scan_id, process in running:
+            self._terminate_process(process)
+            self._requeue_interrupted(scan_id)
 
     def create_file(self, *, user_id: str, filename: str, content: bytes, ocr_enabled: bool, source_kind: str = "file") -> ScannerOut:
         """Persist one managed source copy and enqueue its Markdown projection."""
@@ -305,6 +267,37 @@ class ScannerService:
             shutil.rmtree(scan_root)
         return True
 
+    def cancel(self, *, user_id: str, scan_id: str) -> ScannerOut:
+        """Cancel a queued task or hard-stop only its isolated worker process."""
+
+        context = self._context(user_id)
+        with Session(self.engine) as db:
+            record = self._owned_record(db=db, context=context, scan_id=scan_id)
+            if record.status not in {"queued", "running", "cancelling"}:
+                return self._to_out(record, context=context)
+            running = record.status in {"running", "cancelling"}
+            record.status = "cancelling" if running else "cancelled"
+            record.stage = "cancelling" if running else "cancelled"
+            record.stage_label = "正在终止" if running else "已终止"
+            record.updated_at = self._now()
+            if not running:
+                record.finished_at = self._now()
+            db.add(record)
+            db.commit()
+        if running:
+            with self._lock:
+                process = self._processes.get(scan_id)
+            if process is not None:
+                self._terminate_process(process)
+                with self._lock:
+                    if self._processes.get(scan_id) is process:
+                        self._processes.pop(scan_id, None)
+            self._finish_cancelled(scan_id)
+        with self._lock:
+            self._safe_mode_scans.discard(scan_id)
+        self._wake_event.set()
+        return self.get_scan(user_id=user_id, scan_id=scan_id)
+
     def save_to_knowledge(
         self,
         *,
@@ -315,6 +308,8 @@ class ScannerService:
     ) -> dict[str, Any]:
         """Write a chosen projection and its referenced assets into the knowledge root."""
 
+        if self.settings_service is None or self.knowledge_library_service is None:
+            raise RuntimeError("scanner worker cannot save knowledge projections")
         context = self._context(user_id)
         with Session(self.engine) as db:
             record = self._owned_record(db=db, context=context, scan_id=scan_id)
@@ -347,6 +342,8 @@ class ScannerService:
     def export_payload(self, *, user_id: str, scan_id: str, variant: ScannerVariant) -> tuple[str, str, bytes]:
         """Return filename, media type, and bytes for native external saving."""
 
+        if self.settings_service is None:
+            raise RuntimeError("scanner worker cannot export projections")
         context = self._context(user_id)
         with Session(self.engine) as db:
             record = self._owned_record(db=db, context=context, scan_id=scan_id)
@@ -366,14 +363,190 @@ class ScannerService:
         return f"{stem}.zip", "application/zip", buffer.getvalue()
 
     def _submit(self, scan_id: str) -> None:
-        """Submit one record to the owned executor unless shutdown began."""
+        """Wake the queue dispatcher after a durable record is committed."""
 
         with self._lock:
             if self._closed:
                 raise RuntimeError("scanner service is stopped")
-            self._executor.submit(self._process, scan_id)
+        self._wake_event.set()
 
-    def _process(self, scan_id: str) -> None:
+    def _scheduler_loop(self) -> None:
+        """Fill free process slots from the durable FIFO queue and reap exits."""
+
+        capacity = max(1, int(self.config.limits.scanner_worker_count))
+        while not self._stop_event.is_set():
+            try:
+                self._reap_finished_processes()
+                while not self._stop_event.is_set() and self._active_process_count() < capacity:
+                    job = self._claim_next()
+                    if job is None:
+                        break
+                    self._start_claimed_task(job)
+            except Exception:
+                logger.exception("扫描器调度循环异常")
+            self._wake_event.wait(timeout=self.config.limits.scanner_process_poll_seconds)
+            self._wake_event.clear()
+
+    def _active_process_count(self) -> int:
+        """Return the number of process slots currently owned by the scheduler."""
+
+        with self._lock:
+            return len(self._processes)
+
+    def _claim_next(self) -> dict[str, Any] | None:
+        """Claim the oldest task whose general and OCR resource slots are free."""
+
+        while True:
+            with Session(self.engine) as db:
+                queued = db.exec(
+                    select(ScannerRecord)
+                    .where(ScannerRecord.status == "queued")
+                    .order_by(ScannerRecord.created_at, ScannerRecord.scan_id)
+                ).all()
+                running_ocr = db.exec(
+                    select(ScannerRecord)
+                    .where(ScannerRecord.status == "running")
+                    .where(ScannerRecord.ocr_enabled == True)  # noqa: E712
+                ).all()
+                ocr_capacity = max(1, int(self.config.limits.scanner_ocr_worker_count))
+                record = next(
+                    (candidate for candidate in queued if not candidate.ocr_enabled or len(running_ocr) < ocr_capacity),
+                    None,
+                )
+                if record is None:
+                    return None
+                try:
+                    context = self._context(record.user_id, expected_library_id=record.library_id)
+                except Exception as exc:
+                    record.status = "failed"
+                    record.stage = "failed"
+                    record.stage_label = "解析失败"
+                    record.error = str(exc)
+                    record.finished_at = self._now()
+                    record.updated_at = self._now()
+                    db.add(record)
+                    db.commit()
+                    logger.exception("扫描器任务上下文解析失败 | scan_id=%s", record.scan_id)
+                    continue
+                record.status = "running"
+                record.stage = "prepare"
+                record.stage_label = "正在准备文件"
+                record.progress = max(record.progress, 1)
+                record.updated_at = self._now()
+                db.add(record)
+                db.commit()
+                return {"scan_id": record.scan_id, "context": context}
+
+    def _start_claimed_task(self, job: dict[str, Any]) -> None:
+        """Launch one claimed record in its own spawn-isolated process."""
+
+        scan_id = str(job["scan_id"])
+        context = multiprocessing.get_context("spawn")
+        process = context.Process(
+            target=_run_scanner_worker,
+            args=(str(self.engine.url), self.config, scan_id, dict(job["context"]), self._is_safe_mode(scan_id)),
+            daemon=True,
+            name=f"scanner-{scan_id[-8:]}",
+        )
+        with self._lock:
+            self._processes[scan_id] = process
+        try:
+            if self._scan_status(scan_id) in {"cancelling", "cancelled"}:
+                with self._lock:
+                    self._processes.pop(scan_id, None)
+                self._finish_cancelled(scan_id)
+                return
+            process.start()
+        except Exception as exc:
+            with self._lock:
+                self._processes.pop(scan_id, None)
+            self._finish_failed(scan_id, f"扫描工作进程启动失败: {exc}")
+
+    def _reap_finished_processes(self) -> None:
+        """Release completed process handles and repair abnormal exits."""
+
+        with self._lock:
+            snapshot = list(self._processes.items())
+        for scan_id, process in snapshot:
+            try:
+                alive = process.is_alive()
+            except ValueError:
+                continue
+            if alive:
+                continue
+            process.join(timeout=0)
+            with self._lock:
+                if self._processes.get(scan_id) is process:
+                    self._processes.pop(scan_id, None)
+            status = self._scan_status(scan_id)
+            if status == "cancelling":
+                self._finish_cancelled(scan_id)
+            elif status in {"queued", "running"}:
+                if self._claim_safe_mode_retry(scan_id=scan_id, exitcode=process.exitcode):
+                    self._requeue_native_crash(scan_id)
+                    self._wake_event.set()
+                else:
+                    self._finish_failed(scan_id, f"扫描工作进程异常退出 ({process.exitcode})")
+            else:
+                with self._lock:
+                    self._safe_mode_scans.discard(scan_id)
+            process.close()
+
+    def _is_safe_mode(self, scan_id: str) -> bool:
+        """Return whether one task is using its bounded native-crash retry."""
+
+        with self._lock:
+            return scan_id in self._safe_mode_scans
+
+    def _claim_safe_mode_retry(self, *, scan_id: str, exitcode: int | None) -> bool:
+        """Grant one retry for the Windows native access-violation exit code."""
+
+        if exitcode is None or exitcode & 0xFFFFFFFF != WINDOWS_ACCESS_VIOLATION_EXIT_CODE:
+            return False
+        with self._lock:
+            if scan_id in self._safe_mode_scans:
+                return False
+            self._safe_mode_scans.add(scan_id)
+            return True
+
+    def _requeue_native_crash(self, scan_id: str) -> None:
+        """Return one crashed OCR task to the queue with explicit recovery state."""
+
+        with Session(self.engine) as db:
+            record = db.get(ScannerRecord, scan_id)
+            if record is None or record.status not in {"queued", "running"}:
+                return
+            record.status = "queued"
+            record.stage = "queued"
+            record.stage_label = "高分辨率 OCR 异常，等待安全模式重试"
+            record.progress = 0
+            record.error = ""
+            record.finished_at = None
+            record.updated_at = self._now()
+            db.add(record)
+            db.commit()
+
+    def _terminate_process(self, process: Any) -> None:
+        """Terminate one child, escalating to kill when it does not exit promptly."""
+
+        if process.is_alive():
+            process.terminate()
+            process.join(timeout=self.config.limits.scanner_process_join_timeout_seconds)
+        if process.is_alive():
+            process.kill()
+            process.join(timeout=self.config.limits.scanner_process_join_timeout_seconds)
+        close = getattr(process, "close", None)
+        if callable(close):
+            close()
+
+    def _scan_status(self, scan_id: str) -> str:
+        """Read one task status without holding the scheduler state lock."""
+
+        with Session(self.engine) as db:
+            record = db.get(ScannerRecord, scan_id)
+            return record.status if record is not None else "missing"
+
+    def _process(self, scan_id: str, context_override: dict[str, Any] | None = None) -> None:
         """Run file projection or webpage crawling and persist a terminal state."""
 
         try:
@@ -382,7 +555,7 @@ class ScannerService:
                 record = db.get(ScannerRecord, scan_id)
                 if record is None:
                     return
-                context = self._context(record.user_id, expected_library_id=record.library_id)
+                context = context_override or self._context(record.user_id, expected_library_id=record.library_id)
                 if record.source_kind == "url":
                     no_ocr, ocr, assets, ocr_blocks, source_name, source_path, size = self._crawl(record=record, context=context)
                 else:
@@ -390,7 +563,7 @@ class ScannerService:
                     source_name, source_path, size = record.source_name, record.source_path, record.size
             with Session(self.engine) as db:
                 record = db.get(ScannerRecord, scan_id)
-                if record is None:
+                if record is None or record.status in {"cancelled", "cancelling"}:
                     return
                 record.source_name = source_name
                 record.source_path = source_path
@@ -412,7 +585,7 @@ class ScannerService:
             logger.exception("扫描器解析失败 | scan_id=%s", scan_id)
             with Session(self.engine) as db:
                 record = db.get(ScannerRecord, scan_id)
-                if record is None:
+                if record is None or record.status in {"cancelled", "cancelling"}:
                     return
                 record.status = "failed"
                 record.stage = "failed"
@@ -437,7 +610,7 @@ class ScannerService:
             shutil.copy2(source, asset)
             no_ocr = f"# {source.stem}\n\n![{source.stem}](./assets/{asset.name})\n"
         else:
-            no_ocr_doc = FrontmatterBootstrapService(config=self.config, ocr_enabled=False).build_markdown_projection(
+            no_ocr_doc = FrontmatterBootstrapService(config=self.config, ocr_enabled=False, ocr_inline=True).build_markdown_projection(
                 source_path=source,
                 knowledge_dir=context["root"],
                 asset_output_dir=assets_dir,
@@ -448,7 +621,21 @@ class ScannerService:
         assets = [path.relative_to(context["root"]).as_posix() for path in sorted(assets_dir.glob("*")) if path.is_file()]
         if not record.ocr_enabled:
             return no_ocr, "", assets, []
-        ocr_doc = FrontmatterBootstrapService(config=self.config, ocr_enabled=True).build_markdown_projection(
+        if source.suffix.lower() in IMAGE_SUFFIXES:
+            result = ImageOcrService(config=self.config, enabled=True, run_inline=True).extract_image_text(
+                source,
+                progress_callback=lambda payload: self._set_progress(
+                    record.scan_id,
+                    status="running",
+                    stage=str(payload.get("stage") or "ocr"),
+                    label=str(payload.get("stage_label") or "正在识别图片"),
+                    progress=50 + max(0.0, min(100.0, float(payload.get("progress") or 0))) * 0.46,
+                ),
+            )
+            if result.preview_image_png:
+                (assets_dir / "ocr-preview.png").write_bytes(result.preview_image_png)
+            return no_ocr, self._strip_markdown_images(result.content), assets, [dict(block) for block in result.blocks]
+        ocr_doc = FrontmatterBootstrapService(config=self.config, ocr_enabled=True, ocr_inline=True).build_markdown_projection(
             source_path=source,
             knowledge_dir=context["root"],
             asset_output_dir=assets_dir,
@@ -466,7 +653,7 @@ class ScannerService:
         if "html" not in content_type.lower():
             raise ValueError("webpage URL did not return HTML")
         text = body.decode("utf-8", errors="replace")
-        parser = _HtmlMarkdownParser()
+        parser = HtmlMarkdownParser()
         parser.feed(text)
         title = parser.title() or urlparse(final_url).hostname or "webpage"
         safe_title = re.sub(r"[\\/:*?\"<>|]+", "-", title).strip(" .") or "webpage"
@@ -499,7 +686,7 @@ class ScannerService:
         ocr_texts: list[str] = []
         ocr_blocks: list[dict[str, Any]] = []
         if record.ocr_enabled and assets:
-            ocr_service = ImageOcrService(config=self.config, enabled=True)
+            ocr_service = ImageOcrService(config=self.config, enabled=True, run_inline=True)
             for index, relative in enumerate(assets, start=1):
                 result = ocr_service.extract_image_text(context["root"] / relative)
                 if result.has_text:
@@ -566,7 +753,7 @@ class ScannerService:
 
         with Session(self.engine) as db:
             record = db.get(ScannerRecord, scan_id)
-            if record is None:
+            if record is None or record.status in {"cancelled", "cancelling"}:
                 return
             record.status = status
             record.stage = stage
@@ -653,6 +840,8 @@ class ScannerService:
     def _context(self, user_id: str, expected_library_id: str = "") -> dict[str, Any]:
         """Resolve the active user/library/root and optionally verify task scope."""
 
+        if self.settings_service is None:
+            raise RuntimeError("scanner worker requires an explicit task context")
         profile = self.settings_service.ensure_user_profile(user_id=self._required(user_id, "user_id"))
         active = dict(profile["active_knowledge_library"])
         library_id = str(active["library_id"])
@@ -720,6 +909,7 @@ class ScannerService:
             no_ocr_markdown=record.no_ocr_markdown if include_content else "",
             ocr_markdown=record.ocr_markdown if include_content else "",
             ocr_blocks=[dict(item) for item in ocr_blocks if isinstance(item, dict)] if include_content else [],
+            ocr_preview_path=self._ocr_preview_path(record=record, context=context),
             assets=[str(item) for item in assets] if isinstance(assets, list) else [],
             error=record.error,
             source_text=source_text,
@@ -728,17 +918,85 @@ class ScannerService:
             finished_at=record.finished_at,
         )
 
-    def _fail_interrupted_records(self) -> None:
-        """Move stale queued/running records to an explicit failed terminal state."""
+    def _ocr_preview_path(self, *, record: ScannerRecord, context: dict[str, Any]) -> str:
+        """Return the preprocessed image whose pixels match persisted OCR boxes."""
+
+        preview = self._scan_root(context=context, scan_id=record.scan_id) / "assets" / "ocr-preview.png"
+        return preview.relative_to(context["root"]).as_posix() if preview.is_file() else ""
+
+    def _finish_cancelled(self, scan_id: str) -> None:
+        """Persist the cancelled terminal state after the worker is gone."""
 
         with Session(self.engine) as db:
-            records = db.exec(select(ScannerRecord).where(ScannerRecord.status.in_(["queued", "running"]))).all()
-            for record in records:
-                record.status = "failed"
-                record.stage = "interrupted"
-                record.stage_label = "解析已中断"
-                record.error = "应用退出时解析尚未完成，请重新上传"
+            record = db.get(ScannerRecord, scan_id)
+            if record is None:
+                return
+            record.status = "cancelled"
+            record.stage = "cancelled"
+            record.stage_label = "已终止"
+            record.error = ""
+            record.finished_at = self._now()
+            record.updated_at = self._now()
+            db.add(record)
+            db.commit()
+        with self._lock:
+            self._safe_mode_scans.discard(scan_id)
+
+    def _finish_failed(self, scan_id: str, message: str) -> None:
+        """Persist an abnormal worker exit without affecting sibling tasks."""
+
+        with Session(self.engine) as db:
+            record = db.get(ScannerRecord, scan_id)
+            if record is None or record.status == "cancelled":
+                return
+            record.status = "failed"
+            record.stage = "failed"
+            record.stage_label = "解析失败"
+            record.error = message
+            record.finished_at = self._now()
+            record.updated_at = self._now()
+            db.add(record)
+            db.commit()
+        with self._lock:
+            self._safe_mode_scans.discard(scan_id)
+
+    def _requeue_interrupted(self, scan_id: str) -> None:
+        """Return a shutdown-interrupted running task to the durable queue."""
+
+        with Session(self.engine) as db:
+            record = db.get(ScannerRecord, scan_id)
+            if record is None or record.status not in {"running", "cancelling"}:
+                return
+            if record.status == "cancelling":
+                record.status = "cancelled"
+                record.stage = "cancelled"
+                record.stage_label = "已终止"
                 record.finished_at = self._now()
+            else:
+                record.status = "queued"
+                record.stage = "queued"
+                record.stage_label = "等待解析"
+                record.progress = 0
+            record.updated_at = self._now()
+            db.add(record)
+            db.commit()
+
+    def _reconcile_interrupted_records(self) -> None:
+        """Recover running work to the queue and complete interrupted cancellation."""
+
+        with Session(self.engine) as db:
+            records = db.exec(select(ScannerRecord).where(ScannerRecord.status.in_(["running", "cancelling"]))).all()
+            for record in records:
+                if record.status == "cancelling":
+                    record.status = "cancelled"
+                    record.stage = "cancelled"
+                    record.stage_label = "已终止"
+                    record.finished_at = self._now()
+                else:
+                    record.status = "queued"
+                    record.stage = "queued"
+                    record.stage_label = "等待解析"
+                    record.progress = 0
                 record.updated_at = self._now()
                 db.add(record)
             if records:

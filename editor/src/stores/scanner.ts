@@ -9,6 +9,7 @@ import { computed, ref } from 'vue'
 import { defineStore } from 'pinia'
 
 import {
+  cancelScan,
   createFileScan,
   createUrlScan,
   deleteScan,
@@ -102,5 +103,11 @@ export const useScannerStore = defineStore('scanner', () => {
     if (activeId.value === scanId) activeId.value = ''
   }
 
-  return { records, activeId, active, loading, actionError, hasRunning, load, upload, crawl, refreshActive, saveDraft, saveSource, remove, upsert }
+  /** Immediately terminate one task through its backend-owned process handle. */
+  async function cancel(scanId: string): Promise<void> {
+    actionError.value = ''
+    upsert(await cancelScan(userId(), scanId))
+  }
+
+  return { records, activeId, active, loading, actionError, hasRunning, load, upload, crawl, refreshActive, saveDraft, saveSource, remove, cancel, upsert }
 })
