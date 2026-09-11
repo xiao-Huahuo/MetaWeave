@@ -30,6 +30,10 @@ class ScannerRecord(SQLModel, table=True):
     source_url: str = Field(default="", sa_column=Column(Text))
     size: int = Field(default=0, ge=0)
     ocr_enabled: bool = Field(default=True)
+    # 用户提交时固化的临时联网偏好，以及最终实际采用的解析器。
+    online_enabled: bool = Field(default=True)
+    parser_engine: str = Field(default="pending", max_length=DEFAULT_BUSINESS_LIMITS.short_type_max_length)
+    parser_fallback_reason: str = Field(default="", sa_column=Column(Text))
     status: str = Field(default="queued", index=True, max_length=DEFAULT_BUSINESS_LIMITS.short_status_max_length)
     stage: str = Field(default="queued", max_length=DEFAULT_BUSINESS_LIMITS.short_type_max_length)
     stage_label: str = Field(default="等待解析", max_length=DEFAULT_BUSINESS_LIMITS.secret_max_length)

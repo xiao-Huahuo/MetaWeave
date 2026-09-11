@@ -103,6 +103,7 @@ class ImageOcrService:
             return ImageOcrResult()
         if _is_uniform_image(source_path):
             return ImageOcrResult(engine_available=True)
+        self.ensure_ready()
         timeout_seconds = max(float(self.config.ocr.timeout_seconds), 0.001)
         if self.run_inline:
             try:
@@ -197,6 +198,23 @@ class ImageOcrService:
             daemon=True,
             name="paddleocr-load",
         ).start()
+
+    def ensure_ready(self) -> None:
+        """同步下载并加载本地 OCR；失败时阻止调用方开启 OCR。"""
+
+        from agent_service.scripts.download_model import ensure_paddleocr_models, is_paddleocr_pipeline_available
+
+        model_root = Path(self.config.storage.paddleocr_model_dir)
+        if not is_paddleocr_pipeline_available(model_root, self.config.ocr.pipeline_model_names):
+            ensure_paddleocr_models(
+                paddleocr_model_dir=model_root,
+                language=self.config.ocr.language,
+                model_names=self.config.ocr.pipeline_model_names,
+                feature_flags=self.config.ocr.pipeline_feature_flags,
+                device=self.config.ocr.device,
+            )
+        if self._get_pipeline() is None:
+            raise RuntimeError("本地 OCR 模型下载或加载失败")
 
     @property
     def loaded(self) -> bool:

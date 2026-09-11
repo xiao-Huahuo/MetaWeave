@@ -62,6 +62,8 @@ def test_supported_unversioned_database_is_backed_up_stamped_and_upgraded(tmp_pa
         connection.execute(text("DROP TABLE knowledge_graph_dedup_decisions"))
         connection.execute(text("DROP TABLE knowledge_graph_section_cache"))
         connection.execute(text("DROP TABLE component_library_metadata"))
+        connection.execute(text("DROP TABLE scanner_records"))
+        connection.execute(text("DROP TABLE user_vlm_config_presets"))
         connection.execute(text("DROP TABLE user_llm_config"))
         connection.execute(text(
             "CREATE TABLE user_llm_config ("
@@ -103,7 +105,7 @@ def test_supported_unversioned_database_is_backed_up_stamped_and_upgraded(tmp_pa
 
     with engine.connect() as connection:
         version = connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
-    assert version == "20260910_0015"
+    assert version == "20260911_0017"
     assert "component_library_metadata" in inspect(engine).get_table_names()
     assert {"knowledge_graph_section_cache", "knowledge_graph_dedup_decisions"} <= set(inspect(engine).get_table_names())
     assert "small_model_name" in {
@@ -127,6 +129,13 @@ def test_supported_unversioned_database_is_backed_up_stamped_and_upgraded(tmp_pa
     assert "tag_colors_translucent" in {
         column["name"] for column in inspect(engine).get_columns("user_settings")
     }
+    assert {"vlm_enabled", "vlm_api_key", "vlm_model", "vlm_max_pages"} <= {
+        column["name"] for column in inspect(engine).get_columns("user_settings")
+    }
+    assert {"online_enabled", "parser_engine", "parser_fallback_reason"} <= {
+        column["name"] for column in inspect(engine).get_columns("scanner_records")
+    }
+    assert "user_vlm_config_presets" in inspect(engine).get_table_names()
     assert {"height", "created_at", "updated_at"} <= {
         column["name"] for column in inspect(engine).get_columns("smart_form_rows")
     }
@@ -156,5 +165,5 @@ def test_compatibility_revision_downgrade_and_upgrade_round_trip(tmp_path: Path)
     command.upgrade(alembic_config, "head")
 
     with engine.connect() as connection:
-        assert connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == "20260910_0015"
+        assert connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == "20260911_0017"
     assert set(SQLModel.metadata.tables) <= set(inspect(engine).get_table_names())

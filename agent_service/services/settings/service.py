@@ -24,6 +24,7 @@ from agent_service.models.user_settings import (
     UserKnowledgeLibrary,
     UserLLMConfig,
     UserLLMConfigPreset,
+    UserVlmConfigPreset,
     UserSettingsRecord,
     UserSystemPromptEntry,
 )
@@ -482,6 +483,7 @@ class SettingsService:
             "knowledge_libraries": [self._serialize_knowledge_library(item) for item in libraries],
             "auto_ingest_on_upload": bool(record.auto_ingest_on_upload),
             "ocr_enabled": bool(record.ocr_enabled),
+            "vlm_enabled": bool(record.vlm_enabled),
             "vision_understanding_enabled": bool(record.vision_understanding_enabled),
             "model_auto_download_enabled": bool(record.model_auto_download_enabled),
             "dsh_coding_agent_enabled": bool(record.dsh_coding_agent_enabled),
@@ -1607,6 +1609,7 @@ class SettingsService:
                     "user_id": normalized_user_id,
                     "auto_ingest_on_upload": False,
                     "ocr_enabled": self.config.ocr.enabled,
+                    "vlm_enabled": self.config.vlm.enabled,
                     "vision_understanding_enabled": False,
                     "dsh_coding_agent_enabled": False,
                     "knowledge_ignore_patterns": DEFAULT_VIDEO_IGNORE_PATTERNS,
@@ -1614,6 +1617,7 @@ class SettingsService:
             return {
                 "auto_ingest_on_upload": bool(record.auto_ingest_on_upload),
                 "ocr_enabled": bool(record.ocr_enabled),
+                "vlm_enabled": bool(record.vlm_enabled),
                 "vision_understanding_enabled": bool(record.vision_understanding_enabled),
                 "dsh_coding_agent_enabled": bool(record.dsh_coding_agent_enabled),
                 "knowledge_ignore_patterns": _with_default_video_ignore_patterns(record.knowledge_ignore_patterns),
@@ -1625,6 +1629,7 @@ class SettingsService:
         user_id: str,
         auto_ingest_on_upload: bool | None = None,
         ocr_enabled: bool | None = None,
+        vlm_enabled: bool | None = None,
         vision_understanding_enabled: bool | None = None,
         dsh_coding_agent_enabled: bool | None = None,
         knowledge_ignore_patterns: str | None = None,
@@ -1642,6 +1647,7 @@ class SettingsService:
                     knowledge_dir=str(self.config.storage.knowledge_dir),
                     auto_ingest_on_upload=bool(auto_ingest_on_upload),
                     ocr_enabled=bool(ocr_enabled),
+                    vlm_enabled=bool(vlm_enabled),
                     vision_understanding_enabled=bool(vision_understanding_enabled),
                     dsh_coding_agent_enabled=bool(dsh_coding_agent_enabled),
                     knowledge_ignore_patterns=_with_default_video_ignore_patterns(knowledge_ignore_patterns),
@@ -1656,6 +1662,8 @@ class SettingsService:
                     next_ocr_enabled = bool(ocr_enabled)
                     restart_required = bool(record.ocr_enabled) != next_ocr_enabled
                     record.ocr_enabled = next_ocr_enabled
+                if vlm_enabled is not None:
+                    record.vlm_enabled = bool(vlm_enabled)
                 if vision_understanding_enabled is not None:
                     record.vision_understanding_enabled = bool(vision_understanding_enabled)
                 if dsh_coding_agent_enabled is not None:
@@ -1669,6 +1677,7 @@ class SettingsService:
             return {
                 "auto_ingest_on_upload": bool(record.auto_ingest_on_upload),
                 "ocr_enabled": bool(record.ocr_enabled),
+                "vlm_enabled": bool(record.vlm_enabled),
                 "vision_understanding_enabled": bool(record.vision_understanding_enabled),
                 "dsh_coding_agent_enabled": bool(record.dsh_coding_agent_enabled),
                 "knowledge_ignore_patterns": _with_default_video_ignore_patterns(record.knowledge_ignore_patterns),
@@ -1708,6 +1717,221 @@ class SettingsService:
             return {
                 "graph_node_limit": record.graph_node_limit,
             }
+
+    def get_vlm_config(self, *, user_id: str) -> dict[str, object]:
+        """返回用户覆盖与服务默认合并后的 MinerU 精准 API 配置。"""
+
+        normalized_user_id = user_id.strip()
+        if not normalized_user_id:
+            raise ValueError("user_id is required")
+        with Session(self.engine) as db:
+            record = db.get(UserSettingsRecord, normalized_user_id)
+        service = self.config.vlm
+        api_key = (record.vlm_api_key if record else "") or service.api_key
+        enabled = bool(record.vlm_enabled if record else service.enabled)
+        return {
+            "user_id": normalized_user_id,
+            "enabled": enabled,
+            "api_key": api_key,
+            "configured": bool(api_key),
+            "base_url": service.base_url,
+            "model": (record.vlm_model if record else "") or service.model,
+            "max_concurrency": (record.vlm_max_concurrency if record else 0) or service.max_concurrency,
+            "max_file_bytes": (record.vlm_max_file_bytes if record else 0) or service.max_file_bytes,
+            "max_pages": (record.vlm_max_pages if record else 0) or service.max_pages,
+            "submit_rate_per_minute": (
+                (record.vlm_submit_rate_per_minute if record else 0) or service.submit_rate_per_minute
+            ),
+            "result_rate_per_minute": (
+                (record.vlm_result_rate_per_minute if record else 0) or service.result_rate_per_minute
+            ),
+            "batch_max_files": service.batch_max_files,
+            "poll_interval_seconds": service.poll_interval_seconds,
+            "timeout_seconds": service.timeout_seconds,
+            "slot_dir": str(self.config.storage.base_data_dir / "locks" / "mineru"),
+            "ocr_enabled": bool(record.ocr_enabled if record else self.config.ocr.enabled),
+        }
+
+    def save_vlm_config(
+        self,
+        *,
+        user_id: str,
+        enabled: bool | None = None,
+        api_key: str | None = None,
+        model: str | None = None,
+        max_concurrency: int | None = None,
+        max_file_bytes: int | None = None,
+        max_pages: int | None = None,
+        submit_rate_per_minute: int | None = None,
+        result_rate_per_minute: int | None = None,
+        ocr_enabled: bool | None = None,
+    ) -> dict[str, object]:
+        """持久化用户 MinerU 覆盖；开启 VLM 时必须存在有效形态的 Key。"""
+
+        normalized_user_id = user_id.strip()
+        if not normalized_user_id:
+            raise ValueError("user_id is required")
+        if model is not None and model not in {"pipeline", "vlm"}:
+            raise ValueError("model 必须是 pipeline / vlm")
+        numeric = {
+            "max_concurrency": max_concurrency,
+            "max_file_bytes": max_file_bytes,
+            "max_pages": max_pages,
+            "submit_rate_per_minute": submit_rate_per_minute,
+            "result_rate_per_minute": result_rate_per_minute,
+        }
+        if any(value is not None and int(value) <= 0 for value in numeric.values()):
+            raise ValueError("MinerU 限制参数必须为正整数")
+        maxima = {
+            "max_concurrency": self.config.vlm.batch_max_files,
+            "max_file_bytes": self.config.vlm.max_file_bytes,
+            "max_pages": self.config.vlm.max_pages,
+            "submit_rate_per_minute": self.config.vlm.submit_rate_per_minute,
+            "result_rate_per_minute": self.config.vlm.result_rate_per_minute,
+        }
+        if any(value is not None and int(value) > maxima[name] for name, value in numeric.items()):
+            raise ValueError("MinerU 参数超过精准 API 当前公开上限")
+        with Session(self.engine) as db:
+            record = db.get(UserSettingsRecord, normalized_user_id)
+            if record is None:
+                record = UserSettingsRecord(
+                    user_id=normalized_user_id,
+                    knowledge_dir=str(self.config.storage.knowledge_dir),
+                )
+            if api_key is not None:
+                record.vlm_api_key = api_key.strip()
+            effective_result_rate = int(
+                result_rate_per_minute
+                or record.vlm_result_rate_per_minute
+                or self.config.vlm.result_rate_per_minute
+            )
+            effective_concurrency = int(
+                max_concurrency
+                or record.vlm_max_concurrency
+                or self.config.vlm.max_concurrency
+            )
+            poll_safe_concurrency = max(
+                1,
+                int(effective_result_rate * self.config.vlm.poll_interval_seconds / 60),
+            )
+            if effective_concurrency > poll_safe_concurrency:
+                raise ValueError("MinerU 并发超过当前查询频控与轮询间隔允许的安全上限")
+            effective_key = record.vlm_api_key or self.config.vlm.api_key
+            next_enabled = bool(enabled) if enabled is not None else bool(record.vlm_enabled)
+            if next_enabled and not effective_key:
+                raise ValueError("开启 VLM 前必须配置 MinerU API Key")
+            if enabled is not None:
+                record.vlm_enabled = next_enabled
+            if model is not None:
+                record.vlm_model = model
+            for field_name, value in numeric.items():
+                if value is not None:
+                    setattr(record, f"vlm_{field_name}", int(value))
+            if ocr_enabled is not None:
+                record.ocr_enabled = bool(ocr_enabled)
+            record.updated_at = self._utc_now()
+            db.add(record)
+            db.commit()
+        return self.get_vlm_config(user_id=normalized_user_id)
+
+    def list_vlm_config_presets(self, *, user_id: str) -> list[dict[str, object]]:
+        """列出当前用户保存的 MinerU 精准 API 配置。"""
+
+        normalized_user_id = user_id.strip()
+        with Session(self.engine) as db:
+            records = db.exec(
+                select(UserVlmConfigPreset)
+                .where(UserVlmConfigPreset.user_id == normalized_user_id)
+                .order_by(UserVlmConfigPreset.updated_at.desc())
+            ).all()
+            return [self._serialize_vlm_config_preset(record) for record in records]
+
+    def save_vlm_config_preset(
+        self,
+        *,
+        user_id: str,
+        label: str,
+        api_key: str,
+        model: str,
+        max_concurrency: int,
+        max_file_bytes: int,
+        max_pages: int,
+        submit_rate_per_minute: int,
+        result_rate_per_minute: int,
+    ) -> dict[str, object]:
+        """保存完整 MinerU 模型与限制参数，不包含 VLM/OCR 总开关。"""
+
+        normalized_user_id = user_id.strip()
+        normalized_label = label.strip()
+        normalized_key = api_key.strip()
+        if not normalized_user_id:
+            raise ValueError("user_id is required")
+        if not normalized_key:
+            raise ValueError("保存 VLM 配置前必须填写 MinerU API Key")
+        if model not in {"pipeline", "vlm"}:
+            raise ValueError("model 必须是 pipeline / vlm")
+        limits = {
+            "max_concurrency": int(max_concurrency),
+            "max_file_bytes": int(max_file_bytes),
+            "max_pages": int(max_pages),
+            "submit_rate_per_minute": int(submit_rate_per_minute),
+            "result_rate_per_minute": int(result_rate_per_minute),
+        }
+        maxima = {
+            "max_concurrency": self.config.vlm.batch_max_files,
+            "max_file_bytes": self.config.vlm.max_file_bytes,
+            "max_pages": self.config.vlm.max_pages,
+            "submit_rate_per_minute": self.config.vlm.submit_rate_per_minute,
+            "result_rate_per_minute": self.config.vlm.result_rate_per_minute,
+        }
+        if any(value <= 0 or value > maxima[name] for name, value in limits.items()):
+            raise ValueError("MinerU 预设参数超出精准 API 当前公开范围")
+        now = self._utc_now()
+        with Session(self.engine) as db:
+            record = UserVlmConfigPreset(
+                config_id=f"vlm_cfg_{uuid4().hex[:self.config.limits.generated_long_id_suffix_chars]}",
+                user_id=normalized_user_id,
+                label=normalized_label or f"MinerU {model}",
+                api_key=normalized_key,
+                model=model,
+                **limits,
+                created_at=now,
+                updated_at=now,
+            )
+            db.add(record)
+            db.commit()
+            db.refresh(record)
+            return self._serialize_vlm_config_preset(record)
+
+    def delete_vlm_config_preset(self, *, config_id: str, user_id: str) -> bool:
+        """仅允许配置所有者删除一条 MinerU 预设。"""
+
+        with Session(self.engine) as db:
+            record = db.get(UserVlmConfigPreset, config_id.strip())
+            if record is None or record.user_id != user_id.strip():
+                return False
+            db.delete(record)
+            db.commit()
+            return True
+
+    @staticmethod
+    def _serialize_vlm_config_preset(record: UserVlmConfigPreset) -> dict[str, object]:
+        """把 MinerU 预设转换为 REST/gRPC/前端共享结构。"""
+
+        return {
+            "config_id": record.config_id,
+            "user_id": record.user_id,
+            "label": record.label,
+            "api_key": record.api_key,
+            "model": record.model,
+            "max_concurrency": record.max_concurrency,
+            "max_file_bytes": record.max_file_bytes,
+            "max_pages": record.max_pages,
+            "submit_rate_per_minute": record.submit_rate_per_minute,
+            "result_rate_per_minute": record.result_rate_per_minute,
+            "created_at": record.created_at.isoformat(),
+            "updated_at": record.updated_at.isoformat(),
+        }
 
     def save_floating_config(
         self,

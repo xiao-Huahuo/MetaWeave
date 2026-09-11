@@ -72,6 +72,7 @@ onMounted(updatePageSlider)
       </div>
       <span class="queue-toolbar-separator" aria-hidden="true"></span>
       <div class="queue-toolbar-spacer"></div>
+      <slot name="toolbar-actions"></slot>
       <label class="queue-concurrency">
         <span>最大并行</span>
         <QueueDropdown

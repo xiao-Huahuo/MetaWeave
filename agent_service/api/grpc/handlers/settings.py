@@ -183,6 +183,7 @@ class SettingsGrpcHandlerMixin:
             ocr_enabled=bool(profile.get("ocr_enabled")),
             vision_understanding_enabled=bool(profile.get("vision_understanding_enabled")),
             auto_ingest_on_upload=bool(profile.get("auto_ingest_on_upload")),
+            vlm_enabled=bool(profile.get("vlm_enabled")),
         )
 
     def GetKnowledgeIngestionConfig(self, request: Struct, context: grpc.ServicerContext) -> Struct:  # noqa: N802
@@ -203,6 +204,7 @@ class SettingsGrpcHandlerMixin:
             user_id=user_id,
             auto_ingest_on_upload=(bool(payload["auto_ingest_on_upload"]) if "auto_ingest_on_upload" in payload else None),
             ocr_enabled=(bool(payload["ocr_enabled"]) if "ocr_enabled" in payload else None),
+            vlm_enabled=(bool(payload["vlm_enabled"]) if "vlm_enabled" in payload else None),
             vision_understanding_enabled=(
                 bool(payload["vision_understanding_enabled"])
                 if "vision_understanding_enabled" in payload else None
@@ -217,6 +219,66 @@ class SettingsGrpcHandlerMixin:
             ),
         )
         return ParseDict(result, Struct())
+
+    def GetVlmConfig(self, request: Struct, context: grpc.ServicerContext) -> Struct:  # noqa: N802
+        """返回与 REST 相同的 MinerU 精准 API 生效配置。"""
+
+        user_id = self._require_struct_user_id(request=request, context=context)
+        return ParseDict(self._require_settings_service(context).get_vlm_config(user_id=user_id), Struct())
+
+    def SaveVlmConfig(self, request: Struct, context: grpc.ServicerContext) -> Struct:  # noqa: N802
+        """保存与 REST 相同的 MinerU 与 OCR 用户覆盖。"""
+
+        payload = MessageToDict(request)
+        user_id = self._require_struct_user_id(request=request, context=context)
+        result = self._require_settings_service(context).save_vlm_config(
+            user_id=user_id,
+            enabled=(bool(payload["enabled"]) if "enabled" in payload else None),
+            api_key=(str(payload["api_key"]) if "api_key" in payload else None),
+            model=(str(payload["model"]) if "model" in payload else None),
+            max_concurrency=(int(payload["max_concurrency"]) if "max_concurrency" in payload else None),
+            max_file_bytes=(int(payload["max_file_bytes"]) if "max_file_bytes" in payload else None),
+            max_pages=(int(payload["max_pages"]) if "max_pages" in payload else None),
+            submit_rate_per_minute=(int(payload["submit_rate_per_minute"]) if "submit_rate_per_minute" in payload else None),
+            result_rate_per_minute=(int(payload["result_rate_per_minute"]) if "result_rate_per_minute" in payload else None),
+            ocr_enabled=(bool(payload["ocr_enabled"]) if "ocr_enabled" in payload else None),
+        )
+        return ParseDict(result, Struct())
+
+    def ListVlmConfigPresets(self, request: Struct, context: grpc.ServicerContext) -> Struct:  # noqa: N802
+        """列出当前用户保存的 MinerU 配置。"""
+
+        user_id = self._require_struct_user_id(request=request, context=context)
+        return ParseDict({"configs": self._require_settings_service(context).list_vlm_config_presets(user_id=user_id)}, Struct())
+
+    def SaveVlmConfigPreset(self, request: Struct, context: grpc.ServicerContext) -> Struct:  # noqa: N802
+        """保存一条 MinerU 模型与限制预设。"""
+
+        payload = MessageToDict(request)
+        user_id = self._require_struct_user_id(request=request, context=context)
+        result = self._require_settings_service(context).save_vlm_config_preset(
+            user_id=user_id,
+            label=str(payload.get("label") or ""),
+            api_key=str(payload.get("api_key") or ""),
+            model=str(payload.get("model") or ""),
+            max_concurrency=int(payload.get("max_concurrency") or 0),
+            max_file_bytes=int(payload.get("max_file_bytes") or 0),
+            max_pages=int(payload.get("max_pages") or 0),
+            submit_rate_per_minute=int(payload.get("submit_rate_per_minute") or 0),
+            result_rate_per_minute=int(payload.get("result_rate_per_minute") or 0),
+        )
+        return ParseDict(result, Struct())
+
+    def DeleteVlmConfigPreset(self, request: Struct, context: grpc.ServicerContext) -> Struct:  # noqa: N802
+        """删除当前用户拥有的一条 MinerU 配置。"""
+
+        payload = MessageToDict(request)
+        user_id = self._require_struct_user_id(request=request, context=context)
+        deleted = self._require_settings_service(context).delete_vlm_config_preset(
+            config_id=str(payload.get("config_id") or ""),
+            user_id=user_id,
+        )
+        return ParseDict({"ok": deleted}, Struct())
     def GetLLMConfig(  # noqa: N802
         self, request: LLMConfigRequest, context: grpc.ServicerContext,
     ) -> LLMConfigResponse:

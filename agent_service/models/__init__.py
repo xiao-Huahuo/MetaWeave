@@ -32,6 +32,7 @@ from agent_service.models.user_settings import (
     UserLLMConfigPreset,
     UserSettingsRecord,
     UserSystemPromptEntry,
+    UserVlmConfigPreset,
 )
 from agent_service.models.vault import VaultAsset, VaultItem, VaultItemTag, VaultProfile, VaultTag
 
@@ -75,6 +76,7 @@ __all__ = [
     "UserLLMConfigPreset",
     "UserSettingsRecord",
     "UserSystemPromptEntry",
+    "UserVlmConfigPreset",
     "VaultAsset",
     "VaultItem",
     "VaultItemTag",

@@ -46,6 +46,15 @@ class UserSettingsRecord(SQLModel, table=True):
     web_search_max_results: int = Field(default=DEFAULT_BUSINESS_LIMITS.default_web_search_max_results)
     auto_ingest_on_upload: bool = Field(default=False)
     ocr_enabled: bool = Field(default=False)
+    # MinerU 精准 API 为首选的用户级总开关与覆盖参数。
+    vlm_enabled: bool = Field(default=False)
+    vlm_api_key: str = Field(default="", max_length=DEFAULT_BUSINESS_LIMITS.secret_max_length)
+    vlm_model: str = Field(default="", max_length=DEFAULT_BUSINESS_LIMITS.short_type_max_length)
+    vlm_max_concurrency: int = Field(default=0, ge=DEFAULT_BUSINESS_LIMITS.nonnegative_min_value)
+    vlm_max_file_bytes: int = Field(default=0, ge=DEFAULT_BUSINESS_LIMITS.nonnegative_min_value)
+    vlm_max_pages: int = Field(default=0, ge=DEFAULT_BUSINESS_LIMITS.nonnegative_min_value)
+    vlm_submit_rate_per_minute: int = Field(default=0, ge=DEFAULT_BUSINESS_LIMITS.nonnegative_min_value)
+    vlm_result_rate_per_minute: int = Field(default=0, ge=DEFAULT_BUSINESS_LIMITS.nonnegative_min_value)
     # 用户显式开启后，Agent 图片附件和 understand_image 工具才允许调用本地 Qwen。
     vision_understanding_enabled: bool = Field(default=False)
     # 用户显式启用后，启动后验证到的缺失模型才允许自动下载。
@@ -132,5 +141,24 @@ class UserLLMConfigPreset(SQLModel, table=True):
     api_key: str = Field(default="", max_length=DEFAULT_BUSINESS_LIMITS.secret_max_length)
     base_url: str = Field(default="", max_length=DEFAULT_BUSINESS_LIMITS.secret_max_length)
     model_name: str = Field(default="", max_length=DEFAULT_BUSINESS_LIMITS.title_max_length)
+    created_at: datetime = Field(default_factory=utc_now)
+    updated_at: datetime = Field(default_factory=utc_now)
+
+
+class UserVlmConfigPreset(SQLModel, table=True):
+    """用户保存的单个 MinerU 精准 API 配置。"""
+
+    __tablename__ = "user_vlm_config_presets"
+
+    config_id: str = Field(primary_key=True, max_length=DEFAULT_BUSINESS_LIMITS.standard_id_max_length)
+    user_id: str = Field(index=True, max_length=DEFAULT_BUSINESS_LIMITS.medium_name_max_length)
+    label: str = Field(default="", max_length=DEFAULT_BUSINESS_LIMITS.title_max_length)
+    api_key: str = Field(default="", max_length=DEFAULT_BUSINESS_LIMITS.secret_max_length)
+    model: str = Field(default="vlm", max_length=DEFAULT_BUSINESS_LIMITS.short_type_max_length)
+    max_concurrency: int = Field(default=2, ge=1)
+    max_file_bytes: int = Field(default=200 * 1024 * 1024, ge=1)
+    max_pages: int = Field(default=600, ge=1)
+    submit_rate_per_minute: int = Field(default=300, ge=1)
+    result_rate_per_minute: int = Field(default=1000, ge=1)
     created_at: datetime = Field(default_factory=utc_now)
     updated_at: datetime = Field(default_factory=utc_now)

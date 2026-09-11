@@ -9,7 +9,7 @@ import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 
 import IcIcon from '@/components/common/IcIcon.vue'
 import PixelLoader from '@/components/common/PixelLoader.vue'
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuPortal, DropdownMenuTrigger } from '@/components/ui/dropdown-menu'
+import ScannerParsingSettingsMenu from '@/components/scanner_view/ScannerParsingSettingsMenu.vue'
 import { useSettingsStore } from '@/stores/settings'
 import { formatProgress } from '@/utils/progress'
 import type { ScannerRecord } from '@/api/scanner'
@@ -35,6 +35,7 @@ const emit = defineEmits<{
   uploadBatch: [files: File[]]
   crawl: [url: string]
   crawlBatch: [urls: string[]]
+  settingError: [message: string]
 }>()
 
 const settingsStore = useSettingsStore()
@@ -47,6 +48,7 @@ const urlError = ref('')
 const visibleCount = ref(3)
 const carouselOffset = ref(0)
 const ocrEnabled = defineModel<boolean>('ocrEnabled', { required: true })
+const onlineEnabled = defineModel<boolean>('onlineEnabled', { required: true })
 const logo = computed(() => settingsStore.isDark ? darkLogo : lightLogo)
 let carouselTimer: number | null = null
 let exampleObserver: ResizeObserver | null = null
@@ -163,10 +165,10 @@ onBeforeUnmount(() => {
     <strong>{{ running ? '解析中' : '正在创建' }}</strong>
     <span v-if="running">{{ running.stage_label }}</span>
     <span v-else>{{ busyLabel }}</span>
-    <div v-if="running" class="scanner-progress" role="progressbar" :aria-valuenow="running.progress" aria-valuemin="0" aria-valuemax="100">
+    <div v-if="running && running.parser_engine !== 'mineru'" class="scanner-progress" role="progressbar" :aria-valuenow="running.progress" aria-valuemin="0" aria-valuemax="100">
       <i :style="{ transform: `scaleX(${running.progress / 100})` }"></i>
     </div>
-    <small v-if="running">{{ formatProgress(running.progress) }}%</small>
+    <small v-if="running && running.parser_engine !== 'mineru'">{{ formatProgress(running.progress) }}%</small>
   </section>
 
   <div v-else class="scanner-start" :class="{ embedded }">
@@ -184,19 +186,7 @@ onBeforeUnmount(() => {
       @dragleave.prevent="dragging = false"
       @drop.prevent="onDrop"
     >
-      <DropdownMenu>
-        <DropdownMenuTrigger as-child>
-          <button class="scanner-settings" type="button" title="解析设置" aria-label="解析设置" @click.stop><IcIcon name="settings" :size="16" /></button>
-        </DropdownMenuTrigger>
-        <DropdownMenuPortal>
-          <DropdownMenuContent align="end">
-            <DropdownMenuItem @select="ocrEnabled = !ocrEnabled">
-              <IcIcon :name="ocrEnabled ? 'check' : 'radio-unchecked'" :size="15" />
-              <span>OCR</span><span class="setting-value">{{ ocrEnabled ? '已开启' : '已关闭' }}</span>
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenuPortal>
-      </DropdownMenu>
+      <ScannerParsingSettingsMenu v-model:ocr-enabled="ocrEnabled" v-model:online-enabled="onlineEnabled" @error="emit('settingError', $event)" />
       <span class="scanner-drop-title"><IcIcon name="cloud-upload" :size="17" />拖拽或上传</span>
       <img class="scanner-logo" :src="logo" alt="" />
       <div class="scanner-upload-actions">
@@ -242,10 +232,7 @@ onBeforeUnmount(() => {
 .scanner-drop-zone:hover { border-color: color-mix(in srgb,var(--color-primary) 55%,var(--color-border-strong)); box-shadow: 0 10px 24px color-mix(in srgb,var(--color-text) 10%,transparent); }
 .scanner-drop-zone:active { transform: scale(.995); }
 .scanner-drop-zone.dragging { border-color: var(--color-primary); background: var(--color-primary-softer); }
-.scanner-settings { position: absolute; top: 14px; right: 14px; display: grid; place-items: center; width: 30px; height: 30px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--color-text-secondary); }
-.scanner-settings:hover { background: var(--color-primary-softer); color: var(--color-primary); }
 .scanner-drop-title { position: absolute; top: 16px; left: 18px; display: inline-flex; align-items: center; gap: 7px; color: var(--color-text-secondary); font-size: calc(13px * var(--font-scale)); font-weight: 650; }
-.setting-value { margin-left: auto; color: var(--color-text-muted); font-size: 11px; }
 .scanner-logo { width: clamp(54px,7vh,76px); height: clamp(54px,7vh,76px); object-fit: contain; }
 .scanner-upload-actions { display: flex; gap: 10px; margin-top: clamp(10px,2vh,20px); }
 .scanner-upload-actions button { display: inline-flex; align-items: center; gap: 6px; min-height: 34px; padding: 0 14px; border: 1px solid var(--color-border); border-radius: 999px; background: var(--color-surface); color: var(--color-text); font: inherit; transition: border-color 150ms ease, background 150ms ease, transform 120ms ease; }
@@ -296,6 +283,6 @@ onBeforeUnmount(() => {
 .scanner-url-dialog footer button { min-height: 32px; padding: 0 16px; border: 1px solid var(--color-border); border-radius: 999px; background: var(--color-surface-raised); color: var(--color-text); }
 .scanner-url-dialog footer .primary { border-color: var(--color-primary); background: var(--color-primary); color: white; }
 @media (max-width: 768px) { .scanner-start { grid-template-rows: minmax(210px,3fr) minmax(180px,2fr); padding: 12px; } }
-@media (max-width: 480px) { .scanner-start { gap: 10px; padding: 8px; } .scanner-start.embedded { height:calc(100dvh - 80px); }.scanner-running.embedded { height:calc(100dvh - 80px); }.scanner-drop-title { top: 12px; left: 14px; } .scanner-settings { top: 9px; right: 9px; } .scanner-upload-actions { gap: 6px; } .scanner-upload-actions button { padding: 0 10px; } .scanner-drop-zone p { display: none; } .scanner-example-copy { min-height: 50px; padding: 6px 9px; } }
+@media (max-width: 480px) { .scanner-start { gap: 10px; padding: 8px; } .scanner-start.embedded { height:calc(100dvh - 80px); }.scanner-running.embedded { height:calc(100dvh - 80px); }.scanner-drop-title { top: 12px; left: 14px; } .scanner-upload-actions { gap: 6px; } .scanner-upload-actions button { padding: 0 10px; } .scanner-drop-zone p { display: none; } .scanner-example-copy { min-height: 50px; padding: 6px 9px; } }
 @media (prefers-reduced-motion: reduce) { .scanner-drop-zone,.scanner-example,.scanner-example-image img,.scanner-progress i,.scanner-carousel-enter-active,.scanner-carousel-leave-active { transition: none; } .scanner-example:hover,.scanner-example:hover img { transform: none; } }
 </style>

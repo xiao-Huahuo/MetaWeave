@@ -45,7 +45,6 @@ class ModelManagementService:
 
         preferences = self.settings_service.get_model_preferences(user_id=user_id)
         auto_download = bool(preferences.get("auto_download_enabled"))
-        ocr_enabled = self.settings_service.is_ocr_enabled_for_user(user_id=user_id)
         self.prepare_model_async(
             "embedding", user_id=user_id, load_after=True,
             download_if_missing=auto_download, prompt_if_missing=True,
@@ -53,10 +52,6 @@ class ModelManagementService:
         self.prepare_model_async(
             "rerank", user_id=user_id, load_after=True,
             download_if_missing=auto_download, prompt_if_missing=True,
-        )
-        self.prepare_model_async(
-            "paddleocr", user_id=user_id, load_after=ocr_enabled,
-            download_if_missing=auto_download, prompt_if_missing=ocr_enabled,
         )
         self.prepare_model_async(
             "local_qwen", user_id=user_id, load_after=False,

@@ -27,6 +27,61 @@ def make_settings_service() -> SettingsService:
     return SettingsService(config=config, memory_service=_MemoryServiceStub())  # type: ignore[arg-type]
 
 
+def test_vlm_config_requires_key_and_merges_user_limits() -> None:
+    """VLM 总开关必须有 Key，用户限制覆盖服务默认且 OCR 可独立开启。"""
+
+    service = make_settings_service()
+    try:
+        service.save_vlm_config(user_id="u-vlm", enabled=True)
+    except ValueError as exc:
+        assert "API Key" in str(exc)
+    else:
+        raise AssertionError("enabled VLM without a key must fail")
+
+    saved = service.save_vlm_config(
+        user_id="u-vlm",
+        api_key="token-secret",
+        enabled=True,
+        model="vlm",
+        max_concurrency=3,
+        max_file_bytes=209715200,
+        max_pages=600,
+        submit_rate_per_minute=300,
+        result_rate_per_minute=1000,
+        ocr_enabled=True,
+    )
+    assert saved["enabled"] is True
+    assert saved["configured"] is True
+    assert saved["max_concurrency"] == 3
+    assert saved["max_pages"] == 600
+    assert saved["ocr_enabled"] is True
+
+
+def test_vlm_config_presets_persist_load_fields_and_delete() -> None:
+    """VLM 预设必须保存凭据、模型和全部限制，并保持用户隔离。"""
+
+    service = make_settings_service()
+    saved = service.save_vlm_config_preset(
+        user_id="u-vlm",
+        label="MinerU 精准",
+        api_key="preset-secret",
+        model="vlm",
+        max_concurrency=2,
+        max_file_bytes=209715200,
+        max_pages=600,
+        submit_rate_per_minute=300,
+        result_rate_per_minute=1000,
+    )
+
+    assert saved["label"] == "MinerU 精准"
+    assert saved["api_key"] == "preset-secret"
+    assert saved["max_pages"] == 600
+    assert service.list_vlm_config_presets(user_id="other") == []
+    assert service.list_vlm_config_presets(user_id="u-vlm") == [saved]
+    assert service.delete_vlm_config_preset(config_id=saved["config_id"], user_id="other") is False
+    assert service.delete_vlm_config_preset(config_id=saved["config_id"], user_id="u-vlm") is True
+
+
 def test_llm_config_small_model_inherits_large_model_fields() -> None:
     service = make_settings_service()
 

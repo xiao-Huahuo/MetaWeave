@@ -5,7 +5,7 @@
   progress state, and reusable split result editor.
 -->
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 import IcIcon from '@/components/common/IcIcon.vue'
 import ScannerHistoryList from '@/components/scanner_view/ScannerHistoryList.vue'
@@ -20,6 +20,16 @@ defineOptions({ name: 'ScannerView' })
 const scannerStore = useScannerStore()
 const settingsStore = useSettingsStore()
 const ocrEnabled = ref(true)
+const onlineEnabled = ref(Boolean(settingsStore.profile.vlmEnabled))
+watch(() => settingsStore.profile.vlmEnabled, value => { onlineEnabled.value = Boolean(value) }, { immediate: true })
+watch(
+  () => scannerStore.active?.parser_fallback_reason,
+  reason => {
+    if (!reason) return
+    onlineEnabled.value = false
+    scannerStore.actionError = `${reason}，已自动切换本地解析`
+  },
+)
 const submitting = ref(false)
 const historyOpen = ref(window.innerWidth > 820)
 const railPicker = ref<HTMLInputElement | null>(null)
@@ -51,7 +61,7 @@ async function upload(file: File, sourceKind = 'file'): Promise<void> {
   submitting.value = true
   scannerStore.actionError = ''
   try {
-    await scannerStore.upload(file, ocrEnabled.value, sourceKind)
+    await scannerStore.upload(file, ocrEnabled.value, onlineEnabled.value, sourceKind)
   } catch (error) {
     scannerStore.actionError = error instanceof Error ? error.message : '上传失败'
   } finally {
@@ -78,7 +88,7 @@ async function crawl(url: string): Promise<void> {
   submitting.value = true
   scannerStore.actionError = ''
   try {
-    await scannerStore.crawl(url, ocrEnabled.value)
+    await scannerStore.crawl(url, ocrEnabled.value, onlineEnabled.value)
   } catch (error) {
     scannerStore.actionError = error instanceof Error ? error.message : '网页解析失败'
   } finally {
@@ -169,7 +179,7 @@ onBeforeUnmount(() => {
         <p>{{ failed.error }}</p>
         <button type="button" @click="scannerStore.activeId = ''">返回上传</button>
       </section>
-      <ScannerUploadPanel v-else v-model:ocr-enabled="ocrEnabled" :running="running" @upload="upload" @crawl="crawl" />
+      <ScannerUploadPanel v-else v-model:ocr-enabled="ocrEnabled" v-model:online-enabled="onlineEnabled" :running="running" @setting-error="scannerStore.actionError = $event" @upload="upload" @crawl="crawl" />
       <p v-if="scannerStore.actionError" class="scanner-error">{{ scannerStore.actionError }}</p>
     </main>
   </section>

@@ -17,7 +17,7 @@ import { partitionFinishedScans } from '@/components/batch_scanner/batchScannerB
 function scannerRecord(status: ScannerRecord['status'] = 'running'): ScannerRecord {
   return {
     scan_id: 'scan-1', user_id: 'u1', library_id: 'lib-1', source_kind: 'file', source_name: 'research-notes.pdf', source_path: '.mw/scan/scan-1/source/research-notes.pdf', source_url: '', size: 2048,
-    ocr_enabled: true, status, stage: 'ocr', stage_label: '正在识别页面', progress: 42.6, no_ocr_markdown: '', ocr_markdown: '', assets: [], error: '', source_text: null, created_at: '2026-09-10T10:00:00Z', updated_at: '2026-09-10T10:01:00Z', finished_at: null,
+    ocr_enabled: true, online_enabled: false, parser_engine: 'local', parser_fallback_reason: '', status, stage: 'ocr', stage_label: '正在识别页面', progress: 42.6, no_ocr_markdown: '', ocr_markdown: '', assets: [], error: '', source_text: null, created_at: '2026-09-10T10:00:00Z', updated_at: '2026-09-10T10:01:00Z', finished_at: null,
   }
 }
 
@@ -44,7 +44,7 @@ describe('batch scanner experience', () => {
 
   it('emits every selected file from the scanner upload component batch mode', async () => {
     const wrapper = mount(ScannerUploadPanel, {
-      props: { running: null, batch: true, ocrEnabled: true },
+      props: { running: null, batch: true, ocrEnabled: true, onlineEnabled: false },
       global: { stubs: { IcIcon: true, PixelLoader: true, DropdownMenu: true, DropdownMenuContent: true, DropdownMenuItem: true, DropdownMenuPortal: true, DropdownMenuTrigger: true } },
     })
     const fileInput = wrapper.get('input[type="file"]')
@@ -57,7 +57,7 @@ describe('batch scanner experience', () => {
 
   it('emits newline-separated URLs from the same scanner upload component', async () => {
     const wrapper = mount(ScannerUploadPanel, {
-      props: { running: null, batch: true, ocrEnabled: true },
+      props: { running: null, batch: true, ocrEnabled: true, onlineEnabled: false },
       attachTo: document.body,
       global: { stubs: { IcIcon: true, PixelLoader: true, DropdownMenu: true, DropdownMenuContent: true, DropdownMenuItem: true, DropdownMenuPortal: true, DropdownMenuTrigger: true } },
     })

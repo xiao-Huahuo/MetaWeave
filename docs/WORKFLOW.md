@@ -414,7 +414,23 @@ flowchart TD
 
 ##### 多模态文件入库流程
 
-系统扫描知识库中的多模态文件，先按原目录结构生成 `.mw/md/` Markdown 中间层，再将结构化 JSON 写入 `.mw/frontmatter/`，随后切片写入 ChromaDB 向量数据库供 Agent 使用。
+系统扫描知识库中的多模态文件，先通过共享双链路把裸文档转换成 Markdown：开启用户级 VLM 时优先调用 MinerU 精准 API，显式本地或断网回退时调用既有确定性解析器与 PP-StructureV3。统一结果按原目录结构写入 `.mw/md/` 和 `.mw/frontmatter/`，随后仍由原有切片、Embedding、ChromaDB 与知识图谱流程消费。
+
+```mermaid
+flowchart LR
+    A[裸文档] --> B{用户开启 VLM?}
+    B -->|是且任务联网| C[MinerU 精准 API\n异步上传与轮询]
+    C -->|网络不可达| D[同步准备本地流水线]
+    B -->|否或任务显式本地| D
+    C -->|成功| E[统一 Markdown + 布局块]
+    D -->|成功| E
+    D -->|下载或加载失败| X[任务失败]
+    E --> F[.mw/md + .mw/frontmatter]
+    F --> G[原有切片 / 向量入库 / 知识图谱]
+    A -.预览仍读取原件.-> H[原文件预览]
+```
+
+MinerU 配置采用服务默认与用户覆盖合并：默认 `vlm`、200 MB、600 页、提交 300 次/分钟、查询 1000 次/分钟，并保留用户可调并发。公开合同可能变化，因此服务端错误响应始终为最终约束。相同源文件哈希、OCR 开关、解析器和模型命中缓存时，在发起联网请求前直接复用既有 frontmatter，避免重复计费。
 
 ###### 多模态扫描与格式解析
 
@@ -426,14 +442,14 @@ flowchart TD
 - `.docx`：将文件作为 ZIP 包读取，解析 `word/document.xml` 及图片关系引用。段落按标题样式或段落结构生成文本块；表格保留结构并生成检索摘要；图片优先使用替代文本，否则执行 OCR。提取出的图片保存到 `.mw/assets/`，并在 Markdown 中登记资源位置。
 - `.pptx`：将文件作为 ZIP 包读取并解析 `ppt/slides/slide*.xml`。旧版 `.ppt` 不属于支持格式。
 - `.xlsx`：将文件作为 ZIP 包读取，解析 `xl/sharedStrings.xml` 和 `xl/worksheets/sheet*.xml`。小表完整提取行列；大表提取结构、表头、样例、统计信息和工作表摘要；超大或不适合语义检索的表格只索引工作表名、列名、数据范围等元信息。
-- 图片（`.jpg`、`.jpeg`、`.png`、`.webp`）：知识库入库使用 PP-StructureV3 识别版面、中英文文字、表格、公式和阅读顺序；OCR 默认关闭，在设置页开启后对后续灌库立即生效，无需重启，模型缓存位于 `runtime/models/paddleocr/`。直接上传到 Agent 会话的图片在统一解析器完成结构化 OCR 后，还会交给 CPU 本地 Qwen 补充对象、空间关系、图表趋势和其他视觉语义。
+- 图片（`.jpg`、`.jpeg`、`.png`、`.webp`）：知识库入库在 VLM 开启时优先使用 MinerU，任务显式本地或断网回退时使用 PP-StructureV3。直接上传到 Agent 会话的图片保持本地 OCR，并交给 CPU 本地 Qwen 补充视觉语义，不受知识库联网开关影响。
 - `.pdf`：文档型 PDF 优先提取文本层、表格和图片；扫描型 PDF 按页渲染并执行 OCR；混合型 PDF 逐页判断是否存在文本层；表格无法稳定识别时至少输出文本块和页码范围。
 - 文档内嵌图片：图片本体不作为独立语义文档写入向量库，结构化 JSON 记录图片引用、OCR 状态和识别结果。PDF 与 Office 文档提取的图片统一保存在 `.mw/assets/`，并结合相邻标题、段落、表格编号和图注形成检索上下文。
 - 其他格式：系统先检查支持的后缀白名单；白名单外文件读取前 8192 字节，通过空字节、UTF-8/GBK 等编码解码结果和控制字符占比判断是文本还是二进制。可解码文本按普通文本处理；无法识别的二进制文件登记为资源占位并禁止入库。
 
 #### 结构化 OCR 流水线
 
-图片、扫描型 PDF 页面和 Office 内嵌图片共用 `ImageOcrService`，其底层是一个受管的 PP-StructureV3 高质量流水线。原生 DOCX/XLSX/PPTX 和带文本层 PDF 仍优先使用确定性格式解析器；只有需要理解像素内容的区域进入 OCR，避免重复识别已经存在的结构化正文。
+本节描述双链路中的本地分支。图片、扫描型 PDF 页面和 Office 内嵌图片共用 `ImageOcrService`，其底层是受管的 PP-StructureV3 高质量流水线。应用不会在启动时为 VLM 主路径预热或下载该模型；只有真正选择本地 OCR 或联网失败回退时才同步准备。
 
 ```mermaid
 flowchart TD
@@ -562,7 +578,7 @@ flowchart TD
 ```
 
 - 上传附件是 session-scoped context asset, 不是知识库资产; 它不写入知识库目录, 不生成可灌库 frontmatter, 不进入 Embedding/ChromaDB。
-- 解析链路复用文件树/知识库的同一套结构化解析器。差别只在消费端: 知识库文件解析后进入灌库, 上传附件解析后只登记到会话附件表并供 ContextBuilder 注入。
+- 附件复用统一文档结构合同，但保持本地解析，不读取知识库的 MinerU VLM 总开关，也不会自动把会话附件上传到第三方解析服务。
 - 图片附件的 OCR 文本和本地 Qwen 视觉描述写入同一份附件正文；OCR 负责精确文字，本地模型补充非文字视觉信息。视觉模型异常时保留已完成的 OCR 结果，不让附件上传整体失败。
 - 同一个 session 的后续提问会保留附件目录; 当用户说“这个文件”“刚才上传的文件”或直接提到文件名时, ContextBuilder 会把相关附件正文片段放进本轮 system context。
 - `understand_image`（界面显示为“识图”）允许 Agent 按 attachment_id、文件名或关键词重新读取当前会话图片，并向同一 CPU 本地 Qwen 提出新的视觉问题。

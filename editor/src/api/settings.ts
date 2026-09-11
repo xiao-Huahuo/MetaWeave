@@ -17,6 +17,7 @@ export interface SettingsProfileResponse {
   knowledge_libraries?: SettingsKnowledgeLibraryResponse[]
   auto_ingest_on_upload?: boolean
   ocr_enabled?: boolean
+  vlm_enabled?: boolean
   vision_understanding_enabled?: boolean
   model_auto_download_enabled?: boolean
   dsh_coding_agent_enabled?: boolean
@@ -213,6 +214,69 @@ export interface KnowledgeIngestionConfigResponse {
     files_seen: number
     chunks_deleted: number
   }
+}
+
+/** Effective MinerU precision configuration after service defaults and user overrides are merged. */
+export interface VlmConfigResponse {
+  user_id: string
+  enabled: boolean
+  api_key: string
+  configured: boolean
+  base_url: string
+  model: 'pipeline' | 'vlm'
+  max_concurrency: number
+  max_file_bytes: number
+  max_pages: number
+  submit_rate_per_minute: number
+  result_rate_per_minute: number
+  batch_max_files: number
+  poll_interval_seconds: number
+  timeout_seconds: number
+  ocr_enabled: boolean
+}
+
+/** User-owned reusable MinerU model and limit configuration. */
+export interface SavedVlmConfig {
+  config_id: string
+  user_id: string
+  label: string
+  api_key: string
+  model: 'pipeline' | 'vlm'
+  max_concurrency: number
+  max_file_bytes: number
+  max_pages: number
+  submit_rate_per_minute: number
+  result_rate_per_minute: number
+  created_at: string
+  updated_at: string
+}
+
+export function fetchVlmConfig(userId: string): Promise<VlmConfigResponse> {
+  return apiGet<VlmConfigResponse>(API_ROUTES.SETTINGS_VLM_CONFIG, { user_id: userId })
+}
+
+export function saveVlmConfig(userId: string, config: Partial<Omit<VlmConfigResponse, 'user_id' | 'configured' | 'base_url' | 'batch_max_files' | 'poll_interval_seconds' | 'timeout_seconds'>>): Promise<VlmConfigResponse> {
+  return apiPut<VlmConfigResponse>(API_ROUTES.SETTINGS_VLM_CONFIG, { user_id: userId, ...config })
+}
+
+export function checkVlmConnection(userId: string, apiKey?: string): Promise<{ online: boolean; authorized: boolean; message: string }> {
+  return apiPost(API_ROUTES.SETTINGS_VLM_CHECK, { user_id: userId, ...(apiKey === undefined ? {} : { api_key: apiKey }) })
+}
+
+export function ensureLocalOcr(userId: string): Promise<{ ready: boolean }> {
+  return apiPost(API_ROUTES.SETTINGS_VLM_LOCAL_OCR_ENSURE, { user_id: userId })
+}
+
+export function fetchSavedVlmConfigs(userId: string): Promise<{ configs: SavedVlmConfig[] }> {
+  return apiGet(API_ROUTES.SETTINGS_VLM_CONFIG_SAVED, { user_id: userId })
+}
+
+export function saveVlmConfigPreset(userId: string, config: Omit<SavedVlmConfig, 'config_id' | 'user_id' | 'created_at' | 'updated_at'>): Promise<SavedVlmConfig> {
+  return apiPost(API_ROUTES.SETTINGS_VLM_CONFIG_SAVED, { user_id: userId, ...config })
+}
+
+export function deleteVlmConfigPreset(configId: string, userId: string): Promise<{ ok: boolean }> {
+  return apiDelete(`${API_ROUTES.SETTINGS_VLM_CONFIG_SAVED}/${encodeURIComponent(configId)}`, { user_id: userId })
 }
 
 export function fetchKnowledgeIngestionConfig(userId: string): Promise<KnowledgeIngestionConfigResponse> {

@@ -62,7 +62,11 @@ const resultGridStyle = computed(() => ({
   '--scanner-source-ratio': `${paneSplitRatio.value}fr`,
   '--scanner-markdown-ratio': `${1 - paneSplitRatio.value}fr`,
 }))
-const previewBlocks = computed(() => variant.value === 'ocr' ? (props.record.ocr_blocks ?? []) : [])
+const previewBlocks = computed(() => (
+  props.record.parser_engine === 'mineru' || variant.value === 'ocr'
+    ? (props.record.ocr_blocks ?? [])
+    : []
+))
 const sourceOverlayBlocks = computed(() => props.record.ocr_preview_path ? previewBlocks.value : [])
 const activeBlockId = computed(() => hoveredBlockId.value || lockedBlockId.value)
 

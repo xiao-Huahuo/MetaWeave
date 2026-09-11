@@ -5,13 +5,14 @@
   creates every selected file or URL through the real asynchronous scanner API.
 -->
 <script setup lang="ts">
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 import { createFileScan, createUrlScan, type ScannerRecord } from '@/api/scanner'
 import BatchScannerTaskCard from '@/components/batch_scanner/BatchScannerTaskCard.vue'
 import BatchScannerTaskDialog from '@/components/batch_scanner/BatchScannerTaskDialog.vue'
 import { localDateKey, partitionFinishedScans } from '@/components/batch_scanner/batchScannerBuckets'
 import { preferredScannerMarkdown, preferredScannerVariant, useScannerRecordActions } from '@/components/scanner_view/useScannerRecordActions'
+import ScannerParsingSettingsMenu from '@/components/scanner_view/ScannerParsingSettingsMenu.vue'
 import IcIcon from '@/components/common/IcIcon.vue'
 import QueueBoardShell from '@/components/common/QueueBoardShell.vue'
 import { useScannerStore } from '@/stores/scanner'
@@ -29,6 +30,20 @@ const dialogOpen = ref(false)
 const selected = ref<ScannerRecord | null>(null)
 const submitting = ref(false)
 const submitError = ref('')
+const ocrEnabled = ref(true)
+const onlineEnabled = ref(Boolean(settingsStore.profile.vlmEnabled))
+watch(() => settingsStore.profile.vlmEnabled, value => { onlineEnabled.value = Boolean(value) }, { immediate: true })
+const handledFallbacks = new Set<string>()
+watch(
+  () => scannerStore.records.filter(record => record.parser_fallback_reason).map(record => `${record.scan_id}:${record.parser_fallback_reason}`),
+  fallbacks => {
+    const next = fallbacks.find(item => !handledFallbacks.has(item))
+    if (!next) return
+    handledFallbacks.add(next)
+    onlineEnabled.value = false
+    scannerStore.actionError = `${next.split(':').slice(1).join(':')}，后续任务已自动切换本地解析`
+  },
+)
 const busyScanIds = ref<Set<string>>(new Set())
 const batchAction = ref('')
 let pollTimer: number | null = null
@@ -116,7 +131,8 @@ function closeDialog(): void {
 }
 
 /** Create one durable scanner task per source; individual submission failures do not block siblings. */
-async function createBatch(files: File[], urls: string[], ocrEnabled: boolean): Promise<void> {
+async function createBatch(files: File[], urls: string[], taskOcrEnabled: boolean, taskOnlineEnabled: boolean): Promise<void> {
+  if (!files.length && !urls.length) return
   submitting.value = true
   submitError.value = ''
   scannerStore.actionError = ''
@@ -125,7 +141,7 @@ async function createBatch(files: File[], urls: string[], ocrEnabled: boolean): 
   try {
     for (const file of files) {
       try {
-        scannerStore.upsert(await createFileScan(settingsStore.profile.userId, file, ocrEnabled))
+        scannerStore.upsert(await createFileScan(settingsStore.profile.userId, file, taskOcrEnabled, taskOnlineEnabled))
         createdCount += 1
       } catch {
         failures.push(file.name)
@@ -133,7 +149,7 @@ async function createBatch(files: File[], urls: string[], ocrEnabled: boolean): 
     }
     for (const url of urls) {
       try {
-        scannerStore.upsert(await createUrlScan(settingsStore.profile.userId, url, ocrEnabled))
+        scannerStore.upsert(await createUrlScan(settingsStore.profile.userId, url, taskOcrEnabled, taskOnlineEnabled))
         createdCount += 1
       } catch {
         failures.push(url)
@@ -199,6 +215,9 @@ onBeforeUnmount(() => { if (pollTimer !== null) window.clearInterval(pollTimer) 
     @switch-page="historyMode = $event"
     @new-task="openNew"
   >
+    <template #toolbar-actions>
+      <ScannerParsingSettingsMenu v-model:ocr-enabled="ocrEnabled" v-model:online-enabled="onlineEnabled" placement="toolbar" @error="scannerStore.actionError = $event" />
+    </template>
     <template #board>
       <div class="queue-lane">
         <h2 class="queue-column-title pending">等待扫描 <small>{{ queued.length }}</small></h2>
@@ -229,7 +248,7 @@ onBeforeUnmount(() => { if (pollTimer !== null) window.clearInterval(pollTimer) 
     </template>
   </QueueBoardShell>
 
-  <BatchScannerTaskDialog :open="dialogOpen" :record="selected" :submitting="submitting" :submit-error="submitError" @close="closeDialog" @create="createBatch" @cancel="cancel" @remove="remove" @updated="updateRecord" />
+  <BatchScannerTaskDialog v-model:ocr-enabled="ocrEnabled" v-model:online-enabled="onlineEnabled" :open="dialogOpen" :record="selected" :submitting="submitting" :submit-error="submitError" @setting-error="submitError = $event" @close="closeDialog" @create="createBatch" @cancel="cancel" @remove="remove" @updated="updateRecord" />
   <p v-if="scannerStore.actionError" class="batch-scanner-error" role="alert">{{ scannerStore.actionError }}</p>
 </template>
 

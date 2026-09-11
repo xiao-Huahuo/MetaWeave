@@ -5,7 +5,7 @@
  * Verifies that supported suffix capsules append gitignore rules once and use
  * the section's existing save event instead of introducing separate storage.
  */
-import { mount } from '@vue/test-utils'
+import { mount, type VueWrapper } from '@vue/test-utils'
 import { describe, expect, it } from 'vitest'
 
 import BasicSettingsSection from '@/components/settings_view/BasicSettingsSection.vue'
@@ -18,7 +18,6 @@ function mountSection(ignorePatterns = '*.md') {
       editorImageAssetsDirDraft: './assets/',
       watchEnabledDraft: true,
       autoIngestOnUploadDraft: false,
-      ocrEnabledDraft: false,
       visionUnderstandingEnabledDraft: false,
       dshCodingAgentEnabledDraft: false,
       knowledgeIgnorePatternsDraft: ignorePatterns,
@@ -27,19 +26,21 @@ function mountSection(ignorePatterns = '*.md') {
       saving: false,
       saveMessage: '',
       saveError: '',
+      switchingKnowledgeRoot: false,
       'onUpdate:knowledgeIgnorePatternsDraft': (value: string) => wrapper.setProps({ knowledgeIgnorePatternsDraft: value }),
     },
   })
 }
 
-let wrapper: ReturnType<typeof mount<InstanceType<typeof BasicSettingsSection>>>
+let wrapper: VueWrapper
 
 describe('BasicSettingsSection blocked file types', () => {
-  it('places the default-off image-understanding switch directly below OCR', () => {
+  it('moves OCR out of basic settings while preserving image understanding and DSH', () => {
     wrapper = mountSection()
     const labels = wrapper.findAll('.toggle-row label').map((item) => item.text())
 
-    expect(labels.indexOf('识图')).toBe(labels.indexOf('OCR') + 1)
+    expect(labels).not.toContain('OCR')
+    expect(labels).toContain('识图')
     expect(wrapper.props('visionUnderstandingEnabledDraft')).toBe(false)
     expect(labels.indexOf('启用 DSH coding agent')).toBe(labels.indexOf('识图') + 1)
     expect(wrapper.props('dshCodingAgentEnabledDraft')).toBe(false)

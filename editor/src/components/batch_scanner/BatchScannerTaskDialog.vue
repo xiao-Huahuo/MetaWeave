@@ -5,7 +5,7 @@
   the existing scanner result editor for completed task inspection.
 -->
 <script setup lang="ts">
-import { computed, ref, watch } from 'vue'
+import { computed } from 'vue'
 
 import type { ScannerRecord } from '@/api/scanner'
 import IcIcon from '@/components/common/IcIcon.vue'
@@ -27,19 +27,17 @@ const props = withDefaults(defineProps<{
 
 const emit = defineEmits<{
   close: []
-  create: [files: File[], urls: string[], ocrEnabled: boolean]
+  create: [files: File[], urls: string[], ocrEnabled: boolean, onlineEnabled: boolean]
+  settingError: [message: string]
   cancel: [record: ScannerRecord]
   remove: [record: ScannerRecord]
   updated: [record: ScannerRecord]
 }>()
 
-const ocrEnabled = ref(true)
+const ocrEnabled = defineModel<boolean>('ocrEnabled', { required: true })
+const onlineEnabled = defineModel<boolean>('onlineEnabled', { required: true })
 const title = computed(() => !props.record ? '新建批量扫描' : props.record.status === 'finished' ? '扫描结果' : '扫描任务详情')
 
-watch(() => props.open, (open) => {
-  if (!open || props.record) return
-  ocrEnabled.value = true
-})
 </script>
 
 <template>
@@ -51,14 +49,15 @@ watch(() => props.open, (open) => {
       <dl>
         <div><dt>状态</dt><dd>{{ record.stage_label }}</dd></div>
         <div><dt>OCR</dt><dd>{{ record.ocr_enabled ? '已开启' : '已关闭' }}</dd></div>
+        <div><dt>解析器</dt><dd>{{ record.parser_engine === 'mineru' ? 'MinerU 精准 API' : '本地流水线' }}</dd></div>
         <div><dt>创建时间</dt><dd>{{ new Date(record.created_at).toLocaleString() }}</dd></div>
       </dl>
-      <div v-if="record.status === 'running' || record.status === 'cancelling'" class="batch-detail-progress" role="progressbar" :aria-valuenow="record.progress" aria-valuemin="0" aria-valuemax="100"><i :style="{ transform: `scaleX(${record.progress / 100})` }"></i></div>
-      <p v-if="record.status === 'running'">{{ formatProgress(record.progress) }}%</p>
+      <div v-if="(record.status === 'running' || record.status === 'cancelling') && record.parser_engine !== 'mineru'" class="batch-detail-progress" role="progressbar" :aria-valuenow="record.progress" aria-valuemin="0" aria-valuemax="100"><i :style="{ transform: `scaleX(${record.progress / 100})` }"></i></div>
+      <p v-if="record.status === 'running' && record.parser_engine !== 'mineru'">{{ formatProgress(record.progress) }}%</p>
       <p v-if="record.error" class="batch-form-error">{{ record.error }}</p>
     </section>
 
-    <ScannerUploadPanel v-else v-model:ocr-enabled="ocrEnabled" :running="null" batch embedded :busy="submitting" :error="submitError" @upload-batch="emit('create', $event, [], ocrEnabled)" @crawl-batch="emit('create', [], $event, ocrEnabled)" />
+    <ScannerUploadPanel v-else v-model:ocr-enabled="ocrEnabled" v-model:online-enabled="onlineEnabled" :running="null" batch embedded :busy="submitting" :error="submitError" @setting-error="emit('settingError', $event)" @upload-batch="emit('create', $event, [], ocrEnabled, onlineEnabled)" @crawl-batch="emit('create', [], $event, ocrEnabled, onlineEnabled)" />
 
     <template v-if="record && record.status !== 'finished'" #footer>
       <button v-if="record && ['queued', 'running', 'cancelling'].includes(record.status)" class="danger-btn" type="button" @click="emit('cancel', record)">终止扫描</button>

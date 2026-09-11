@@ -6,17 +6,18 @@ import { cancelScan, createFileScan, createUrlScan, fetchScanBatchExport, listSc
 describe('scanner API', () => {
   beforeEach(() => vi.restoreAllMocks())
 
-  it('constructs file and URL scan requests with task-local OCR', async () => {
+  it('constructs file and URL scan requests with task-local OCR and online snapshots', async () => {
     const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(async () => new Response(JSON.stringify({ scan_id: 'scan-1' }), { status: 200, headers: { 'Content-Type': 'application/json' } }))
-    await createFileScan('u1', new File(['x'], 'sample.bin'), true)
+    await createFileScan('u1', new File(['x'], 'sample.bin'), true, true)
     const fileInit = fetchMock.mock.calls[0]?.[1]
     expect(fetchMock.mock.calls[0]?.[0]).toContain('/scanner/files')
     expect(fileInit?.body).toBeInstanceOf(FormData)
     expect((fileInit?.body as FormData).get('ocr_enabled')).toBe('true')
+    expect((fileInit?.body as FormData).get('online_enabled')).toBe('true')
 
-    await createUrlScan('u1', 'https://example.com', false)
+    await createUrlScan('u1', 'https://example.com', false, false)
     expect(fetchMock.mock.calls[1]?.[0]).toContain('/scanner/urls')
-    expect(JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body))).toEqual({ user_id: 'u1', url: 'https://example.com', ocr_enabled: false })
+    expect(JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body))).toEqual({ user_id: 'u1', url: 'https://example.com', ocr_enabled: false, online_enabled: false })
   })
 
   it('constructs draft and knowledge-save requests with explicit variants', async () => {

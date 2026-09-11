@@ -66,17 +66,17 @@ export const useScannerStore = defineStore('scanner', () => {
   }
 
   /** Create and select a real uploaded-file scanner task. */
-  async function upload(file: File, ocrEnabled: boolean, sourceKind = 'file'): Promise<void> {
+  async function upload(file: File, ocrEnabled: boolean, onlineEnabled: boolean, sourceKind = 'file'): Promise<void> {
     actionError.value = ''
-    const record = await createFileScan(userId(), file, ocrEnabled, sourceKind)
+    const record = await createFileScan(userId(), file, ocrEnabled, onlineEnabled, sourceKind)
     upsert(record)
     activeId.value = record.scan_id
   }
 
   /** Create and select a real webpage scanner task. */
-  async function crawl(url: string, ocrEnabled: boolean): Promise<void> {
+  async function crawl(url: string, ocrEnabled: boolean, onlineEnabled: boolean): Promise<void> {
     actionError.value = ''
-    const record = await createUrlScan(userId(), url, ocrEnabled)
+    const record = await createUrlScan(userId(), url, ocrEnabled, onlineEnabled)
     upsert(record)
     activeId.value = record.scan_id
   }

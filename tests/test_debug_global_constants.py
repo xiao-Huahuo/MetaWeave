@@ -47,3 +47,15 @@ def test_collect_agent_config_constants_serializes_non_json_native_values() -> N
 
     assert project_root["type"] == "Path"
     assert isinstance(project_root["value"], str)
+
+
+def test_collect_agent_config_constants_redacts_vlm_api_key() -> None:
+    """Debug 配置快照不得泄露 MinerU 或其他服务级密钥。"""
+
+    config = AgentConfig()
+    config.vlm.api_key = "secret-token"
+    payload = _collect_agent_config_constants(config)
+    vlm = next(group for group in payload["configs"] if group["key"] == "vlm")
+    api_key = next(item for item in vlm["constants"] if item["name"] == "api_key")
+
+    assert api_key["value"] == "***"

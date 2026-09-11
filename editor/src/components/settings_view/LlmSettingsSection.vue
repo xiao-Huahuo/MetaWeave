@@ -9,6 +9,7 @@
 import { computed } from 'vue'
 
 import { DEFAULT_MODEL_CONTEXT_WINDOW_TOKENS, type SavedLLMConfig } from '@/api/settings'
+import SavedModelConfigRow from '@/components/settings_view/SavedModelConfigRow.vue'
 
 const largeModelName = defineModel<string>('largeModelName', { required: true })
 const largeBaseUrl = defineModel<string>('largeBaseUrl', { required: true })
@@ -81,7 +82,7 @@ function clearModelDraft(target: 'large' | 'small') {
 </script>
 
 <template>
-  <div class="setting-section">
+  <div class="setting-section settings-model-form">
     <section class="effective-model-summary" aria-labelledby="effective-model-title">
       <h3 id="effective-model-title">当前生效</h3>
       <dl>
@@ -147,18 +148,20 @@ function clearModelDraft(target: 'large' | 'small') {
       <h3>已保存的配置</h3>
       <p v-if="!savedConfigs.length" class="empty-hint">暂无已保存的模型配置。</p>
       <div v-else class="saved-model-grid">
-        <article v-for="config in savedConfigs" :key="config.config_id" class="saved-model-card">
-          <div class="saved-model-main">
-            <strong>{{ config.label || config.model_name || '未命名配置' }}</strong>
-            <span>{{ config.model_name || '未填写模型名称' }}</span>
-            <small>{{ config.base_url || '未填写 Base URL' }}</small>
-          </div>
-          <div class="saved-model-actions">
+        <SavedModelConfigRow
+          v-for="config in savedConfigs"
+          :key="config.config_id"
+          :title="config.label || config.model_name || '未命名配置'"
+          :model="config.model_name"
+          :endpoint="config.base_url"
+          icon="psychology"
+        >
+          <template #actions>
             <button type="button" @click="$emit('importSavedConfig', config, 'large')">导入大模型</button>
             <button type="button" @click="$emit('importSavedConfig', config, 'small')">导入小模型</button>
             <button class="danger" type="button" @click="$emit('deleteSavedConfig', config.config_id)">删除</button>
-          </div>
-        </article>
+          </template>
+        </SavedModelConfigRow>
       </div>
     </section>
   </div>

@@ -34,6 +34,7 @@ from agent_service.models.scanner import ScannerRecord
 from agent_service.models.favorite import FavoriteRecord
 from agent_service.schemas.scanner import ScannerConflictStrategy, ScannerOut, ScannerVariant
 from agent_service.services.knowledge_library import KnowledgeLibraryService
+from agent_service.services.document_parsing import MinerUClient, MinerUNetworkError
 from agent_service.services.memory.rag.frontmatter_bootstrap import FrontmatterBootstrapService
 from agent_service.services.memory.rag.image_ocr import ImageOcrService
 from agent_service.services.settings.service import SettingsService
@@ -130,14 +131,25 @@ class ScannerService:
             self._terminate_process(process)
             self._requeue_interrupted(scan_id)
 
-    def create_file(self, *, user_id: str, filename: str, content: bytes, ocr_enabled: bool, source_kind: str = "file") -> ScannerOut:
+    def create_file(
+        self,
+        *,
+        user_id: str,
+        filename: str,
+        content: bytes,
+        ocr_enabled: bool,
+        online_enabled: bool = False,
+        source_kind: str = "file",
+    ) -> ScannerOut:
         """Persist one managed source copy and enqueue its Markdown projection."""
 
         normalized_user = self._required(user_id, "user_id")
         safe_name = Path(filename).name.strip()
         if not safe_name:
             raise ValueError("filename is required")
-        if len(content) > self.config.limits.scanner_source_max_bytes:
+        vlm_config = self._require_online_available(normalized_user) if online_enabled else None
+        max_bytes = int(vlm_config.get("max_file_bytes") or 0) if vlm_config else self.config.limits.scanner_source_max_bytes
+        if len(content) > max_bytes:
             raise ValueError("file exceeds scanner size limit")
         context = self._context(normalized_user)
         scan_id = f"scan_{uuid4().hex}"
@@ -155,6 +167,8 @@ class ScannerService:
             source_path=relative_path,
             size=len(content),
             ocr_enabled=ocr_enabled,
+            online_enabled=online_enabled,
+            parser_engine="mineru" if online_enabled else "local",
         )
         with Session(self.engine) as db:
             db.add(record)
@@ -163,12 +177,14 @@ class ScannerService:
         self._submit(scan_id)
         return self._to_out(record, context=context, include_content=False)
 
-    def create_url(self, *, user_id: str, url: str, ocr_enabled: bool) -> ScannerOut:
+    def create_url(self, *, user_id: str, url: str, ocr_enabled: bool, online_enabled: bool = False) -> ScannerOut:
         """Persist a queued public webpage task and enqueue crawling."""
 
         normalized_user = self._required(user_id, "user_id")
         self._validate_public_url(url)
         context = self._context(normalized_user)
+        if online_enabled:
+            self._require_online_available(normalized_user)
         scan_id = f"scan_{uuid4().hex}"
         source_name = (urlparse(url).hostname or "webpage") + ".html"
         record = ScannerRecord(
@@ -179,6 +195,8 @@ class ScannerService:
             source_name=source_name,
             source_url=url,
             ocr_enabled=ocr_enabled,
+            online_enabled=online_enabled,
+            parser_engine="mineru" if online_enabled else "local-web",
         )
         with Session(self.engine) as db:
             db.add(record)
@@ -446,6 +464,8 @@ class ScannerService:
                     return None
                 try:
                     context = self._context(record.user_id, expected_library_id=record.library_id)
+                    if record.online_enabled:
+                        context["vlm_config"] = self._require_online_available(record.user_id)
                 except Exception as exc:
                     record.status = "failed"
                     record.stage = "failed"
@@ -586,9 +606,9 @@ class ScannerService:
                     return
                 context = context_override or self._context(record.user_id, expected_library_id=record.library_id)
                 if record.source_kind == "url":
-                    no_ocr, ocr, assets, ocr_blocks, source_name, source_path, size = self._crawl(record=record, context=context)
+                    no_ocr, ocr, assets, ocr_blocks, source_name, source_path, size, parser_engine, fallback_reason = self._crawl(record=record, context=context)
                 else:
-                    no_ocr, ocr, assets, ocr_blocks = self._project_file(record=record, context=context)
+                    no_ocr, ocr, assets, ocr_blocks, parser_engine, fallback_reason = self._project_file(record=record, context=context)
                     source_name, source_path, size = record.source_name, record.source_path, record.size
             with Session(self.engine) as db:
                 record = db.get(ScannerRecord, scan_id)
@@ -601,6 +621,8 @@ class ScannerService:
                 record.ocr_markdown = ocr
                 record.ocr_blocks_json = json.dumps(ocr_blocks, ensure_ascii=False)
                 record.assets_json = json.dumps(assets, ensure_ascii=False)
+                record.parser_engine = parser_engine
+                record.parser_fallback_reason = fallback_reason
                 record.status = "finished"
                 record.stage = "completed"
                 record.stage_label = "解析完成"
@@ -625,7 +647,7 @@ class ScannerService:
                 db.add(record)
                 db.commit()
 
-    def _project_file(self, *, record: ScannerRecord, context: dict[str, Any]) -> tuple[str, str, list[str], list[dict[str, Any]]]:
+    def _project_file(self, *, record: ScannerRecord, context: dict[str, Any]) -> tuple[str, str, list[str], list[dict[str, Any]], str, str]:
         """Create no-OCR and optional OCR projections through the shared cleaner."""
 
         source = self._source_absolute(record=record, context=context)
@@ -634,7 +656,9 @@ class ScannerService:
             raise ValueError(f"unsupported binary file type: {source.suffix.lower() or 'unknown'}")
         assets_dir = self._scan_root(context=context, scan_id=record.scan_id) / "assets"
         assets_dir.mkdir(parents=True, exist_ok=True)
-        if source.suffix.lower() in IMAGE_SUFFIXES:
+        if record.online_enabled and not record.ocr_enabled:
+            no_ocr = ""
+        elif source.suffix.lower() in IMAGE_SUFFIXES:
             asset = assets_dir / self._safe_asset_name(source.name)
             shutil.copy2(source, asset)
             no_ocr = f"# {source.stem}\n\n![{source.stem}](./assets/{asset.name})\n"
@@ -648,10 +672,11 @@ class ScannerService:
             )
             no_ocr = no_ocr_doc.markdown
         assets = [path.relative_to(context["root"]).as_posix() for path in sorted(assets_dir.glob("*")) if path.is_file()]
-        if not record.ocr_enabled:
-            return no_ocr, "", assets, []
-        if source.suffix.lower() in IMAGE_SUFFIXES:
-            result = ImageOcrService(config=self.config, enabled=True, run_inline=True).extract_image_text(
+        if not record.ocr_enabled and not record.online_enabled:
+            return no_ocr, "", assets, [], "local", ""
+        if source.suffix.lower() in IMAGE_SUFFIXES and not record.online_enabled:
+            local_ocr = ImageOcrService(config=self.config, enabled=True, run_inline=True)
+            result = local_ocr.extract_image_text(
                 source,
                 progress_callback=lambda payload: self._set_progress(
                     record.scan_id,
@@ -663,18 +688,31 @@ class ScannerService:
             )
             if result.preview_image_png:
                 (assets_dir / "ocr-preview.png").write_bytes(result.preview_image_png)
-            return no_ocr, self._strip_markdown_images(result.content), assets, [dict(block) for block in result.blocks]
-        ocr_doc = FrontmatterBootstrapService(config=self.config, ocr_enabled=True, ocr_inline=True).build_markdown_projection(
+            return no_ocr, self._strip_markdown_images(result.content), assets, [dict(block) for block in result.blocks], "local", ""
+        vlm_config = self._vlm_config_from_context(context)
+        parsed_doc = FrontmatterBootstrapService(
+            config=self.config,
+            ocr_enabled=record.ocr_enabled,
+            ocr_inline=True,
+            vlm_config=vlm_config,
+            online_enabled=record.online_enabled,
+        ).build_markdown_projection(
             source_path=source,
             knowledge_dir=context["root"],
             asset_output_dir=assets_dir,
             asset_public_prefix="./assets",
             progress_callback=lambda payload: self._projection_progress(record.scan_id, payload, 50, 96),
         )
-        ocr_blocks = [dict(block) for block in ocr_doc.metadata.get("ocr_blocks", []) if isinstance(block, dict)]
-        return no_ocr, self._strip_markdown_images(ocr_doc.markdown), assets, ocr_blocks
+        ocr_blocks = [dict(block) for block in parsed_doc.metadata.get("ocr_blocks", []) if isinstance(block, dict)]
+        assets = [path.relative_to(context["root"]).as_posix() for path in sorted(assets_dir.glob("*")) if path.is_file()]
+        parser_engine = str(parsed_doc.metadata.get("parser_engine") or "local")
+        fallback_reason = str(parsed_doc.metadata.get("parser_fallback_reason") or "")
+        parsed_markdown = self._strip_markdown_images(parsed_doc.markdown)
+        if record.ocr_enabled:
+            return no_ocr, parsed_markdown, assets, ocr_blocks, parser_engine, fallback_reason
+        return parsed_markdown, "", assets, ocr_blocks, parser_engine, fallback_reason
 
-    def _crawl(self, *, record: ScannerRecord, context: dict[str, Any]) -> tuple[str, str, list[str], list[dict[str, Any]], str, str, int]:
+    def _crawl(self, *, record: ScannerRecord, context: dict[str, Any]) -> tuple[str, str, list[str], list[dict[str, Any]], str, str, int, str, str]:
         """Fetch a public webpage, localize images, and build both projection variants."""
 
         self._set_progress(record.scan_id, status="running", stage="download", label="正在抓取网页", progress=12)
@@ -712,6 +750,34 @@ class ScannerService:
             markdown = markdown.replace(f"]({remote})", f"]({local})")
         self._set_progress(record.scan_id, status="running", stage="normalize", label="正在生成 Markdown", progress=72)
         assets = [path.relative_to(context["root"]).as_posix() for path in sorted(assets_dir.glob("*")) if path.is_file()]
+        if record.online_enabled:
+            vlm_config = self._vlm_config_from_context(context)
+            try:
+                remote = MinerUClient(vlm_config).parse_url(
+                    final_url,
+                    source_path=source,
+                    ocr_enabled=record.ocr_enabled,
+                    progress_callback=lambda payload: self._set_progress(
+                        record.scan_id,
+                        status="running",
+                        stage=str(payload.get("stage") or "vlm_pending"),
+                        label=str(payload.get("stage_label") or "MinerU 正在解析"),
+                        progress=72,
+                    ),
+                    asset_output_dir=assets_dir,
+                    asset_public_prefix="./assets",
+                )
+                remote_markdown = self._strip_markdown_images(remote.markdown).strip() + "\n"
+                if record.ocr_enabled:
+                    return markdown.strip() + "\n", remote_markdown, assets, remote.blocks, source.name, source.relative_to(context["root"]).as_posix(), len(body), "mineru", ""
+                return remote_markdown, "", assets, remote.blocks, source.name, source.relative_to(context["root"]).as_posix(), len(body), "mineru", ""
+            except MinerUNetworkError as exc:
+                fallback_reason = str(exc)
+                self._set_progress(record.scan_id, status="running", stage="vlm_fallback", label="MinerU 不可连接，正在切换本地解析", progress=72)
+            else:
+                fallback_reason = ""
+        else:
+            fallback_reason = ""
         ocr_texts: list[str] = []
         ocr_blocks: list[dict[str, Any]] = []
         if record.ocr_enabled and assets:
@@ -725,7 +791,7 @@ class ScannerService:
         ocr_markdown = self._strip_markdown_images(markdown)
         if ocr_texts:
             ocr_markdown += "\n\n## 图片文字\n\n" + "\n\n".join(ocr_texts)
-        return markdown.strip() + "\n", ocr_markdown.strip() + "\n" if record.ocr_enabled else "", assets, ocr_blocks, source.name, source.relative_to(context["root"]).as_posix(), len(body)
+        return markdown.strip() + "\n", ocr_markdown.strip() + "\n" if record.ocr_enabled else "", assets, ocr_blocks, source.name, source.relative_to(context["root"]).as_posix(), len(body), "local-web", fallback_reason
 
     def _fetch_url(self, url: str) -> tuple[str, str, bytes]:
         """Fetch one public URL with per-hop SSRF checks and bounded bytes."""
@@ -787,6 +853,8 @@ class ScannerService:
             record.status = status
             record.stage = stage
             record.stage_label = label
+            if stage == "vlm_fallback":
+                record.parser_engine = "local-web" if record.source_kind == "url" else "local"
             running_max = self.config.limits.progress_max_percent - 0.1
             record.progress = max(record.progress, min(running_max, round(progress, 1)))
             record.updated_at = self._now()
@@ -879,6 +947,26 @@ class ScannerService:
         root = Path(str(active["knowledge_dir"])).expanduser().resolve()
         return {"user_id": str(profile["user_id"]), "library_id": library_id, "root": root}
 
+    def _require_online_available(self, user_id: str) -> dict[str, object]:
+        """禁止任务级联网越过持久 VLM 总开关或缺失 Key。"""
+
+        if self.settings_service is None:
+            raise ValueError("scanner worker requires VLM settings")
+        config = self.settings_service.get_vlm_config(user_id=user_id)
+        if not bool(config.get("enabled")) or not bool(config.get("configured")):
+            raise ValueError("请先在 OCR/VLM 设置中开启 VLM 并配置 MinerU API Key")
+        return config
+
+    def _vlm_config_from_context(self, context: dict[str, Any]) -> dict[str, object]:
+        """读取父进程固化的 VLM 配置，主进程直调时才回退 SettingsService。"""
+
+        snapshot = context.get("vlm_config")
+        if isinstance(snapshot, dict):
+            return dict(snapshot)
+        if self.settings_service is not None:
+            return self.settings_service.get_vlm_config(user_id=str(context["user_id"]))
+        return {}
+
     @staticmethod
     def _scan_root(*, context: dict[str, Any], scan_id: str) -> Path:
         """Return one isolated scanner directory under the active knowledge root."""
@@ -931,6 +1019,9 @@ class ScannerService:
             source_url=record.source_url,
             size=record.size,
             ocr_enabled=record.ocr_enabled,
+            online_enabled=record.online_enabled,
+            parser_engine=record.parser_engine,
+            parser_fallback_reason=record.parser_fallback_reason,
             status=record.status,
             stage=record.stage,
             stage_label=record.stage_label,

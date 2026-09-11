@@ -18,6 +18,7 @@ from starlette.concurrency import run_in_threadpool
 from agent_service.api.grpc import agent_service_pb2
 from agent_service.api.rest.deps import _require_agent, _require_knowledge_library_service
 from agent_service.core.agent_config import AgentConfig, DEFAULT_BUSINESS_LIMITS
+from agent_service.services.document_parsing import MINERU_SUPPORTED_SUFFIXES
 from agent_service.services.memory.rag.chunk import chunk_text
 from agent_service.services.memory.rag.frontmatter_bootstrap import FrontmatterBootstrapService
 from agent_service.services.memory.rag.frontmatter_document import StructuredKnowledgeDocument
@@ -77,7 +78,12 @@ def _collect_agent_config_constants(config: AgentConfig) -> dict[str, Any]:
                 "name": field_info.name,
                 "description": field_descriptions.get(field_info.name, ""),
                 "type": _value_type_name(getattr(config_group, field_info.name)),
-                "value": _to_json_value(getattr(config_group, field_info.name)),
+                "value": (
+                    "***"
+                    if any(secret in field_info.name.lower() for secret in ("api_key", "password", "token", "secret"))
+                    and bool(getattr(config_group, field_info.name))
+                    else _to_json_value(getattr(config_group, field_info.name))
+                ),
             }
             for field_info in group_fields
         ]
@@ -191,10 +197,13 @@ def _build_multimodal_ingestion_observation(*, user_id: str, relative_path: str)
         raise ValueError("source file not found")
 
     ocr_enabled = True
+    vlm_config: dict[str, object] = {}
     if hasattr(library_service, "settings_service"):
         settings_service = library_service.settings_service
         if hasattr(settings_service, "is_ocr_enabled_for_user"):
             ocr_enabled = bool(settings_service.is_ocr_enabled_for_user(user_id=user_id))
+        if hasattr(settings_service, "get_vlm_config"):
+            vlm_config = settings_service.get_vlm_config(user_id=user_id)
 
     try:
         structured_payload = library_service.read_frontmatter_payload_for_file(
@@ -202,13 +211,24 @@ def _build_multimodal_ingestion_observation(*, user_id: str, relative_path: str)
             path=normalized_relative_path,
         )
         current_hash = FrontmatterBootstrapService._hash_file(source_path)
-        if int(structured_payload.get("schema_version") or 1) < 2 or structured_payload.get("source_hash") != current_hash:
+        metadata = structured_payload.get("metadata") if isinstance(structured_payload.get("metadata"), dict) else {}
+        expected_engine = "mineru" if bool(vlm_config.get("enabled")) and source_path.suffix.lower() in MINERU_SUPPORTED_SUFFIXES else "local"
+        if (
+            int(structured_payload.get("schema_version") or 1) < 2
+            or structured_payload.get("source_hash") != current_hash
+            or metadata.get("parser_engine") != expected_engine
+        ):
             raise ValueError("stale projection")
     except ValueError:
         with tempfile.TemporaryDirectory(prefix="metaweave_multimodal_observe_") as temp_dir:
             frontmatter_root = Path(temp_dir) / "frontmatter"
             markdown_root = Path(temp_dir) / "md"
-            _, output_path = FrontmatterBootstrapService(config=config, ocr_enabled=ocr_enabled).build_frontmatter_file(
+            _, output_path = FrontmatterBootstrapService(
+                config=config,
+                ocr_enabled=ocr_enabled,
+                vlm_config=vlm_config,
+                online_enabled=bool(vlm_config.get("enabled")),
+            ).build_frontmatter_file(
                 source_path=source_path,
                 knowledge_dir=source_root,
                 frontmatter_dir=frontmatter_root,

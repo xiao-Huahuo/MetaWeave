@@ -722,6 +722,46 @@ class AgentConfig:
             }
 
     @dataclass(slots=True)
+    class VlmConfig:
+        """MinerU 精准解析的服务级默认配置。
+
+        用户可在 OCR/VLM 设置中覆盖这些值；API Key 仅作为部署级回退，
+        不会写入日志。限制值对应 MinerU 精准 API 的公开合同，服务端返回
+        的实际限流与文件校验错误始终拥有最终决定权。
+        """
+
+        enabled: bool = False
+        api_key: str = ""
+        base_url: str = "https://mineru.net"
+        model: str = "vlm"
+        max_concurrency: int = 2
+        max_file_bytes: int = 200 * 1024 * 1024
+        max_pages: int = 600
+        submit_rate_per_minute: int = 300
+        result_rate_per_minute: int = 1000
+        batch_max_files: int = 200
+        poll_interval_seconds: float = 3.0
+        timeout_seconds: float = 300.0
+
+        def __post_init__(self) -> None:
+            """拒绝 MinerU 精准 API 不支持的模型和非正限制。"""
+
+            if self.model not in {"pipeline", "vlm"}:
+                raise ValueError("vlm.model 必须是 pipeline / vlm")
+            numeric_limits = (
+                self.max_concurrency,
+                self.max_file_bytes,
+                self.max_pages,
+                self.submit_rate_per_minute,
+                self.result_rate_per_minute,
+                self.batch_max_files,
+                self.poll_interval_seconds,
+                self.timeout_seconds,
+            )
+            if any(value <= 0 for value in numeric_limits):
+                raise ValueError("vlm limits 必须为正数")
+
+    @dataclass(slots=True)
     class TaskScheduleConfig:
         """
         管理 LLM 多级任务队列调度参数。
@@ -1338,7 +1378,7 @@ class AgentConfig:
         web_fetch_timeout_seconds: int = 15
         web_fetch_min_chars: int = 50
         download_timeout_seconds: int = 60
-        scanner_source_max_bytes: int = 100 * 1024 * 1024
+        scanner_source_max_bytes: int = 200 * 1024 * 1024
         scanner_web_max_bytes: int = 12 * 1024 * 1024
         scanner_worker_count: int = 2
         scanner_ocr_worker_count: int = 1
@@ -1476,6 +1516,7 @@ class AgentConfig:
     prompts: PromptConfig = field(default_factory=PromptConfig)
     memory: MemoryConfig = field(default_factory=MemoryConfig)
     ocr: OcrConfig = field(default_factory=OcrConfig)
+    vlm: VlmConfig = field(default_factory=VlmConfig)
     task_schedule: TaskScheduleConfig = field(default_factory=TaskScheduleConfig)
     mcp: MCPConfig = field(default_factory=MCPConfig)
     terminal_sandbox: TerminalSandboxConfig = field(default_factory=TerminalSandboxConfig)
@@ -1521,6 +1562,7 @@ class AgentConfig:
             prompts=cls.PromptConfig(**data["prompts"]),
             memory=cls.MemoryConfig(**data["memory"]),
             ocr=cls.OcrConfig(**data["ocr"]),
+            vlm=cls.VlmConfig(**data["vlm"]),
             task_schedule=cls.TaskScheduleConfig(**data["task_schedule"]),
             mcp=cls.MCPConfig(**data["mcp"]),
             terminal_sandbox=cls.TerminalSandboxConfig(**data["terminal_sandbox"]),
@@ -1678,6 +1720,18 @@ class AgentConfig:
             "AGENT_OCR_TIMEOUT_SECONDS": ("ocr", "timeout_seconds", int),
             "AGENT_OCR_INPUT_MAX_SIDE_PIXELS": ("ocr", "input_max_side_pixels", int),
             "AGENT_OCR_RECOVERY_INPUT_MAX_SIDE_PIXELS": ("ocr", "recovery_input_max_side_pixels", int),
+            "AGENT_VLM_ENABLED": ("vlm", "enabled", AgentConfig._parse_bool),
+            "AGENT_VLM_API_KEY": ("vlm", "api_key", str),
+            "AGENT_VLM_BASE_URL": ("vlm", "base_url", str),
+            "AGENT_VLM_MODEL": ("vlm", "model", str),
+            "AGENT_VLM_MAX_CONCURRENCY": ("vlm", "max_concurrency", int),
+            "AGENT_VLM_MAX_FILE_BYTES": ("vlm", "max_file_bytes", int),
+            "AGENT_VLM_MAX_PAGES": ("vlm", "max_pages", int),
+            "AGENT_VLM_SUBMIT_RATE_PER_MINUTE": ("vlm", "submit_rate_per_minute", int),
+            "AGENT_VLM_RESULT_RATE_PER_MINUTE": ("vlm", "result_rate_per_minute", int),
+            "AGENT_VLM_BATCH_MAX_FILES": ("vlm", "batch_max_files", int),
+            "AGENT_VLM_POLL_INTERVAL_SECONDS": ("vlm", "poll_interval_seconds", float),
+            "AGENT_VLM_TIMEOUT_SECONDS": ("vlm", "timeout_seconds", float),
             "AGENT_IMPORTANT_FACT_SUMMARY_SYSTEM_PROMPT": (
                 "prompts",
                 "important_fact_summary_system_prompt",

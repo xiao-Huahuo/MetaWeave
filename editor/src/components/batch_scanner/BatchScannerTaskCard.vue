@@ -43,12 +43,12 @@ function formatSize(size: number): string {
     <button class="queue-task-open" type="button" @click="emit('select', record)">
       <div class="queue-task-title">
         <strong>{{ record.source_name }}</strong>
-        <span>{{ sourceLabel }} · {{ formatSize(record.size) }} · OCR {{ record.ocr_enabled ? '开启' : '关闭' }}</span>
+        <span>{{ sourceLabel }} · {{ formatSize(record.size) }} · {{ record.parser_engine === 'mineru' ? 'MinerU' : '本地' }} · OCR {{ record.ocr_enabled ? '开启' : '关闭' }}</span>
       </div>
-      <div v-if="record.status === 'running' || record.status === 'cancelling'" class="queue-progress" role="progressbar" :aria-valuenow="record.progress" aria-valuemin="0" aria-valuemax="100">
+      <div v-if="(record.status === 'running' || record.status === 'cancelling') && record.parser_engine !== 'mineru'" class="queue-progress" role="progressbar" :aria-valuenow="record.progress" aria-valuemin="0" aria-valuemax="100">
         <i :style="{ transform: `scaleX(${record.progress / 100})` }"></i>
       </div>
-      <small :class="{ error: record.status === 'failed' }">{{ record.status === 'failed' ? record.error : record.stage_label }}<template v-if="record.status === 'running'"> · {{ formatProgress(record.progress) }}%</template></small>
+      <small :class="{ error: record.status === 'failed' }">{{ record.status === 'failed' ? record.error : record.stage_label }}<template v-if="record.status === 'running' && record.parser_engine !== 'mineru'"> · {{ formatProgress(record.progress) }}%</template></small>
     </button>
     <div v-if="record.status === 'finished'" class="queue-card-top-actions">
       <button class="queue-card-action" :class="{ favorite }" type="button" :title="favorite ? '取消收藏' : '收藏'" :aria-label="favorite ? '取消收藏' : '收藏'" :disabled="busy" @click="emit('favorite', record)"><IcIcon name="star" :size="16" /></button>

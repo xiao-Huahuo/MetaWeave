@@ -131,6 +131,11 @@ function fileKind(row: IngestionQueueItem | (IngestionHistoryItem & { sourceType
   return row.name.slice(dotIndex + 1).toUpperCase()
 }
 
+/** MinerU publishes real asynchronous stages instead of a fabricated percentage. */
+function usesIndeterminateVlmProgress(row: IngestionQueueItem): boolean {
+  return String(row.stage ?? '').startsWith('vlm_')
+}
+
 function formatDate(value?: string): string {
   if (!value) return '-'
   const date = new Date(value)
@@ -283,10 +288,11 @@ function historySummary(row: IngestionHistoryItem): string {
           <span class="column-kind">{{ fileKind(row) }}</span>
           <span class="column-size">{{ formatSize(row.size) }}</span>
           <span class="progress-cell ingestion-progress-cell column-progress">
-            <div class="progress-bar-wrap" :title="row.message || row.stageLabel">
+            <div v-if="!usesIndeterminateVlmProgress(row)" class="progress-bar-wrap" :title="row.message || row.stageLabel">
               <div class="progress-bar-fill" :style="{ width: `${row.progress ?? 0}%` }" />
               <span class="progress-pct">{{ formatProgress(row.progress ?? 0) }}%</span>
             </div>
+            <span v-else class="progress-na">联网解析中</span>
             <span class="progress-detail" :title="row.message || row.stageLabel">
               {{ row.stageLabel || '等待灌库' }}
               <template v-if="row.stageTotal"> · {{ row.stageCurrent }} / {{ row.stageTotal }}</template>

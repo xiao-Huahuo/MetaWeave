@@ -631,6 +631,58 @@
         "title": "Body_agent_task_suggestions_agent_task_suggestions_post",
         "type": "object"
       },
+      "Body_claim_child_agent_wakeup_agent_children__run_id__claim_wakeup_post": {
+        "properties": {
+          "session_id": {
+            "title": "Session Id",
+            "type": "string"
+          },
+          "user_id": {
+            "title": "User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id",
+          "session_id"
+        ],
+        "title": "Body_claim_child_agent_wakeup_agent_children__run_id__claim_wakeup_post",
+        "type": "object"
+      },
+      "Body_create_file_scan_scanner_files_post": {
+        "properties": {
+          "file": {
+            "contentMediaType": "application/octet-stream",
+            "title": "File",
+            "type": "string"
+          },
+          "ocr_enabled": {
+            "default": true,
+            "title": "Ocr Enabled",
+            "type": "boolean"
+          },
+          "online_enabled": {
+            "default": true,
+            "title": "Online Enabled",
+            "type": "boolean"
+          },
+          "source_kind": {
+            "default": "file",
+            "title": "Source Kind",
+            "type": "string"
+          },
+          "user_id": {
+            "title": "User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id",
+          "file"
+        ],
+        "title": "Body_create_file_scan_scanner_files_post",
+        "type": "object"
+      },
       "Body_duplicate_literature_row_literature_reading__form_id__rows__row_id__duplicate_post": {
         "properties": {
           "user_id": {
@@ -771,10 +823,22 @@
       "ComponentLibraryItemCreate": {
         "description": "Validate one component upload request.",
         "properties": {
+          "cover_asset_id": {
+            "default": "",
+            "maxLength": 64,
+            "title": "Cover Asset Id",
+            "type": "string"
+          },
           "filename": {
             "default": "",
             "maxLength": 256,
             "title": "Filename",
+            "type": "string"
+          },
+          "script_language": {
+            "default": "",
+            "maxLength": 128,
+            "title": "Script Language",
             "type": "string"
           },
           "source": {
@@ -812,6 +876,31 @@
             "minLength": 1,
             "title": "Component Id",
             "type": "string"
+          },
+          "cover_asset_id": {
+            "anyOf": [
+              {
+                "maxLength": 64,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Cover Asset Id"
+          },
+          "script_language": {
+            "anyOf": [
+              {
+                "maxLength": 128,
+                "minLength": 1,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Script Language"
           },
           "source": {
             "anyOf": [
@@ -887,7 +976,8 @@
               "library_item",
               "component",
               "session",
-              "smart_form_row"
+              "smart_form_row",
+              "scanner"
             ],
             "title": "Target Type",
             "type": "string"
@@ -950,7 +1040,8 @@
               "library_item",
               "component",
               "session",
-              "smart_form_row"
+              "smart_form_row",
+              "scanner"
             ],
             "title": "Target Type",
             "type": "string"
@@ -1396,6 +1487,376 @@
           "created_at"
         ],
         "title": "PrivacyOut",
+        "type": "object"
+      },
+      "ScannerBatchExportItem": {
+        "description": "Select one completed scanner projection for a combined ZIP export.",
+        "properties": {
+          "scan_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "Scan Id",
+            "type": "string"
+          },
+          "variant": {
+            "enum": [
+              "ocr",
+              "no_ocr"
+            ],
+            "title": "Variant",
+            "type": "string"
+          }
+        },
+        "required": [
+          "scan_id",
+          "variant"
+        ],
+        "title": "ScannerBatchExportItem",
+        "type": "object"
+      },
+      "ScannerBatchExportRequest": {
+        "description": "Request one ZIP containing every selected scanner export payload.",
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ScannerBatchExportItem"
+            },
+            "minItems": 1,
+            "title": "Items",
+            "type": "array"
+          },
+          "user_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id",
+          "items"
+        ],
+        "title": "ScannerBatchExportRequest",
+        "type": "object"
+      },
+      "ScannerCancelRequest": {
+        "description": "Cancel one queued or running scanner task owned by the user.",
+        "properties": {
+          "user_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id"
+        ],
+        "title": "ScannerCancelRequest",
+        "type": "object"
+      },
+      "ScannerDraftUpdate": {
+        "description": "Persist one editable OCR or no-OCR Markdown draft.",
+        "properties": {
+          "content": {
+            "title": "Content",
+            "type": "string"
+          },
+          "user_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "User Id",
+            "type": "string"
+          },
+          "variant": {
+            "enum": [
+              "ocr",
+              "no_ocr"
+            ],
+            "title": "Variant",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id",
+          "variant",
+          "content"
+        ],
+        "title": "ScannerDraftUpdate",
+        "type": "object"
+      },
+      "ScannerListOut": {
+        "description": "Chronologically ordered scanner history and scheduler capacity response.",
+        "properties": {
+          "max_concurrency": {
+            "minimum": 1.0,
+            "title": "Max Concurrency",
+            "type": "integer"
+          },
+          "scans": {
+            "items": {
+              "$ref": "#/components/schemas/ScannerOut"
+            },
+            "title": "Scans",
+            "type": "array"
+          }
+        },
+        "required": [
+          "scans",
+          "max_concurrency"
+        ],
+        "title": "ScannerListOut",
+        "type": "object"
+      },
+      "ScannerOut": {
+        "description": "Complete scanner history and editable projection payload.",
+        "properties": {
+          "assets": {
+            "items": {
+              "type": "string"
+            },
+            "title": "Assets",
+            "type": "array"
+          },
+          "created_at": {
+            "format": "date-time",
+            "title": "Created At",
+            "type": "string"
+          },
+          "error": {
+            "title": "Error",
+            "type": "string"
+          },
+          "finished_at": {
+            "anyOf": [
+              {
+                "format": "date-time",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Finished At"
+          },
+          "library_id": {
+            "title": "Library Id",
+            "type": "string"
+          },
+          "no_ocr_markdown": {
+            "title": "No Ocr Markdown",
+            "type": "string"
+          },
+          "ocr_blocks": {
+            "items": {
+              "additionalProperties": true,
+              "type": "object"
+            },
+            "title": "Ocr Blocks",
+            "type": "array"
+          },
+          "ocr_enabled": {
+            "title": "Ocr Enabled",
+            "type": "boolean"
+          },
+          "ocr_markdown": {
+            "title": "Ocr Markdown",
+            "type": "string"
+          },
+          "ocr_preview_path": {
+            "default": "",
+            "title": "Ocr Preview Path",
+            "type": "string"
+          },
+          "online_enabled": {
+            "title": "Online Enabled",
+            "type": "boolean"
+          },
+          "parser_engine": {
+            "title": "Parser Engine",
+            "type": "string"
+          },
+          "parser_fallback_reason": {
+            "title": "Parser Fallback Reason",
+            "type": "string"
+          },
+          "progress": {
+            "title": "Progress",
+            "type": "number"
+          },
+          "scan_id": {
+            "title": "Scan Id",
+            "type": "string"
+          },
+          "size": {
+            "title": "Size",
+            "type": "integer"
+          },
+          "source_kind": {
+            "title": "Source Kind",
+            "type": "string"
+          },
+          "source_name": {
+            "title": "Source Name",
+            "type": "string"
+          },
+          "source_path": {
+            "title": "Source Path",
+            "type": "string"
+          },
+          "source_text": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Source Text"
+          },
+          "source_url": {
+            "title": "Source Url",
+            "type": "string"
+          },
+          "stage": {
+            "title": "Stage",
+            "type": "string"
+          },
+          "stage_label": {
+            "title": "Stage Label",
+            "type": "string"
+          },
+          "status": {
+            "title": "Status",
+            "type": "string"
+          },
+          "updated_at": {
+            "format": "date-time",
+            "title": "Updated At",
+            "type": "string"
+          },
+          "user_id": {
+            "title": "User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "scan_id",
+          "user_id",
+          "library_id",
+          "source_kind",
+          "source_name",
+          "source_path",
+          "source_url",
+          "size",
+          "ocr_enabled",
+          "online_enabled",
+          "parser_engine",
+          "parser_fallback_reason",
+          "status",
+          "stage",
+          "stage_label",
+          "progress",
+          "no_ocr_markdown",
+          "ocr_markdown",
+          "ocr_blocks",
+          "assets",
+          "error",
+          "created_at",
+          "updated_at"
+        ],
+        "title": "ScannerOut",
+        "type": "object"
+      },
+      "ScannerSaveRequest": {
+        "description": "Save the chosen scanner projection into the active knowledge root.",
+        "properties": {
+          "conflict_strategy": {
+            "default": "overwrite",
+            "enum": [
+              "overwrite",
+              "skip",
+              "rename"
+            ],
+            "title": "Conflict Strategy",
+            "type": "string"
+          },
+          "user_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "User Id",
+            "type": "string"
+          },
+          "variant": {
+            "enum": [
+              "ocr",
+              "no_ocr"
+            ],
+            "title": "Variant",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id",
+          "variant"
+        ],
+        "title": "ScannerSaveRequest",
+        "type": "object"
+      },
+      "ScannerSourceUpdate": {
+        "description": "Persist editable text in the managed original source copy.",
+        "properties": {
+          "content": {
+            "title": "Content",
+            "type": "string"
+          },
+          "user_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id",
+          "content"
+        ],
+        "title": "ScannerSourceUpdate",
+        "type": "object"
+      },
+      "ScannerUrlCreate": {
+        "description": "Create a scanner task from one public HTTP(S) webpage.",
+        "properties": {
+          "ocr_enabled": {
+            "default": true,
+            "title": "Ocr Enabled",
+            "type": "boolean"
+          },
+          "online_enabled": {
+            "default": true,
+            "title": "Online Enabled",
+            "type": "boolean"
+          },
+          "url": {
+            "format": "uri",
+            "maxLength": 2083,
+            "minLength": 1,
+            "title": "Url",
+            "type": "string"
+          },
+          "user_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "User Id",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id",
+          "url"
+        ],
+        "title": "ScannerUrlCreate",
         "type": "object"
       },
       "SkillCreateRequest": {
@@ -2779,6 +3240,58 @@
           }
         },
         "summary": "Agent Children"
+      }
+    },
+    "/agent/children/{run_id}/claim-wakeup": {
+      "post": {
+        "description": "原子领取子 Agent 当前 Turn 的自动唤醒，阻止多窗口重复触发。",
+        "operationId": "claim_child_agent_wakeup_agent_children__run_id__claim_wakeup_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "run_id",
+            "required": true,
+            "schema": {
+              "title": "Run Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_claim_child_agent_wakeup_agent_children__run_id__claim_wakeup_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Claim Child Agent Wakeup Agent Children  Run Id  Claim Wakeup Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Claim Child Agent Wakeup"
       }
     },
     "/agent/children/{run_id}/dsh-web": {
@@ -4212,7 +4725,8 @@
                 "library_item",
                 "component",
                 "session",
-                "smart_form_row"
+                "smart_form_row",
+                "scanner"
               ],
               "title": "Target Type",
               "type": "string"
@@ -4300,7 +4814,8 @@
                     "library_item",
                     "component",
                     "session",
-                    "smart_form_row"
+                    "smart_form_row",
+                    "scanner"
                   ],
                   "type": "string"
                 },
@@ -6270,9 +6785,117 @@
         "summary": "Get Dedup Status"
       }
     },
+    "/knowledge/graph/nodes/{node_id}": {
+      "delete": {
+        "description": "Delete one entity node and all of its incident graph edges.",
+        "operationId": "delete_knowledge_graph_entity_knowledge_graph_nodes__node_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "node_id",
+            "required": true,
+            "schema": {
+              "title": "Node Id",
+              "type": "string"
+            }
+          },
+          {
+            "description": "用户 ID",
+            "in": "query",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "description": "用户 ID",
+              "minLength": 1,
+              "title": "User Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Delete Knowledge Graph Entity Knowledge Graph Nodes  Node Id  Delete",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Knowledge Graph Entity"
+      }
+    },
+    "/knowledge/graph/nodes/{node_id}/clear": {
+      "post": {
+        "description": "Delete one document's contributed entity graph while retaining the document node.",
+        "operationId": "clear_knowledge_graph_document_knowledge_graph_nodes__node_id__clear_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "node_id",
+            "required": true,
+            "schema": {
+              "title": "Node Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "title": "Body",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Clear Knowledge Graph Document Knowledge Graph Nodes  Node Id  Clear Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Clear Knowledge Graph Document"
+      }
+    },
     "/knowledge/graph/rebuild": {
       "post": {
-        "description": "在后台启动语义知识图谱重建。\n使用源文件的 source_hash 做增量标记，已抽取且未变更的文档自动跳过。",
+        "description": "在后台启动语义知识图谱重建。\n使用统一 ingestion_hash 和章节缓存增量处理，已抽取且未变更的内容自动跳过。",
         "operationId": "rebuild_knowledge_graph_knowledge_graph_rebuild_post",
         "requestBody": {
           "content": {
@@ -6311,6 +6934,49 @@
           }
         },
         "summary": "Rebuild Knowledge Graph"
+      }
+    },
+    "/knowledge/graph/rebuild/cancel": {
+      "post": {
+        "description": "中止当前知识库内一个等待中或运行中的图谱任务。",
+        "operationId": "cancel_knowledge_graph_rebuild_knowledge_graph_rebuild_cancel_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "title": "Body",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Cancel Knowledge Graph Rebuild Knowledge Graph Rebuild Cancel Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Cancel Knowledge Graph Rebuild"
       }
     },
     "/knowledge/graph/rebuild/status": {
@@ -7612,6 +8278,560 @@
           }
         },
         "summary": "Add Privacy"
+      }
+    },
+    "/scanner": {
+      "get": {
+        "description": "List scanner history for the user's active knowledge library.",
+        "operationId": "list_scans_scanner_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "title": "User Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScannerListOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Scans",
+        "tags": [
+          "scanner"
+        ]
+      }
+    },
+    "/scanner/export-batch": {
+      "post": {
+        "description": "Return one ZIP containing all requested completed scanner projections.",
+        "operationId": "export_scan_batch_scanner_export_batch_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScannerBatchExportRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Export Scan Batch",
+        "tags": [
+          "scanner"
+        ]
+      }
+    },
+    "/scanner/files": {
+      "post": {
+        "description": "Create a scanner task from one uploaded file or bundled example.",
+        "operationId": "create_file_scan_scanner_files_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_create_file_scan_scanner_files_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScannerOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create File Scan",
+        "tags": [
+          "scanner"
+        ]
+      }
+    },
+    "/scanner/urls": {
+      "post": {
+        "description": "Create a scanner task from one public webpage URL.",
+        "operationId": "create_url_scan_scanner_urls_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScannerUrlCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScannerOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Create Url Scan",
+        "tags": [
+          "scanner"
+        ]
+      }
+    },
+    "/scanner/{scan_id}": {
+      "delete": {
+        "description": "Delete one terminal scanner history record and all managed artifacts.",
+        "operationId": "delete_scan_scanner__scan_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "scan_id",
+            "required": true,
+            "schema": {
+              "title": "Scan Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "title": "User Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "boolean"
+                  },
+                  "title": "Response Delete Scan Scanner  Scan Id  Delete",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Scan",
+        "tags": [
+          "scanner"
+        ]
+      },
+      "get": {
+        "description": "Return one scanner record and its editable drafts.",
+        "operationId": "get_scan_scanner__scan_id__get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "scan_id",
+            "required": true,
+            "schema": {
+              "title": "Scan Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "title": "User Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScannerOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Scan",
+        "tags": [
+          "scanner"
+        ]
+      }
+    },
+    "/scanner/{scan_id}/cancel": {
+      "post": {
+        "description": "Immediately terminate one isolated scanner worker process.",
+        "operationId": "cancel_scan_scanner__scan_id__cancel_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "scan_id",
+            "required": true,
+            "schema": {
+              "title": "Scan Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScannerCancelRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScannerOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Cancel Scan",
+        "tags": [
+          "scanner"
+        ]
+      }
+    },
+    "/scanner/{scan_id}/draft": {
+      "patch": {
+        "description": "Persist one OCR or no-OCR Markdown draft.",
+        "operationId": "update_scan_draft_scanner__scan_id__draft_patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "scan_id",
+            "required": true,
+            "schema": {
+              "title": "Scan Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScannerDraftUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScannerOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Scan Draft",
+        "tags": [
+          "scanner"
+        ]
+      }
+    },
+    "/scanner/{scan_id}/export": {
+      "get": {
+        "description": "Return a Markdown or ZIP payload for the desktop save dialog.",
+        "operationId": "export_scan_scanner__scan_id__export_get",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "scan_id",
+            "required": true,
+            "schema": {
+              "title": "Scan Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "title": "User Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "variant",
+            "required": true,
+            "schema": {
+              "enum": [
+                "ocr",
+                "no_ocr"
+              ],
+              "title": "Variant",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Export Scan",
+        "tags": [
+          "scanner"
+        ]
+      }
+    },
+    "/scanner/{scan_id}/save": {
+      "post": {
+        "description": "Save a scanner projection into the active knowledge root.",
+        "operationId": "save_scan_to_knowledge_scanner__scan_id__save_post",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "scan_id",
+            "required": true,
+            "schema": {
+              "title": "Scan Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScannerSaveRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Save Scan To Knowledge Scanner  Scan Id  Save Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Save Scan To Knowledge",
+        "tags": [
+          "scanner"
+        ]
+      }
+    },
+    "/scanner/{scan_id}/source": {
+      "patch": {
+        "description": "Persist editable UTF-8 text in the managed original copy.",
+        "operationId": "update_scan_source_scanner__scan_id__source_patch",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "scan_id",
+            "required": true,
+            "schema": {
+              "title": "Scan Id",
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ScannerSourceUpdate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ScannerOut"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Update Scan Source",
+        "tags": [
+          "scanner"
+        ]
       }
     },
     "/search": {
@@ -11161,6 +12381,176 @@
           }
         },
         "summary": "Save Disabled Tools"
+      }
+    },
+    "/settings/vlm/check": {
+      "post": {
+        "description": "验证当前用户 MinerU 网络和 Token，供设置页与扫描器开关使用。",
+        "operationId": "check_vlm_connection_settings_vlm_check_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "title": "Body",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Check Vlm Connection Settings Vlm Check Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Check Vlm Connection"
+      }
+    },
+    "/settings/vlm/config": {
+      "get": {
+        "description": "返回用户生效的 MinerU 精准 API 配置。",
+        "operationId": "get_vlm_config_settings_vlm_config_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "title": "User Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Get Vlm Config Settings Vlm Config Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Get Vlm Config"
+      },
+      "put": {
+        "description": "保存 MinerU 精准 API 与 OCR 用户设置。",
+        "operationId": "save_vlm_config_settings_vlm_config_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "title": "Body",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Save Vlm Config Settings Vlm Config Put",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Save Vlm Config"
+      }
+    },
+    "/settings/vlm/local-ocr/ensure": {
+      "post": {
+        "description": "用户显式选择本地 OCR 时同步下载并加载完整流水线。",
+        "operationId": "ensure_local_ocr_settings_vlm_local_ocr_ensure_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "title": "Body",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Ensure Local Ocr Settings Vlm Local Ocr Ensure Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Ensure Local Ocr"
       }
     },
     "/settings/web-search/config": {

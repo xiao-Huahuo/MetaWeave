@@ -1597,9 +1597,67 @@
               "number": 7,
               "type": "TYPE_MESSAGE",
               "type_name": ".agent_service.KnowledgeLibraryEntry"
+            },
+            {
+              "label": "LABEL_OPTIONAL",
+              "name": "ocr_enabled",
+              "number": 8,
+              "type": "TYPE_BOOL"
+            },
+            {
+              "label": "LABEL_OPTIONAL",
+              "name": "vision_understanding_enabled",
+              "number": 9,
+              "type": "TYPE_BOOL"
+            },
+            {
+              "label": "LABEL_OPTIONAL",
+              "name": "auto_ingest_on_upload",
+              "number": 10,
+              "type": "TYPE_BOOL"
+            },
+            {
+              "label": "LABEL_OPTIONAL",
+              "name": "vlm_enabled",
+              "number": 11,
+              "type": "TYPE_BOOL"
             }
           ],
           "name": "UserProfileResponse"
+        },
+        {
+          "field": [
+            {
+              "label": "LABEL_OPTIONAL",
+              "name": "uri",
+              "number": 1,
+              "type": "TYPE_STRING"
+            }
+          ],
+          "name": "AttachmentRawRequest"
+        },
+        {
+          "field": [
+            {
+              "label": "LABEL_OPTIONAL",
+              "name": "content",
+              "number": 1,
+              "type": "TYPE_BYTES"
+            },
+            {
+              "label": "LABEL_OPTIONAL",
+              "name": "mime_type",
+              "number": 2,
+              "type": "TYPE_STRING"
+            },
+            {
+              "label": "LABEL_OPTIONAL",
+              "name": "filename",
+              "number": 3,
+              "type": "TYPE_STRING"
+            }
+          ],
+          "name": "AttachmentRawResponse"
         },
         {
           "field": [
@@ -1655,6 +1713,30 @@
               "name": "small_model_name",
               "number": 7,
               "type": "TYPE_STRING"
+            },
+            {
+              "label": "LABEL_OPTIONAL",
+              "name": "model_context_window_tokens",
+              "number": 8,
+              "type": "TYPE_INT64"
+            },
+            {
+              "label": "LABEL_OPTIONAL",
+              "name": "model_max_output_tokens",
+              "number": 9,
+              "type": "TYPE_INT64"
+            },
+            {
+              "label": "LABEL_OPTIONAL",
+              "name": "small_model_context_window_tokens",
+              "number": 10,
+              "type": "TYPE_INT64"
+            },
+            {
+              "label": "LABEL_OPTIONAL",
+              "name": "small_model_max_output_tokens",
+              "number": 11,
+              "type": "TYPE_INT64"
             }
           ],
           "name": "LLMConfigSaveRequest"
@@ -1756,6 +1838,30 @@
               "name": "effective_small_model_source",
               "number": 16,
               "type": "TYPE_STRING"
+            },
+            {
+              "label": "LABEL_OPTIONAL",
+              "name": "model_context_window_tokens",
+              "number": 17,
+              "type": "TYPE_INT64"
+            },
+            {
+              "label": "LABEL_OPTIONAL",
+              "name": "model_max_output_tokens",
+              "number": 18,
+              "type": "TYPE_INT64"
+            },
+            {
+              "label": "LABEL_OPTIONAL",
+              "name": "small_model_context_window_tokens",
+              "number": 19,
+              "type": "TYPE_INT64"
+            },
+            {
+              "label": "LABEL_OPTIONAL",
+              "name": "small_model_max_output_tokens",
+              "number": 20,
+              "type": "TYPE_INT64"
             }
           ],
           "name": "LLMConfigResponse"
@@ -2616,6 +2722,16 @@
               "output_type": ".agent_service.ToolListResponse"
             },
             {
+              "input_type": ".google.protobuf.Struct",
+              "name": "GetSessionAttachment",
+              "output_type": ".google.protobuf.Struct"
+            },
+            {
+              "input_type": ".agent_service.AttachmentRawRequest",
+              "name": "GetSessionAttachmentRaw",
+              "output_type": ".agent_service.AttachmentRawResponse"
+            },
+            {
               "input_type": ".agent_service.UserProfileRequest",
               "name": "EnsureUserProfile",
               "output_type": ".agent_service.UserProfileResponse"
@@ -2678,6 +2794,26 @@
             {
               "input_type": ".google.protobuf.Struct",
               "name": "SaveAppearanceConfig",
+              "output_type": ".google.protobuf.Struct"
+            },
+            {
+              "input_type": ".google.protobuf.Struct",
+              "name": "GetKnowledgeIngestionConfig",
+              "output_type": ".google.protobuf.Struct"
+            },
+            {
+              "input_type": ".google.protobuf.Struct",
+              "name": "SaveKnowledgeIngestionConfig",
+              "output_type": ".google.protobuf.Struct"
+            },
+            {
+              "input_type": ".google.protobuf.Struct",
+              "name": "GetVlmConfig",
+              "output_type": ".google.protobuf.Struct"
+            },
+            {
+              "input_type": ".google.protobuf.Struct",
+              "name": "SaveVlmConfig",
               "output_type": ".google.protobuf.Struct"
             },
             {
@@ -2748,6 +2884,11 @@
             {
               "input_type": ".google.protobuf.Struct",
               "name": "CancelKnowledgeIngestionJob",
+              "output_type": ".google.protobuf.Struct"
+            },
+            {
+              "input_type": ".google.protobuf.Struct",
+              "name": "SearchAllLibraries",
               "output_type": ".google.protobuf.Struct"
             },
             {
@@ -3068,6 +3209,31 @@
             {
               "input_type": ".google.protobuf.Struct",
               "name": "GetModelManagement",
+              "output_type": ".google.protobuf.Struct"
+            },
+            {
+              "input_type": ".google.protobuf.Struct",
+              "name": "GetModelPreferences",
+              "output_type": ".google.protobuf.Struct"
+            },
+            {
+              "input_type": ".google.protobuf.Struct",
+              "name": "SaveModelPreferences",
+              "output_type": ".google.protobuf.Struct"
+            },
+            {
+              "input_type": ".google.protobuf.Struct",
+              "name": "InitializeModels",
+              "output_type": ".google.protobuf.Struct"
+            },
+            {
+              "input_type": ".google.protobuf.Struct",
+              "name": "StartModelDownload",
+              "output_type": ".google.protobuf.Struct"
+            },
+            {
+              "input_type": ".google.protobuf.Struct",
+              "name": "DeleteManagedModel",
               "output_type": ".google.protobuf.Struct"
             },
             {

@@ -83,6 +83,11 @@ service AgentService {
   rpc SaveAppearanceConfig(google.protobuf.Struct) returns (google.protobuf.Struct);
   rpc GetKnowledgeIngestionConfig(google.protobuf.Struct) returns (google.protobuf.Struct);
   rpc SaveKnowledgeIngestionConfig(google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc GetVlmConfig(google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc SaveVlmConfig(google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc ListVlmConfigPresets(google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc SaveVlmConfigPreset(google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc DeleteVlmConfigPreset(google.protobuf.Struct) returns (google.protobuf.Struct);
 
   // 知识库重建与上传
   rpc RebuildKnowledge(KnowledgeRebuildRequest) returns (KnowledgeRebuildResponse);
@@ -662,6 +667,7 @@ message UserProfileResponse {
   bool ocr_enabled = 8;
   bool vision_understanding_enabled = 9;
   bool auto_ingest_on_upload = 10;
+  bool vlm_enabled = 11;
 }
 
 message AttachmentRawRequest {

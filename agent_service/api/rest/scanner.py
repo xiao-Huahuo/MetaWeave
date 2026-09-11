@@ -27,6 +27,7 @@ router = APIRouter(prefix="/scanner", tags=["scanner"])
 async def create_file_scan(
     user_id: str = Form(...),
     ocr_enabled: bool = Form(True),
+    online_enabled: bool = Form(True),
     source_kind: str = Form("file"),
     file: UploadFile = File(...),
 ) -> ScannerOut:
@@ -40,6 +41,7 @@ async def create_file_scan(
             filename=file.filename or "upload",
             content=content,
             ocr_enabled=ocr_enabled,
+            online_enabled=online_enabled,
             source_kind=source_kind,
         )
     except ValueError as exc:
@@ -56,6 +58,7 @@ async def create_url_scan(payload: ScannerUrlCreate) -> ScannerOut:
             user_id=payload.user_id,
             url=str(payload.url),
             ocr_enabled=payload.ocr_enabled,
+            online_enabled=payload.online_enabled,
         )
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc

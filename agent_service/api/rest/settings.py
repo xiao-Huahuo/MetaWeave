@@ -9,8 +9,11 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, HTTPException, Query
+from starlette.concurrency import run_in_threadpool
 
 from agent_service.core.agent_config import DEFAULT_BUSINESS_LIMITS
+from agent_service.services.document_parsing import MinerUClient
+from agent_service.services.memory.rag.image_ocr import ImageOcrService
 from agent_service.api.rest.deps import (
     _require_agent,
     _require_dsh_runtime_manager,
@@ -549,19 +552,11 @@ async def save_knowledge_ingestion_config(body: dict[str, Any]) -> dict[str, Any
         user_id=user_id,
         auto_ingest_on_upload=body.get("auto_ingest_on_upload"),
         ocr_enabled=body.get("ocr_enabled"),
+        vlm_enabled=body.get("vlm_enabled"),
         vision_understanding_enabled=body.get("vision_understanding_enabled"),
         dsh_coding_agent_enabled=body.get("dsh_coding_agent_enabled"),
         knowledge_ignore_patterns=body.get("knowledge_ignore_patterns"),
     )
-    if body.get("ocr_enabled") is True:
-        preferences = svc.get_model_preferences(user_id=user_id)
-        _require_model_management_service().prepare_model_async(
-            "paddleocr",
-            user_id=user_id,
-            load_after=True,
-            download_if_missing=bool(preferences.get("auto_download_enabled")),
-            prompt_if_missing=True,
-        )
     if result.get("dsh_coding_agent_enabled") is True:
         _require_dsh_runtime_manager().start_install()
     if "knowledge_ignore_patterns" in body:
@@ -571,6 +566,102 @@ async def save_knowledge_ingestion_config(body: dict[str, Any]) -> dict[str, Any
         except RuntimeError:
             result["ignore_cleanup"] = {"files_seen": 0, "chunks_deleted": 0}
     return result
+
+
+@router.get("/settings/vlm/config")
+async def get_vlm_config(user_id: str = Query(..., min_length=1)) -> dict[str, object]:
+    """返回用户生效的 MinerU 精准 API 配置。"""
+
+    return _require_settings_service().get_vlm_config(user_id=user_id)
+
+
+@router.put("/settings/vlm/config")
+async def save_vlm_config(body: dict[str, Any]) -> dict[str, object]:
+    """保存 MinerU 精准 API 与 OCR 用户设置。"""
+
+    user_id = str(body.get("user_id") or "").strip()
+    if not user_id:
+        raise HTTPException(status_code=422, detail="user_id is required")
+    try:
+        return _require_settings_service().save_vlm_config(
+            user_id=user_id,
+            enabled=body.get("enabled"),
+            api_key=body.get("api_key"),
+            model=body.get("model"),
+            max_concurrency=body.get("max_concurrency"),
+            max_file_bytes=body.get("max_file_bytes"),
+            max_pages=body.get("max_pages"),
+            submit_rate_per_minute=body.get("submit_rate_per_minute"),
+            result_rate_per_minute=body.get("result_rate_per_minute"),
+            ocr_enabled=body.get("ocr_enabled"),
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.get("/settings/vlm/config/saved")
+async def list_vlm_config_presets(user_id: str = Query(..., min_length=1)) -> dict[str, object]:
+    """列出当前用户保存的 MinerU 配置。"""
+
+    return {"configs": _require_settings_service().list_vlm_config_presets(user_id=user_id)}
+
+
+@router.post("/settings/vlm/config/saved")
+async def save_vlm_config_preset(body: dict[str, Any]) -> dict[str, object]:
+    """保存一条可加载的 MinerU 模型与限制参数。"""
+
+    try:
+        return _require_settings_service().save_vlm_config_preset(
+            user_id=str(body.get("user_id") or ""),
+            label=str(body.get("label") or ""),
+            api_key=str(body.get("api_key") or ""),
+            model=str(body.get("model") or ""),
+            max_concurrency=int(body.get("max_concurrency") or 0),
+            max_file_bytes=int(body.get("max_file_bytes") or 0),
+            max_pages=int(body.get("max_pages") or 0),
+            submit_rate_per_minute=int(body.get("submit_rate_per_minute") or 0),
+            result_rate_per_minute=int(body.get("result_rate_per_minute") or 0),
+        )
+    except (TypeError, ValueError) as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.delete("/settings/vlm/config/saved/{config_id}")
+async def delete_vlm_config_preset(config_id: str, user_id: str = Query(..., min_length=1)) -> dict[str, bool]:
+    """删除当前用户拥有的一条 MinerU 配置。"""
+
+    deleted = _require_settings_service().delete_vlm_config_preset(config_id=config_id, user_id=user_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="VLM config preset not found")
+    return {"ok": True}
+
+
+@router.post("/settings/vlm/check")
+async def check_vlm_connection(body: dict[str, Any]) -> dict[str, object]:
+    """验证当前用户 MinerU 网络和 Token，供设置页与扫描器开关使用。"""
+
+    user_id = str(body.get("user_id") or "").strip()
+    if not user_id:
+        raise HTTPException(status_code=422, detail="user_id is required")
+    config = _require_settings_service().get_vlm_config(user_id=user_id)
+    if "api_key" in body:
+        config = {**config, "api_key": str(body.get("api_key") or "").strip()}
+    return await run_in_threadpool(MinerUClient(config).check)
+
+
+@router.post("/settings/vlm/local-ocr/ensure")
+async def ensure_local_ocr(body: dict[str, Any]) -> dict[str, object]:
+    """用户显式选择本地 OCR 时同步下载并加载完整流水线。"""
+
+    user_id = str(body.get("user_id") or "").strip()
+    if not user_id:
+        raise HTTPException(status_code=422, detail="user_id is required")
+    try:
+        await run_in_threadpool(ImageOcrService(config=_require_settings_service().config, enabled=True).ensure_ready)
+    except Exception as exc:
+        logger.exception("本地 OCR 准备失败 | user=%s", user_id)
+        raise HTTPException(status_code=503, detail="本地 OCR 模型下载或加载失败") from exc
+    return {"ready": True}
 
 
 @router.post("/settings/floating/config")

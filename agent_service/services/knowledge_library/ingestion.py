@@ -83,7 +83,13 @@ class KnowledgeIngestionMixin:
         ignore_matcher = self._build_ignore_matcher(user_id=normalized_user_id)
 
         ocr_enabled = self.settings_service.is_ocr_enabled_for_user(user_id=normalized_user_id)
-        frontmatter_result = FrontmatterBootstrapService(config=self.config, ocr_enabled=ocr_enabled).build_frontmatter_dir(
+        vlm_config = self.settings_service.get_vlm_config(user_id=normalized_user_id)
+        frontmatter_result = FrontmatterBootstrapService(
+            config=self.config,
+            ocr_enabled=ocr_enabled,
+            vlm_config=vlm_config,
+            online_enabled=bool(vlm_config.get("enabled")),
+        ).build_frontmatter_dir(
             knowledge_dir=source_root,
             frontmatter_dir=frontmatter_root,
             markdown_dir=markdown_root,
@@ -292,7 +298,13 @@ class KnowledgeIngestionMixin:
             )
 
         ocr_enabled = self.settings_service.is_ocr_enabled_for_user(user_id=normalized_user_id)
-        frontmatter_result, frontmatter_path = FrontmatterBootstrapService(config=self.config, ocr_enabled=ocr_enabled).build_frontmatter_file(
+        vlm_config = self.settings_service.get_vlm_config(user_id=normalized_user_id)
+        frontmatter_result, frontmatter_path = FrontmatterBootstrapService(
+            config=self.config,
+            ocr_enabled=ocr_enabled,
+            vlm_config=vlm_config,
+            online_enabled=bool(vlm_config.get("enabled")),
+        ).build_frontmatter_file(
             source_path=source_path,
             knowledge_dir=source_root,
             frontmatter_dir=frontmatter_root,

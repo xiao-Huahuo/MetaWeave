@@ -28,7 +28,8 @@ from agent_service.services.memory.rag.frontmatter_document import (
     StructuredKnowledgeSection,
 )
 from agent_service.services.memory.rag.image_ocr import ImageOcrService
-from agent_service.services.memory.rag.multimodal_cleaner import MultimodalDocumentCleaner
+from agent_service.services.document_parsing import MINERU_SUPPORTED_SUFFIXES, MinerUClient, MinerUNetworkError
+from agent_service.services.memory.rag.multimodal_cleaner import CleanedDocument, MultimodalDocumentCleaner
 
 TEXT_FALLBACK_ENCODINGS = ("utf-8", "utf-8-sig", "gb18030")
 DOCX_IMAGE_REFERENCE_RE = re.compile(r"\[DOCX 图片引用:\s*([^\]]+)\]")
@@ -54,11 +55,21 @@ class FrontmatterBootstrapService:
     config: 全局配置对象,用于读取原始知识目录和结构化输出目录。
     """
 
-    def __init__(self, *, config: AgentConfig, ocr_enabled: bool | None = None, ocr_inline: bool = False) -> None:
+    def __init__(
+        self,
+        *,
+        config: AgentConfig,
+        ocr_enabled: bool | None = None,
+        ocr_inline: bool = False,
+        vlm_config: dict[str, object] | None = None,
+        online_enabled: bool = False,
+    ) -> None:
         """初始化原始知识源结构化服务。"""
 
         self.config = config
         self.ocr_enabled = config.ocr.enabled if ocr_enabled is None else bool(ocr_enabled)
+        self.vlm_config = vlm_config or {}
+        self.online_enabled = bool(online_enabled)
         self.multimodal_cleaner = MultimodalDocumentCleaner(
             config=config,
             ocr_enabled=self.ocr_enabled,
@@ -108,11 +119,6 @@ class FrontmatterBootstrapService:
             )
             try:
                 source_hash = self._hash_file(source_path)
-                document = self._build_document(
-                    source_path=source_path,
-                    source_hash=source_hash,
-                    knowledge_dir=source_root,
-                )
                 output_path = self._resolve_output_path(
                     source_path=source_path,
                     knowledge_dir=source_root,
@@ -122,6 +128,27 @@ class FrontmatterBootstrapService:
                     source_path=source_path,
                     knowledge_dir=source_root,
                     markdown_dir=markdown_root,
+                )
+                cached = self._load_reusable_document(output_path=output_path, source_hash=source_hash)
+                if cached is not None:
+                    markdown_path.parent.mkdir(parents=True, exist_ok=True)
+                    markdown_path.write_text(cached.markdown, encoding="utf-8")
+                    result.files_skipped += 1
+                    self._emit_progress(
+                        progress_callback,
+                        status="skipped",
+                        source_path=source_path,
+                        relative_path=rel_path,
+                        processed=result.files_seen,
+                        total=total,
+                        result=result,
+                        message="frontmatter unchanged",
+                    )
+                    continue
+                document = self._build_document(
+                    source_path=source_path,
+                    source_hash=source_hash,
+                    knowledge_dir=source_root,
                 )
                 markdown_path.parent.mkdir(parents=True, exist_ok=True)
                 markdown_path.write_text(document.markdown, encoding="utf-8")
@@ -226,12 +253,6 @@ class FrontmatterBootstrapService:
             overall_progress=2,
         )
         source_hash = self._hash_file(resolved_source)
-        document = self._build_document(
-            source_path=resolved_source,
-            source_hash=source_hash,
-            knowledge_dir=source_root,
-            progress_callback=progress_callback,
-        )
         output_path = self._resolve_output_path(
             source_path=resolved_source,
             knowledge_dir=source_root,
@@ -241,6 +262,28 @@ class FrontmatterBootstrapService:
             source_path=resolved_source,
             knowledge_dir=source_root,
             markdown_dir=markdown_root,
+        )
+        cached = self._load_reusable_document(output_path=output_path, source_hash=source_hash)
+        if cached is not None:
+            markdown_path.parent.mkdir(parents=True, exist_ok=True)
+            markdown_path.write_text(cached.markdown, encoding="utf-8")
+            result.files_skipped = 1
+            self._emit_progress(
+                progress_callback,
+                status="skipped",
+                source_path=resolved_source,
+                relative_path=relative_path,
+                processed=1,
+                total=1,
+                result=result,
+                message="frontmatter unchanged",
+            )
+            return result, output_path
+        document = self._build_document(
+            source_path=resolved_source,
+            source_hash=source_hash,
+            knowledge_dir=source_root,
+            progress_callback=progress_callback,
         )
         markdown_path.parent.mkdir(parents=True, exist_ok=True)
         markdown_path.write_text(document.markdown, encoding="utf-8")
@@ -438,16 +481,16 @@ class FrontmatterBootstrapService:
             asset_relative_dir = Path(".mw") / "assets" / relative_path
             effective_asset_output_dir = asset_output_dir or knowledge_dir / asset_relative_dir
             effective_asset_public_prefix = asset_public_prefix or "/" + asset_relative_dir.as_posix()
-            cleaned = self.multimodal_cleaner.clean(
+            cleaned = self._clean_multimodal_source(
                 source_path=source_path,
                 title=self._resolve_title(source_path=source_path, metadata=metadata),
                 asset_output_dir=effective_asset_output_dir,
                 asset_public_prefix=effective_asset_public_prefix,
-                progress_callback=lambda payload: progress_callback({
+                progress_callback=(lambda payload: progress_callback({
                     **payload,
                     "path": relative_path.as_posix(),
                     "name": source_path.name,
-                }) if progress_callback else None,
+                })) if progress_callback else None,
             )
             sections = cleaned.sections
             source_type = cleaned.source_type
@@ -483,6 +526,7 @@ class FrontmatterBootstrapService:
             summary = cleaned.summary
         markdown = self._build_canonical_markdown(title=title, source_type=source_type, sections=sections)
         sections = self._build_markdown_sections(title=title, body_text=markdown)
+        extra_metadata.setdefault("parser_engine", "local")
         document_metadata = {
             "file_suffix": source_path.suffix.lower(),
             "relative_path": relative_path.as_posix(),
@@ -534,6 +578,93 @@ class FrontmatterBootstrapService:
                 for section in sections
             ],
         )
+
+    def _clean_multimodal_source(
+        self,
+        *,
+        source_path: Path,
+        title: str,
+        asset_output_dir: Path,
+        asset_public_prefix: str,
+        progress_callback: Callable[[dict[str, Any]], None] | None,
+    ) -> CleanedDocument:
+        """优先 MinerU，并只在网络不可达时回退现有本地解析器。"""
+
+        fallback_reason = ""
+        if self.online_enabled and source_path.suffix.lower() in MINERU_SUPPORTED_SUFFIXES:
+            if not bool(self.vlm_config.get("enabled")) or not str(self.vlm_config.get("api_key") or ""):
+                raise ValueError("联网解析需要先在 OCR/VLM 设置中开启 VLM 并配置 API Key")
+            try:
+                result = MinerUClient(self.vlm_config).parse_file(
+                    source_path,
+                    ocr_enabled=self.ocr_enabled,
+                    progress_callback=progress_callback,
+                    asset_output_dir=asset_output_dir,
+                    asset_public_prefix=asset_public_prefix,
+                )
+                sections = self._build_sections(source_path=source_path, title=title, body_text=result.markdown)
+                return CleanedDocument(
+                    source_type=self._resolve_source_type(source_path),
+                    sections=sections,
+                    metadata={
+                        "modality": "document",
+                        "parser_engine": "mineru",
+                        "parser_model": (
+                            "MinerU-HTML"
+                            if source_path.suffix.lower() in {".html", ".htm"}
+                            else str(self.vlm_config.get("model") or "vlm")
+                        ),
+                        "mineru_task_id": result.task_id,
+                        "ocr_blocks": result.blocks,
+                        "image_refs": result.assets,
+                        "ocr_enabled": self.ocr_enabled,
+                    },
+                )
+            except MinerUNetworkError as exc:
+                fallback_reason = str(exc)
+                if progress_callback:
+                    progress_callback({
+                        "stage": "vlm_fallback",
+                        "stage_label": "MinerU 不可连接，正在切换本地解析",
+                        "indeterminate": True,
+                    })
+        if self.ocr_enabled and self.multimodal_cleaner.image_ocr_service is None:
+            raise RuntimeError("本地 OCR 服务不可用")
+        cleaned = self.multimodal_cleaner.clean(
+            source_path=source_path,
+            title=title,
+            asset_output_dir=asset_output_dir,
+            asset_public_prefix=asset_public_prefix,
+            progress_callback=progress_callback,
+        )
+        cleaned.metadata["parser_engine"] = "local"
+        if fallback_reason:
+            cleaned.metadata["parser_fallback_reason"] = fallback_reason
+        return cleaned
+
+    def _load_reusable_document(self, *, output_path: Path, source_hash: str) -> StructuredKnowledgeDocument | None:
+        """在任何本地模型或计费 API 调用前复用相同解析合同的缓存。"""
+
+        if not output_path.is_file():
+            return None
+        try:
+            cached = StructuredKnowledgeDocument.from_dict(json.loads(output_path.read_text(encoding="utf-8")))
+        except (OSError, ValueError, KeyError, json.JSONDecodeError):
+            return None
+        expected_engine = "mineru" if self.online_enabled and Path(cached.source_path).suffix.lower() in MINERU_SUPPORTED_SUFFIXES else "local"
+        metadata = cached.metadata
+        if cached.source_hash != source_hash or metadata.get("parser_engine") != expected_engine:
+            return None
+        if bool(metadata.get("ocr_enabled")) != self.ocr_enabled:
+            return None
+        expected_model = (
+            "MinerU-HTML"
+            if Path(cached.source_path).suffix.lower() in {".html", ".htm"}
+            else str(self.vlm_config.get("model") or "vlm")
+        )
+        if expected_engine == "mineru" and metadata.get("parser_model") != expected_model:
+            return None
+        return cached
 
     @staticmethod
     def _build_canonical_markdown(

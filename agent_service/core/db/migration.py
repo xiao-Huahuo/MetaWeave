@@ -30,6 +30,8 @@ POST_BASELINE_TABLES = {
     "component_library_metadata",
     "knowledge_graph_section_cache",
     "knowledge_graph_dedup_decisions",
+    "scanner_records",
+    "user_vlm_config_presets",
 }
 
 

@@ -6,8 +6,7 @@
   persistence and side effects.
 -->
 <script setup lang="ts">
-import { nextTick, ref } from 'vue'
-import { checkModelDisk } from '@/api/settings'
+import { nextTick } from 'vue'
 import IcIcon from '@/components/common/IcIcon.vue'
 
 const libraryNameDraft = defineModel<string>('libraryNameDraft', { required: true })
@@ -15,7 +14,6 @@ const knowledgeDirDraft = defineModel<string>('knowledgeDirDraft', { required: t
 const editorImageAssetsDirDraft = defineModel<string>('editorImageAssetsDirDraft', { required: true })
 const watchEnabledDraft = defineModel<boolean>('watchEnabledDraft', { required: true })
 const autoIngestOnUploadDraft = defineModel<boolean>('autoIngestOnUploadDraft', { required: true })
-const ocrEnabledDraft = defineModel<boolean>('ocrEnabledDraft', { required: true })
 const visionUnderstandingEnabledDraft = defineModel<boolean>('visionUnderstandingEnabledDraft', { required: true })
 const dshCodingAgentEnabledDraft = defineModel<boolean>('dshCodingAgentEnabledDraft', { required: true })
 const knowledgeIgnorePatternsDraft = defineModel<string>('knowledgeIgnorePatternsDraft', { required: true })
@@ -35,36 +33,6 @@ const emit = defineEmits<{
   selectKnowledgeDirectory: []
 }>()
 
-/* ---- OCR 模型阻断 ---- */
-const ocrModalVisible = ref(false)
-
-async function handleOcrToggle() {
-  // 如果正在关闭 OCR，直接允许
-  if (!ocrEnabledDraft.value) {
-    emit('save')
-    return
-  }
-  try {
-    const status = await checkModelDisk()
-    if (status.paddleocr !== 'ready') {
-      ocrModalVisible.value = true
-      return
-    }
-  } catch { /* 检查失败时允许操作 */ }
-  emit('save')
-}
-
-function closeOcrModal() {
-  ocrModalVisible.value = false
-}
-
-function goToStorageSettings() {
-  ocrModalVisible.value = false
-  window.location.hash = '#/settings'
-  setTimeout(() => {
-    window.dispatchEvent(new CustomEvent('agent-settings-tab', { detail: 'storage' }))
-  }, 100)
-}
 
 /** Converts one backend-supported suffix into the existing gitignore-style rule. */
 function fileTypeRule(suffix: string): string {
@@ -128,11 +96,6 @@ async function appendBlockedFileType(suffix: string): Promise<void> {
       <label>自动灌库</label>
       <input v-model="autoIngestOnUploadDraft" type="checkbox" @change="$emit('save')" />
       <span class="hint-text">关闭时上传只进入文件树,点击 header 刷新或文件按钮才灌库</span>
-    </div>
-    <div class="setting-row toggle-row">
-      <label>OCR</label>
-      <input v-model="ocrEnabledDraft" type="checkbox" @change="handleOcrToggle" />
-      <span class="hint-text">开启后后续灌库会识别图片和内嵌图片中的文字</span>
     </div>
     <div class="setting-row toggle-row">
       <label>识图</label>
@@ -216,20 +179,6 @@ async function appendBlockedFileType(suffix: string): Promise<void> {
     </div>
   </div>
 
-  <!-- OCR 模型阻断 -->
-  <Teleport to="body">
-    <div v-if="ocrModalVisible" class="model-modal-overlay" @click.self="closeOcrModal">
-      <div class="model-modal">
-        <p class="model-modal-message">OCR 模型未就绪，请先下载</p>
-        <p class="model-modal-link">
-          <a href="#" @click.prevent="goToStorageSettings">前往存储管理页面下载</a>
-        </p>
-        <div class="model-modal-actions">
-          <button class="model-modal-btn close-btn" @click="closeOcrModal">关闭</button>
-        </div>
-      </div>
-    </div>
-  </Teleport>
 </template>
 
 <style scoped>

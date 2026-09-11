@@ -34,6 +34,8 @@ export interface UserSettingsProfile {
   autoIngestOnUpload?: boolean
   /** Whether OCR should be enabled after restarting the backend service. */
   ocrEnabled?: boolean
+  /** Whether knowledge ingestion may use the configured MinerU precision API. */
+  vlmEnabled?: boolean
   /** Whether local Qwen may add semantic understanding to uploaded images. */
   visionUnderstandingEnabled?: boolean
   /** Whether missing managed models should download automatically. */

@@ -32,6 +32,9 @@ export interface ScannerRecord {
   source_url: string
   size: number
   ocr_enabled: boolean
+  online_enabled: boolean
+  parser_engine: 'pending' | 'mineru' | 'local' | 'local-web'
+  parser_fallback_reason: string
   status: 'queued' | 'running' | 'cancelling' | 'cancelled' | 'finished' | 'failed'
   stage: string
   stage_label: string
@@ -55,18 +58,19 @@ export interface ScannerListResponse {
 }
 
 /** Upload one selected or dropped file without restricting its extension. */
-export function createFileScan(userId: string, file: File, ocrEnabled: boolean, sourceKind = 'file'): Promise<ScannerRecord> {
+export function createFileScan(userId: string, file: File, ocrEnabled: boolean, onlineEnabled: boolean, sourceKind = 'file'): Promise<ScannerRecord> {
   const form = new FormData()
   form.set('user_id', userId)
   form.set('ocr_enabled', String(ocrEnabled))
+  form.set('online_enabled', String(onlineEnabled))
   form.set('source_kind', sourceKind)
   form.set('file', file)
   return apiPostForm<ScannerRecord>(API_ROUTES.SCANNER_FILES, form)
 }
 
 /** Crawl one public webpage into a managed Markdown scanner record. */
-export function createUrlScan(userId: string, url: string, ocrEnabled: boolean): Promise<ScannerRecord> {
-  return apiPost<ScannerRecord>(API_ROUTES.SCANNER_URLS, { user_id: userId, url, ocr_enabled: ocrEnabled })
+export function createUrlScan(userId: string, url: string, ocrEnabled: boolean, onlineEnabled: boolean): Promise<ScannerRecord> {
+  return apiPost<ScannerRecord>(API_ROUTES.SCANNER_URLS, { user_id: userId, url, ocr_enabled: ocrEnabled, online_enabled: onlineEnabled })
 }
 
 /** List scanner history in the active knowledge library. */

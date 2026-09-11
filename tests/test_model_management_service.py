@@ -284,8 +284,8 @@ def test_huggingface_tracker_observes_real_intermediate_file_bytes(tmp_path: Pat
     assert observed[-1]["percent"] == 100.0
 
 
-def test_post_startup_initialization_applies_four_independent_model_policies(monkeypatch) -> None:
-    """启动成功后的四模型任务必须独立触发，并严格遵守各自加载条件。"""
+def test_post_startup_initialization_skips_local_ocr_until_explicit_use(monkeypatch) -> None:
+    """启动后只准备常驻模型，本地 OCR 留到显式本地使用时同步准备。"""
 
     config = SimpleNamespace()
     service = ModelManagementService(config=config, settings_service=_SettingsStub())
@@ -304,7 +304,6 @@ def test_post_startup_initialization_applies_four_independent_model_policies(mon
     assert calls == [
         ("embedding", True, False, True),
         ("rerank", True, False, True),
-        ("paddleocr", True, False, True),
         ("local_qwen", False, False, False),
     ]
 

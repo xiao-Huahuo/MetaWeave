@@ -8,6 +8,7 @@ import AppearanceSettingsSection from '@/components/settings_view/AppearanceSett
 import BasicSettingsSection from '@/components/settings_view/BasicSettingsSection.vue'
 import BrowserSettingsSection from '@/components/settings_view/BrowserSettingsSection.vue'
 import LlmSettingsSection from '@/components/settings_view/LlmSettingsSection.vue'
+import VlmSettingsSection from '@/components/settings_view/VlmSettingsSection.vue'
 import MemorySettingsSection from '@/components/settings_view/MemorySettingsSection.vue'
 import McpSettingsSection from '@/components/settings_view/McpSettingsSection.vue'
 import SettingsSidebar from '@/components/settings_view/SettingsSidebar.vue'
@@ -39,6 +40,7 @@ const tabs = [
   { key: 'basic' as const, label: '基础设置' },
   { key: 'appearance' as const, label: '外观' },
   { key: 'llm' as const, label: 'LLM 配置' },
+  { key: 'vlm' as const, label: 'OCR/VLM 设置' },
   { key: 'terminal' as const, label: '终端沙盒' },
   { key: 'web' as const, label: '联网配置' },
   { key: 'memory' as const, label: '记忆与指令' },
@@ -67,7 +69,6 @@ const libraryNameDraft = ref(settingsStore.activeKnowledgeLibrary?.name ?? '')
 const knowledgeDirDraft = ref(settingsStore.profile.knowledgeDir)
 const watchEnabledDraft = ref(settingsStore.profile.knowledgeWatchEnabled)
 const autoIngestOnUploadDraft = ref(Boolean(settingsStore.profile.autoIngestOnUpload))
-const ocrEnabledDraft = ref(Boolean(settingsStore.profile.ocrEnabled))
 const visionUnderstandingEnabledDraft = ref(Boolean(settingsStore.profile.visionUnderstandingEnabled))
 const dshCodingAgentEnabledDraft = ref(Boolean(settingsStore.profile.dshCodingAgentEnabled))
 const knowledgeIgnorePatternsDraft = ref(settingsStore.profile.knowledgeIgnorePatterns ?? '')
@@ -95,7 +96,6 @@ const hasChanges = computed(() => {
     libraryNameDraft.value !== (settingsStore.activeKnowledgeLibrary?.name ?? '') ||
     watchEnabledDraft.value !== settingsStore.profile.knowledgeWatchEnabled ||
     autoIngestOnUploadDraft.value !== Boolean(settingsStore.profile.autoIngestOnUpload) ||
-    ocrEnabledDraft.value !== Boolean(settingsStore.profile.ocrEnabled) ||
     visionUnderstandingEnabledDraft.value !== Boolean(settingsStore.profile.visionUnderstandingEnabled) ||
     dshCodingAgentEnabledDraft.value !== Boolean(settingsStore.profile.dshCodingAgentEnabled) ||
     knowledgeIgnorePatternsDraft.value !== (settingsStore.profile.knowledgeIgnorePatterns ?? '') ||
@@ -118,10 +118,6 @@ watch(
   (value) => { autoIngestOnUploadDraft.value = Boolean(value) },
 )
 
-watch(
-  () => settingsStore.profile.ocrEnabled,
-  (value) => { ocrEnabledDraft.value = Boolean(value) },
-)
 
 watch(
   () => settingsStore.profile.visionUnderstandingEnabled,
@@ -351,7 +347,6 @@ async function saveProfile() {
   const nextKnowledgeDir = knowledgeDirDraft.value.trim() || settingsStore.profile.knowledgeDir
   const nextLibraryName = libraryNameDraft.value.trim()
   const ignorePatternsChanged = knowledgeIgnorePatternsDraft.value !== (settingsStore.profile.knowledgeIgnorePatterns ?? '')
-  const ocrEnabledChanged = ocrEnabledDraft.value !== Boolean(settingsStore.profile.ocrEnabled)
   const visionUnderstandingChanged = visionUnderstandingEnabledDraft.value !== Boolean(settingsStore.profile.visionUnderstandingEnabled)
   const dshCodingAgentEnabledChanged = dshCodingAgentEnabledDraft.value !== Boolean(settingsStore.profile.dshCodingAgentEnabled)
   const editorImageAssetsDirChanged = editorImageAssetsDirDraft.value !== (settingsStore.profile.editorImageAssetsDir ?? './assets/')
@@ -365,23 +360,18 @@ async function saveProfile() {
     }
     if (
       autoIngestOnUploadDraft.value !== Boolean(settingsStore.profile.autoIngestOnUpload) ||
-      ocrEnabledChanged ||
       visionUnderstandingChanged ||
       dshCodingAgentEnabledChanged ||
       ignorePatternsChanged
     ) {
       const result = await settingsStore.saveKnowledgeIngestionSettings({
         autoIngestOnUpload: autoIngestOnUploadDraft.value,
-        ocrEnabled: ocrEnabledDraft.value,
         visionUnderstandingEnabled: visionUnderstandingEnabledDraft.value,
         dshCodingAgentEnabled: dshCodingAgentEnabledDraft.value,
         knowledgeIgnorePatterns: knowledgeIgnorePatternsDraft.value,
       })
-      if (result?.restart_required) {
-        saveMessage.value = 'OCR 设置已保存, 重启后生效'
-      }
     }
-    if (ignorePatternsChanged || ocrEnabledChanged) {
+    if (ignorePatternsChanged) {
       await workspaceStore.loadKnowledgeTree()
     }
     if (editorImageAssetsDirChanged) {
@@ -816,7 +806,6 @@ onBeforeUnmount(() => {
         v-model:knowledge-dir-draft="knowledgeDirDraft"
         v-model:knowledge-ignore-patterns-draft="knowledgeIgnorePatternsDraft"
         v-model:library-name-draft="libraryNameDraft"
-        v-model:ocr-enabled-draft="ocrEnabledDraft"
         v-model:vision-understanding-enabled-draft="visionUnderstandingEnabledDraft"
         v-model:dsh-coding-agent-enabled-draft="dshCodingAgentEnabledDraft"
         v-model:watch-enabled-draft="watchEnabledDraft"
@@ -895,6 +884,8 @@ onBeforeUnmount(() => {
         @save="handleSaveModel"
         @save-preset="handleSaveModelPreset"
       />
+
+      <VlmSettingsSection v-if="activeTab === 'vlm'" />
 
       <TerminalSandboxSettingsSection
         v-if="activeTab === 'terminal' && terminalSandboxConfig"
@@ -1062,6 +1053,11 @@ onBeforeUnmount(() => {
     padding: var(--space-6) var(--space-8);
     overflow-x: auto;
     overflow-y: hidden;
+  }
+
+  .settings-sidebar::after {
+    content: '';
+    flex: 0 0 var(--space-12);
   }
 
   .sidebar-tab {
@@ -2120,5 +2116,49 @@ onBeforeUnmount(() => {
 .settings-body select:focus,
 .settings-body textarea:focus {
   box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-border-strong) 50%, transparent) !important;
+}
+
+/* LLM and OCR/VLM forms share one field rhythm, inset, and focus motion. */
+.settings-model-form input:not([type='checkbox']),
+.settings-model-form select {
+  min-width: 0;
+  box-sizing: border-box;
+  padding-inline: var(--space-12) !important;
+  font-size: calc(12px * var(--font-scale));
+  line-height: 28px;
+  transition: background-color 180ms ease, box-shadow 180ms ease, color 180ms ease, opacity 180ms ease, transform 140ms cubic-bezier(.16,1,.3,1);
+}
+
+.settings-model-form input:not([type='checkbox']):hover:not([readonly]),
+.settings-model-form select:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-surface) 90%, var(--color-primary) 10%) !important;
+}
+
+.settings-model-form input:not([type='checkbox']):focus,
+.settings-model-form select:focus {
+  transform: translateY(-1px);
+}
+
+.settings-model-form input.readonly,
+.settings-model-form select.readonly {
+  box-shadow: none !important;
+}
+
+.settings-model-form .effective-model-summary { margin-bottom: var(--space-16); }
+.settings-model-form .effective-model-summary h3 { margin: 0 0 var(--space-10); }
+.settings-model-form .effective-model-summary dl { margin: 0; border-block: 1px solid var(--color-border); }
+.settings-model-form .effective-model-summary dl > div { display:grid; grid-template-columns:84px minmax(0,1fr) auto; align-items:center; gap:var(--space-10); min-height:38px; }
+.settings-model-form .effective-model-summary dl > div + div { border-top:1px solid var(--color-border); }
+.settings-model-form .effective-model-summary dt,
+.settings-model-form .effective-model-summary dd,
+.settings-model-form .effective-model-summary span { margin:0; font-size:calc(12px * var(--font-scale)); }
+.settings-model-form .effective-model-summary dt,
+.settings-model-form .effective-model-summary span { color:var(--color-text-muted); }
+.settings-model-form .effective-model-summary dd { min-width:0; overflow:hidden; color:var(--color-text); font-family:var(--font-mono); text-overflow:ellipsis; white-space:nowrap; }
+.settings-model-form .model-heading { display:flex; align-items:center; min-height:28px; margin-bottom:var(--space-10); }
+
+@media (prefers-reduced-motion: reduce) {
+  .settings-model-form input:not([type='checkbox']),
+  .settings-model-form select { transition:none; }
 }
 </style>

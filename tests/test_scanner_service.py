@@ -39,6 +39,15 @@ class _SettingsStub:
         }
 
 
+class _OnlineSettingsStub(_SettingsStub):
+    """Provide one enabled MinerU config for parent-to-worker snapshot tests."""
+
+    def get_vlm_config(self, *, user_id: str) -> dict[str, object]:
+        """Return the validated user-scoped VLM configuration."""
+
+        return {"user_id": user_id, "enabled": True, "configured": True, "api_key": "worker-key", "model": "vlm", "max_file_bytes": 209715200}
+
+
 class _KnowledgeStub:
     """Persist saved Markdown into the isolated knowledge root."""
 
@@ -298,6 +307,41 @@ def test_scanner_projection_preserves_fractional_backend_progress(monkeypatch: p
 
     assert captured["progress"] == 9.5
     assert captured["label"] == "正在分析版面"
+
+
+def test_scanner_worker_uses_parent_vlm_config_snapshot_without_settings_service() -> None:
+    """Spawn 子进程必须从任务上下文读取 Key，不能依赖被置空的 SettingsService。"""
+
+    service = object.__new__(ScannerService)
+    service.settings_service = None
+    snapshot = {"enabled": True, "configured": True, "api_key": "worker-key", "model": "vlm"}
+
+    resolved = service._vlm_config_from_context({"user_id": "u1", "vlm_config": snapshot})
+
+    assert resolved == snapshot
+    assert resolved is not snapshot
+
+
+def test_scanner_claim_attaches_user_vlm_config_to_spawn_context(tmp_path: Path) -> None:
+    """父调度器领取联网任务时必须把用户 Key 放入传给 spawn worker 的上下文。"""
+
+    root = tmp_path / "knowledge"
+    root.mkdir()
+    engine = create_engine(f"sqlite:///{tmp_path / 'scanner-vlm-context.db'}")
+    SQLModel.metadata.create_all(engine)
+    service = ScannerService(
+        engine=engine,
+        config=AgentConfig(),
+        settings_service=_OnlineSettingsStub(root),  # type: ignore[arg-type]
+        knowledge_library_service=_KnowledgeStub(root),  # type: ignore[arg-type]
+        autostart=False,
+    )
+    service.create_file(user_id="u1", filename="online.txt", content=b"text", ocr_enabled=False, online_enabled=True)
+
+    job = service._claim_next()
+
+    assert job is not None
+    assert job["context"]["vlm_config"]["api_key"] == "worker-key"
 
 
 def test_scanner_docx_no_ocr_renders_embedded_image_in_document_order(tmp_path: Path) -> None:

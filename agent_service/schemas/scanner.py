@@ -19,6 +19,7 @@ class ScannerUrlCreate(BaseModel):
     user_id: str = Field(min_length=1, max_length=DEFAULT_BUSINESS_LIMITS.medium_name_max_length)
     url: HttpUrl
     ocr_enabled: bool = True
+    online_enabled: bool = True
 
 
 class ScannerDraftUpdate(BaseModel):
@@ -76,6 +77,9 @@ class ScannerOut(BaseModel):
     source_url: str
     size: int
     ocr_enabled: bool
+    online_enabled: bool
+    parser_engine: str
+    parser_fallback_reason: str
     status: str
     stage: str
     stage_label: str
