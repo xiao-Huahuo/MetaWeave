@@ -1198,7 +1198,6 @@ watch(
   transform: translateX(-12px);
 }
 
-.main-shell.ide-panel,
 .editor-sidebar-content,
 .agent-col {
   border: 1px solid var(--workspace-panel-border);
@@ -1221,9 +1220,12 @@ watch(
   min-height: 0;
   margin: var(--space-12);
   overflow: hidden;
-  outline: none;
+  border: 1px solid var(--workspace-panel-border);
+  outline: 2px solid color-mix(in srgb, var(--color-text) 35%, transparent);
+  outline-offset: 2px;
   border-radius: var(--workspace-card-radius);
   background: var(--color-bg-app);
+  box-shadow: 0 0 0 2px var(--workspace-panel-ring);
 }
 
 .main-shell.ide-panel.agent-page-main-shell {

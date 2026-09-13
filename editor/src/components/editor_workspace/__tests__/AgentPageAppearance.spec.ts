@@ -23,9 +23,9 @@ describe('Agent page workspace appearance', () => {
     expect(messageListSource).not.toMatch(/\.message-list::-webkit-scrollbar \{[^}]*display: none;/s)
   })
 
-  it('keeps the shared four-pixel translucent workspace frame on Agent page', () => {
+  it('uses a two-pixel theme outline around the two-pixel Agent workspace ring', () => {
     expect(editorWorkspaceSource).toMatch(
-      /\.main-shell\.ide-panel,[\s\S]*?\.agent-col \{[^}]*border: 1px solid var\(--workspace-panel-border\);[^}]*box-shadow: 0 0 0 4px var\(--workspace-panel-ring\);/s,
+      /\.main-shell\.ide-panel \{[^}]*border: 1px solid var\(--workspace-panel-border\);[^}]*outline: 2px solid color-mix\(in srgb, var\(--color-text\) 35%, transparent\);[^}]*outline-offset: 2px;[^}]*box-shadow: 0 0 0 2px var\(--workspace-panel-ring\);/s,
     )
     expect(editorWorkspaceSource).not.toMatch(
       /\.main-shell\.ide-panel\.agent-page-main-shell \{[^}]*(?:border: 0|box-shadow: none);/s,

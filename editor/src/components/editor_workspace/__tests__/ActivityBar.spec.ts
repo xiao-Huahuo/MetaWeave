@@ -39,7 +39,10 @@ describe('ActivityBar', () => {
     expect(activityBarSource).toMatch(/\.activity-bar:not\(\.management\) \{[^}]*border-radius: 20px;/s)
     expect(activityBarSource).toMatch(/\.activity-bar\.management \{[^}]*left: -4px;[^}]*border-radius: 0 28px 28px 0;/s)
     expect(editorWorkspaceSource).toMatch(
-      /\.main-shell\.ide-panel,[\s\S]*?\.editor-sidebar-content,[\s\S]*?\.agent-col \{[^}]*border: 1px solid var\(--workspace-panel-border\);[^}]*box-shadow: 0 0 0 4px var\(--workspace-panel-ring\);/s,
+      /\.editor-sidebar-content,[\s\S]*?\.agent-col \{[^}]*border: 1px solid var\(--workspace-panel-border\);[^}]*box-shadow: 0 0 0 4px var\(--workspace-panel-ring\);/s,
+    )
+    expect(editorWorkspaceSource).toMatch(
+      /\.main-shell\.ide-panel \{[^}]*border: 1px solid var\(--workspace-panel-border\);[^}]*outline: 2px solid color-mix\(in srgb, var\(--color-text\) 35%, transparent\);[^}]*outline-offset: 2px;[^}]*box-shadow: 0 0 0 2px var\(--workspace-panel-ring\);/s,
     )
   })
 
