@@ -270,7 +270,7 @@ onBeforeUnmount(() => {
 .scanner-progress i { position: absolute; inset: 0; background: var(--color-primary); transform-origin: left; transition: transform 260ms ease; }
 .scanner-running small { margin-top: 7px; color: var(--color-text-muted); }
 .scanner-url-backdrop { position: fixed; inset: 0; z-index: 1100; display: grid; place-items: center; padding: 16px; background: rgba(0,0,0,.4); }
-.scanner-url-dialog { display: grid; gap: 18px; width: min(520px,100%); padding: 18px; border: 4px solid var(--library-form-ring); border-radius: 28px; background: var(--color-surface); color: var(--color-text); }
+.scanner-url-dialog { display: grid; gap: 18px; width: min(520px,100%); padding: 18px; border: 0; border-radius: 28px; background: var(--color-surface); color: var(--color-text); }
 .scanner-url-dialog header,.scanner-url-dialog footer { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .scanner-url-dialog header button { display: grid; place-items: center; width: 28px; height: 28px; padding: 0; border: 0; border-radius: 50%; background: transparent; color: var(--color-text-muted); }
 .scanner-url-dialog header button:hover { background: color-mix(in srgb,var(--color-text-secondary) 10%,transparent); color: var(--color-text); }

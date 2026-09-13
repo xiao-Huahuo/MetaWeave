@@ -449,7 +449,9 @@ onMounted(() => {
   border: 0;
   border-radius: 28px;
   background: var(--color-surface);
-  box-shadow: 0 0 0 4px var(--library-form-ring);
+  outline: 2px solid var(--workspace-panel-outline);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--library-form-ring);
   animation: component-sidebar-enter 220ms cubic-bezier(0.23, 1, 0.32, 1) both;
 }
 

@@ -396,7 +396,9 @@ async function appendBlockedFileType(suffix: string): Promise<void> {
 }
 
 .github-btn:hover {
-  box-shadow: 0 0 0 2px #000, 0 0 0 4px var(--color-border);
+  outline: 2px solid var(--workspace-panel-outline);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--library-form-ring);
 }
 
 .github-btn:focus-visible {

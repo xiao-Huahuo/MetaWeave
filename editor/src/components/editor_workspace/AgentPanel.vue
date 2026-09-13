@@ -1632,10 +1632,12 @@ function handleChangeUpdated(event: CustomEvent<AgentChangeSnapshot>) {
   display: flex;
   min-height: 0;
   flex-direction: column;
-  border: 4px solid var(--library-form-ring);
+  border: 0;
+  outline: 2px solid var(--workspace-panel-outline);
+  outline-offset: 2px;
   border-radius: var(--workspace-card-radius);
   background: var(--color-bg-card);
-  box-shadow: none;
+  box-shadow: 0 0 0 2px var(--library-form-ring);
 }
 
 /* 任务列表卡片:按内容弹性展示全部任务(不滚动),任务过多超高时才封顶内部滚动 */

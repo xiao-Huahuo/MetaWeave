@@ -673,7 +673,7 @@ onBeforeUnmount(() => {
 <style scoped>
 .literature-reading { display: grid; grid-template-columns: 384px minmax(0, 1fr); width: 100%; height: 100%; min-width: 0; min-height: 0; background: var(--color-bg-app); color: var(--color-text); }
 .literature-add-column-menu { position: fixed; z-index: 1300; }
-.literature-sidebar { display: flex; min-width: 0; min-height: 0; flex-direction: column; gap: var(--space-6); margin: var(--space-12); padding: var(--space-8); overflow: hidden; border: 0; border-radius: 28px; background: var(--color-surface); box-shadow: 0 0 0 4px var(--library-form-ring); animation: literature-sidebar-enter 220ms cubic-bezier(.23,1,.32,1) both; }
+.literature-sidebar { display: flex; min-width: 0; min-height: 0; flex-direction: column; gap: var(--space-6); margin: var(--space-12); padding: var(--space-8); overflow: hidden; border: 0; outline: 2px solid var(--workspace-panel-outline); outline-offset: 2px; border-radius: 28px; background: var(--color-surface); box-shadow: 0 0 0 2px var(--library-form-ring); animation: literature-sidebar-enter 220ms cubic-bezier(.23,1,.32,1) both; }
 .literature-toolbar { display: grid; padding: 0; }
 .toolbar-row { display: flex; align-items: center; min-width: 0; gap: var(--space-4); }
 .toolbar-primary-row { justify-content: space-between; }

@@ -25,7 +25,7 @@ describe('Agent page workspace appearance', () => {
 
   it('uses a two-pixel theme outline around the two-pixel Agent workspace ring', () => {
     expect(editorWorkspaceSource).toMatch(
-      /\.main-shell\.ide-panel \{[^}]*border: 1px solid var\(--workspace-panel-border\);[^}]*outline: 2px solid color-mix\(in srgb, var\(--color-text\) 35%, transparent\);[^}]*outline-offset: 2px;[^}]*box-shadow: 0 0 0 2px var\(--workspace-panel-ring\);/s,
+      /\.main-shell\.ide-panel \{[^}]*border: 1px solid var\(--workspace-panel-border\);[^}]*outline: 2px solid var\(--workspace-panel-outline\);[^}]*outline-offset: 2px;[^}]*box-shadow: 0 0 0 2px var\(--workspace-panel-ring\);/s,
     )
     expect(editorWorkspaceSource).not.toMatch(
       /\.main-shell\.ide-panel\.agent-page-main-shell \{[^}]*(?:border: 0|box-shadow: none);/s,
@@ -50,15 +50,15 @@ describe('Agent page workspace appearance', () => {
     expect(agentPanelSource).not.toContain('aria-label="子 Agent"')
   })
 
-  it('uses a border-only card for child conversation details and flat environment cards', () => {
+  it('uses the shared two-by-two frame for child conversation and environment cards', () => {
     expect(childConversationDrawerSource).not.toContain('child-conversation-header')
     expect(childConversationDrawerSource).not.toContain('border-left:')
     expect(childConversationDrawerSource).not.toContain('border-bottom:')
     expect(childConversationDrawerSource).toMatch(
-      /\.child-conversation \{[^}]*margin: var\(--space-10\);[^}]*border: 4px solid var\(--library-form-ring\);[^}]*border-radius: var\(--workspace-card-radius\);/s,
+      /\.child-conversation \{[^}]*margin: var\(--space-10\);[^}]*border: 0;[^}]*outline: 2px solid var\(--workspace-panel-outline\);[^}]*outline-offset: 2px;[^}]*border-radius: var\(--workspace-card-radius\);[^}]*box-shadow: 0 0 0 2px var\(--library-form-ring\);/s,
     )
     expect(agentPanelSource).toMatch(
-      /\.agent-sidebar-card \{[^}]*border: 4px solid var\(--library-form-ring\);[^}]*border-radius: var\(--workspace-card-radius\);[^}]*box-shadow: none;/s,
+      /\.agent-sidebar-card \{[^}]*border: 0;[^}]*outline: 2px solid var\(--workspace-panel-outline\);[^}]*outline-offset: 2px;[^}]*border-radius: var\(--workspace-card-radius\);[^}]*box-shadow: 0 0 0 2px var\(--library-form-ring\);/s,
     )
   })
 

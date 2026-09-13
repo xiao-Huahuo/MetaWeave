@@ -765,8 +765,10 @@ onMounted(loadData)
 .safety-global-toggles,
 .safety-category-card {
   border: 0;
+  outline: 2px solid var(--workspace-panel-outline);
+  outline-offset: 2px;
   border-radius: 28px;
-  box-shadow: 0 0 0 4px var(--library-form-ring);
+  box-shadow: 0 0 0 2px var(--library-form-ring);
 }
 
 .vault-debug-card {

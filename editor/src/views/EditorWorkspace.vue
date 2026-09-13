@@ -1201,7 +1201,9 @@ watch(
 .editor-sidebar-content,
 .agent-col {
   border: 1px solid var(--workspace-panel-border);
-  box-shadow: 0 0 0 4px var(--workspace-panel-ring);
+  outline: 2px solid var(--workspace-panel-outline);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--workspace-panel-ring);
 }
 
 .file-resizer {
@@ -1221,7 +1223,7 @@ watch(
   margin: var(--space-12);
   overflow: hidden;
   border: 1px solid var(--workspace-panel-border);
-  outline: 2px solid color-mix(in srgb, var(--color-text) 35%, transparent);
+  outline: 2px solid var(--workspace-panel-outline);
   outline-offset: 2px;
   border-radius: var(--workspace-card-radius);
   background: var(--color-bg-app);

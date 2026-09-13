@@ -317,7 +317,7 @@ async function submit(): Promise<void> {
 
 .upload-form.library-form-surface {
   box-shadow:
-    0 0 0 4px var(--library-form-ring),
+    0 0 0 2px var(--library-form-ring),
     0 24px 70px rgba(0, 0, 0, 0.28);
 }
 

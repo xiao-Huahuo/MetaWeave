@@ -3106,7 +3106,7 @@ button:disabled {
 .form-dialog.library-form-surface {
   border-radius: 28px;
   box-shadow:
-    0 0 0 4px var(--library-form-ring),
+    0 0 0 2px var(--library-form-ring),
     0 24px 70px rgba(0, 0, 0, 0.28);
 }
 

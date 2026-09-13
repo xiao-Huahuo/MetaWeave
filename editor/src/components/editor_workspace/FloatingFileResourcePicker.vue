@@ -99,7 +99,7 @@ async function confirmSelection() {
 .floating-picker-card.library-form-surface {
   border-radius: 28px;
   box-shadow:
-    0 0 0 4px var(--library-form-ring),
+    0 0 0 2px var(--library-form-ring),
     0 24px 60px rgba(0, 0, 0, 0.34);
   animation: library-form-scan-in 420ms cubic-bezier(0.23, 1, 0.32, 1) both;
 }

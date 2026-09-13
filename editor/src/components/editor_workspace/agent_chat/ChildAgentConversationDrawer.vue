@@ -81,10 +81,13 @@ onBeforeUnmount(() => {
   margin: var(--space-10);
   flex-direction: column;
   overflow: hidden;
-  border: 4px solid var(--library-form-ring);
+  border: 0;
+  outline: 2px solid var(--workspace-panel-outline);
+  outline-offset: 2px;
   border-radius: var(--workspace-card-radius);
   background: var(--color-bg-card);
   color: var(--color-text-secondary);
+  box-shadow: 0 0 0 2px var(--library-form-ring);
 }
 
 .child-conversation-close {

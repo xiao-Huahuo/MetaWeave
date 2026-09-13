@@ -117,7 +117,9 @@ function setup() {
   border: 1px solid var(--color-border);
   border-radius: 28px;
   background: var(--color-surface);
-  box-shadow: 0 0 0 4px var(--library-form-ring);
+  outline: 2px solid var(--workspace-panel-outline);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--library-form-ring);
   font-family: var(--font-ui);
   font-size: calc(14px * var(--font-scale));
 }

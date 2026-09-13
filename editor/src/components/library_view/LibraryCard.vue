@@ -386,7 +386,9 @@ function handleDrop(event: DragEvent) {
   border: 0;
   border-radius: 18px;
   background: var(--color-surface-raised);
-  box-shadow: 0 0 0 4px var(--workspace-panel-ring);
+  outline: 2px solid var(--workspace-panel-outline);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--workspace-panel-ring);
   transition: background 160ms ease, box-shadow 160ms ease;
 }
 
@@ -402,6 +404,7 @@ function handleDrop(event: DragEvent) {
 }
 
 .library-card:hover .cover {
+  outline-color: transparent;
   box-shadow: 0 0 0 4px var(--color-primary-soft);
 }
 

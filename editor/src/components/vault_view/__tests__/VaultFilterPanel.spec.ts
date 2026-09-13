@@ -39,7 +39,7 @@ describe('VaultFilterPanel', () => {
 
   it('uses the component-library translucent bordered card as its sidebar shell', () => {
     expect(filterPanelSource).toMatch(
-      /\.filter-panel\s*\{[^}]*margin:\s*var\(--space-12\);[^}]*border:\s*1px solid var\(--color-border\);[^}]*border-radius:\s*28px;[^}]*background:\s*var\(--color-surface\);[^}]*box-shadow:\s*0 0 0 4px var\(--library-form-ring\);/su,
+      /\.filter-panel\s*\{[^}]*margin:\s*var\(--space-12\);[^}]*border:\s*1px solid var\(--color-border\);[^}]*border-radius:\s*28px;[^}]*background:\s*var\(--color-surface\);[^}]*outline:\s*2px solid var\(--workspace-panel-outline\);[^}]*outline-offset:\s*2px;[^}]*box-shadow:\s*0 0 0 2px var\(--library-form-ring\);/su,
     )
   })
 

@@ -478,7 +478,9 @@ tools: (可选) 需要启用的工具列表
   border: 1px solid var(--color-border);
   border-radius: 28px;
   background: var(--color-surface);
-  box-shadow: 0 0 0 4px var(--library-form-ring);
+  outline: 2px solid var(--workspace-panel-outline);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--library-form-ring);
   color: var(--color-text);
   transition: background var(--transition-fast), border-color var(--transition-fast);
   break-inside: avoid;

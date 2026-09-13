@@ -469,7 +469,9 @@ async function handleCloseWindow() {
   width: 90px;
   transition-duration: .4s;
   border-radius: 30px;
-  box-shadow: 0 0 0 2px var(--color-border), 0 0 0 4px var(--color-border);
+  outline: 2px solid var(--workspace-panel-outline);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--library-form-ring);
   z-index: 3;
 }
 

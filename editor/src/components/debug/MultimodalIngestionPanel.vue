@@ -523,7 +523,9 @@ onBeforeUnmount(() => {
   border: 0;
   border-radius: 28px;
   background: var(--color-surface-raised);
-  box-shadow: 0 0 0 4px var(--library-form-ring);
+  outline: 2px solid var(--workspace-panel-outline);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--library-form-ring);
   overflow: hidden;
 }
 

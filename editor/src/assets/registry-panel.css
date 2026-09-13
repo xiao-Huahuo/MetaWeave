@@ -38,7 +38,9 @@
   border: 0;
   border-radius: 28px;
   background: var(--color-surface);
-  box-shadow: 0 0 0 4px var(--library-form-ring);
+  outline: 2px solid var(--workspace-panel-outline);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--library-form-ring);
 }
 .title-summary, .tool-name, .tool-meta, .detail-title code, .empty-state, .error-line { font-family: var(--font-ui); }
 .arg-row, .schema-block { font-family: var(--font-text); }
