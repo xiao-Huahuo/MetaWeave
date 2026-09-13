@@ -27,7 +27,7 @@
 - TODO: [TODO.md](TODO.md)
 - 变更历史: [change_history/](docs/change_history/README.md)
 #### 接口与扩展
-- OPENAPI文档: [metaweave.openapi.json](docs/api/metaweave.openapi.json)
+- OPENAPI文档: [metaweave.openapi.json](docs/api/MetaWeave.openapi.json)
 - MCP 接入: [MCP.md](docs/MCP.md)
 - gRPC: [agent_service.proto](protos/agent_service.proto)
 
@@ -2505,7 +2505,6 @@ MetaWeave/
 ├── protos/                        # gRPC 协议源文件
 ├── resources/                     # 默认知识库、MCP、安全规则与 Skill
 │   └── dsh/                       # DSH 版本锁、补丁与 Runtime SDK
-├── .agents/skills/                # 仓库工作所用的技能说明
 ├── native/                        # Windows 原生辅助程序源码
 ├── scripts/                       # 仓库级构建脚本
 ├── tests/                         # 后端测试与串行回归工具
