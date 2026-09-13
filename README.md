@@ -1,6 +1,6 @@
 # MetaWeave 元织
 > 持续引入，持续联系，持续理解，持续执行
-
+> 日期: 2026.9.13
 ![AI Native](https://img.shields.io/badge/AI-native-8A2BE2) ![Multimodal](https://img.shields.io/badge/knowledge-multimodal-FF6F61) [![GitHub Release](https://img.shields.io/github/v/release/xiao-Huahuo/MetaWeave?include_prereleases)](https://github.com/xiao-Huahuo/MetaWeave/releases/latest) ![Agent](https://img.shields.io/badge/system-AI_Agent-8B5CF6) ![RAG](https://img.shields.io/badge/retrieval-RAG-7C3AED) ![Multi Agent](https://img.shields.io/badge/Agent-multi--agent-8B5CF6) ![Knowledge Base](https://img.shields.io/badge/product-knowledge_base-0EA5E9) ![Knowledge Graph](https://img.shields.io/badge/knowledge-graph-2563EB) ![Markdown](https://img.shields.io/badge/editor-Markdown-000000?logo=markdown&logoColor=white) ![LaTeX](https://img.shields.io/badge/typesetting-LaTeX-008080?logo=latex&logoColor=white) ![MCP](https://img.shields.io/badge/protocol-MCP-8B5CF6) ![PaddleOCR](https://img.shields.io/badge/OCR-PaddleOCR-005BAC) [![DSH Runtime SDK](https://img.shields.io/badge/DSH_Runtime_SDK-47f9438-4224EB)](https://github.com/deepseek-ai/deepseek-harness/commit/47f943859bef60e4160492346772ded9b24f765a)
 
 ## 0. 背景
