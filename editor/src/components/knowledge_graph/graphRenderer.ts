@@ -15,34 +15,36 @@ import type {
   KnowledgeGraphRenderTheme,
 } from './graphTypes'
 
-const EXTENSION_COLORS = new Map<string, string>([
-  ['txt', '#6f63f6'],
-  ['json', '#e2a72e'],
-  ['yaml', '#e2a72e'],
-  ['yml', '#e2a72e'],
-  ['ts', '#3178c6'],
-  ['tsx', '#3178c6'],
-  ['js', '#c8a000'],
-  ['vue', '#26a269'],
-  ['py', '#366fb3'],
-  ['pdf', '#eb2463'],
-  ['docx', '#3b5bdb'],
-  ['xlsx', '#26a269'],
+const FILE_COLOR_SLOTS = new Map<string, number>([
+  ['md', 2],
+  ['markdown', 2],
+  ['txt', 2],
+  ['ts', 3],
+  ['tsx', 3],
+  ['js', 3],
+  ['vue', 3],
+  ['py', 3],
+  ['json', 4],
+  ['yaml', 4],
+  ['yml', 4],
+  ['xlsx', 4],
+  ['pdf', 5],
+  ['docx', 5],
 ])
 
-/** Entity-type color palette for semantic graph nodes. */
-const ENTITY_TYPE_COLORS: Record<string, string> = {
-  person: '#eb2463',
-  organization: '#6366f1',
-  project: '#14b8a6',
-  module: '#a855f7',
-  class: '#ec4899',
-  function: '#f59e0b',
-  file: '#3b82f6',
-  concept: '#f97316',
-  config: '#6b7280',
-  data: '#06b6d4',
-  other: '#94a3b8',
+/** Stable semantic groups mapped onto the six user appearance tag colors. */
+const ENTITY_COLOR_SLOTS: Record<string, number> = {
+  person: 0,
+  organization: 1,
+  project: 2,
+  module: 3,
+  class: 3,
+  function: 3,
+  file: 3,
+  config: 3,
+  concept: 4,
+  data: 5,
+  other: 5,
 }
 
 /** Zoom boundary below which labels would crowd the compact graph silhouette. */
@@ -59,27 +61,29 @@ function linkNode(endpoint: string | KnowledgeGraphNode, nodesById: Map<string, 
   return typeof endpoint === 'string' ? nodesById.get(endpoint) : endpoint
 }
 
-function nodeColor(node: KnowledgeGraphNode, theme: KnowledgeGraphRenderTheme): string {
+function tagColor(theme: KnowledgeGraphRenderTheme, slot: number, fallback: string): string {
+  return theme.tagColors[slot] || fallback
+}
+
+/** Resolve one node category through the user's six shared appearance tag colors. */
+export function resolveKnowledgeGraphNodeColor(node: KnowledgeGraphNode, theme: KnowledgeGraphRenderTheme): string {
   if (node.kind === 'root') {
-    return theme.root
+    return tagColor(theme, 0, theme.root)
   }
   if (node.kind === 'folder' || node.kind === 'virtual-group') {
-    return theme.folder
+    return tagColor(theme, 1, theme.folder)
   }
   if (node.kind === 'document') {
-    return theme.root
+    return tagColor(theme, 2, theme.root)
   }
   if (node.kind === 'library') {
-    return theme.root
+    return tagColor(theme, 0, theme.root)
   }
   if (node.kind === 'entity') {
-    return (node.extension && ENTITY_TYPE_COLORS[node.extension]) ?? theme.accent
+    return tagColor(theme, ENTITY_COLOR_SLOTS[node.extension ?? 'other'] ?? 5, theme.accent)
   }
   const extension = node.extension ?? ''
-  if (extension === 'md' || extension === 'markdown') {
-    return theme.root
-  }
-  return EXTENSION_COLORS.get(extension) ?? theme.file
+  return tagColor(theme, FILE_COLOR_SLOTS.get(extension) ?? 5, theme.file)
 }
 
 function shouldShowLabel(node: KnowledgeGraphNode, state: KnowledgeGraphRenderState): boolean {
@@ -252,7 +256,7 @@ function drawLink(
   const endY = spreadTarget.y ?? spreadTarget.targetY
   const highlightEndX = startX + (endX - startX) * hoverProgress
   const highlightEndY = startY + (endY - startY) * hoverProgress
-  const hoverColor = nodeColor(spreadSource, theme)
+  const hoverColor = resolveKnowledgeGraphNodeColor(spreadSource, theme)
   ctx.save()
   ctx.globalAlpha = 0.2 + 0.8 * hoverProgress
   ctx.strokeStyle = hoverColor
@@ -283,7 +287,7 @@ function drawNode(
   const highlightProgress = nodeHighlightProgress(node, state, relatedNodeIds)
   const hasActive = Boolean(state.hoveredNodeId || state.selectedNodeId)
   const isRelated = relatedNodeIds.has(node.id)
-  const color = nodeColor(node, theme)
+  const color = resolveKnowledgeGraphNodeColor(node, theme)
   ctx.save()
   ctx.globalAlpha = hasActive && !isRelated ? 0.38 : 1
   if (highlightProgress > 0) {

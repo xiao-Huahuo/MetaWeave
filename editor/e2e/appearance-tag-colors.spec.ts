@@ -10,7 +10,7 @@ import { expect, test } from '@playwright/test'
 test('saves, resets, and shares tag colors across Library and Smart Forms', async ({ page }, testInfo) => {
   test.setTimeout(60_000)
   const userId = 'tag-color-smoke'
-  const defaults = ['#7c5cfc', '#eb2463', '#26a269', '#2f88d5', '#e2a72e', '#0ea5b6']
+  const defaults = ['#d85c6f', '#28a7a1', '#2f8fda', '#4e6fe8', '#7064d8', '#9a5fc4']
   let persistedColors = [...defaults]
   let persistedTranslucency = true
   const form = {

@@ -110,7 +110,7 @@ function readTheme(): KnowledgeGraphRenderTheme {
     grid: cssVar('--color-primary-softer', isDark ? 'rgba(66, 36, 235, 0.08)' : 'rgba(66, 36, 235, 0.07)'),
     text: cssVar('--color-text', isDark ? '#f4f4f6' : '#171721'),
     mutedText: cssVar('--color-text-muted', isDark ? '#8f93a3' : '#707486'),
-    edge: isDark ? 'rgba(199, 203, 220, 0.78)' : 'rgba(63, 66, 82, 0.58)',
+    edge: cssVar('--color-graph-edge', isDark ? 'rgba(199, 203, 220, 0.22)' : 'rgba(63, 66, 82, 0.18)'),
     edgeActive: cssVar('--color-primary', '#4224eb'),
     root: cssVar('--color-primary', '#4224eb'),
     folder: cssVar('--color-primary', '#4224eb'),
@@ -118,6 +118,8 @@ function readTheme(): KnowledgeGraphRenderTheme {
     selected: cssVar('--color-accent', '#eb2463'),
     accent: cssVar('--color-accent', '#eb2463'),
     surface: cssVar('--color-surface-raised', isDark ? '#202026' : '#ffffff'),
+    tagColors: ['#d85c6f', '#28a7a1', '#2f8fda', '#4e6fe8', '#7064d8', '#9a5fc4']
+      .map((fallback, index) => cssVar(`--color-tag-${index + 1}`, fallback)),
     libraryImage: isDark ? libraryLogoDark : libraryLogoLight,
   }
 }

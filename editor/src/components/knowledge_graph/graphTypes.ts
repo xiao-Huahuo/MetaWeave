@@ -119,6 +119,8 @@ export interface KnowledgeGraphRenderTheme {
   selected: string
   accent: string
   surface: string
+  /** Six user-configurable appearance tag colors used by graph categories. */
+  tagColors: string[]
   /** Preloaded logo image for the library node. */
   libraryImage?: HTMLImageElement
 }

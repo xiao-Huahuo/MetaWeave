@@ -103,12 +103,12 @@ class AgentConfig:
 
         tag_colors: list[str] = field(
             default_factory=lambda: [
-                "#7c5cfc",
-                "#eb2463",
-                "#26a269",
-                "#2f88d5",
-                "#e2a72e",
-                "#0ea5b6",
+                "#d85c6f",
+                "#28a7a1",
+                "#2f8fda",
+                "#4e6fe8",
+                "#7064d8",
+                "#9a5fc4",
             ]
         )
         tag_colors_translucent: bool = True

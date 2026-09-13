@@ -33,7 +33,7 @@ const DEFAULT_UI_FONT_STACK = 'var(--font-ui-default)'
 const DEFAULT_TEXT_FONT_STACK = 'var(--font-text-default)'
 const DEFAULT_THEME_PRIMARY_COLOR = '#476bf7'
 const DEFAULT_THEME_SOFT_COLOR = '#476bf7'
-export const DEFAULT_TAG_COLORS = ['#7c5cfc', '#eb2463', '#26a269', '#2f88d5', '#e2a72e', '#0ea5b6'] as const
+export const DEFAULT_TAG_COLORS = ['#d85c6f', '#28a7a1', '#2f8fda', '#4e6fe8', '#7064d8', '#9a5fc4'] as const
 const APPEARANCE_PREVIEW_EVENT = 'metaweave:appearance-preview'
 
 const DEFAULT_PROFILE: UserSettingsProfile = {

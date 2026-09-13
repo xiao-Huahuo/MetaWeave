@@ -65,12 +65,12 @@
   --color-success: #26a269;
   --color-warning: #e2a72e;
   --color-danger: #f05d5e;
-  --color-tag-1: #7c5cfc;
-  --color-tag-2: #eb2463;
-  --color-tag-3: #26a269;
-  --color-tag-4: #2f88d5;
-  --color-tag-5: #e2a72e;
-  --color-tag-6: #0ea5b6;
+  --color-tag-1: #d85c6f;
+  --color-tag-2: #28a7a1;
+  --color-tag-3: #2f8fda;
+  --color-tag-4: #4e6fe8;
+  --color-tag-5: #7064d8;
+  --color-tag-6: #9a5fc4;
   --tag-color-library-strength: 30%;
   --tag-color-smart-strength: 16%;
   --color-search-files: var(--color-primary);
@@ -285,6 +285,7 @@ button.v1-icon-button:disabled {
 }
 
 :root[data-theme="dark"] {
+  --color-graph-edge: rgba(199, 203, 220, 0.22);
   --color-message-bubble-bg: #2f3035;
   --color-message-bubble-text: #f4f4f6;
   --color-chrome-bg-top: rgba(18, 18, 20, 0.96);
@@ -343,6 +344,7 @@ button.v1-icon-button:disabled {
 }
 
 :root[data-theme="light"] {
+  --color-graph-edge: rgba(63, 66, 82, 0.18);
   --color-message-bubble-bg: #f4f4f4;
   --color-message-bubble-text: #171721;
   --color-chrome-bg-top: #ffffff;
