@@ -143,6 +143,23 @@ test('resizes the sidebar browser from its left edge', async ({ page }, testInfo
   await page.screenshot({ path: testInfo.outputPath('browser-sidebar-resized.png'), fullPage: true })
 })
 
+test('opens the GitHub repository in the existing browser sidebar', async ({ page, context }, testInfo) => {
+  await page.setViewportSize({ width: 1400, height: 900 })
+  await page.goto('/')
+  const userIdInput = page.getByRole('textbox', { name: '用户 ID' })
+  if (await userIdInput.isVisible()) {
+    await userIdInput.fill('github-sidebar-smoke')
+    await page.getByRole('button', { name: '进入', exact: true }).click()
+  }
+
+  const pageCount = context.pages().length
+  await page.getByTitle('GitHub').click()
+
+  await expect(page.locator('.browser-sidebar-content')).toBeVisible()
+  expect(context.pages()).toHaveLength(pageCount)
+  await page.screenshot({ path: testInfo.outputPath('github-browser-sidebar.png'), fullPage: true })
+})
+
 test('mobile sidebars float and the latest one replaces the previous overlay', async ({ page }, testInfo) => {
   await page.setViewportSize({ width: 600, height: 820 })
   await page.route('**/health', (route) => route.fulfill({ status: 200, body: '{"status":"ok"}' }))

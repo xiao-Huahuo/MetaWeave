@@ -414,7 +414,7 @@
   },
   {
     "callable": "agent_service.tools.builtin.memory.write_long_term_rule",
-    "description": "向当前用户的长期系统规则中追加一条必须遵守的指令,效果等同于用户在设置页手动添加系统提示词。该规则每轮都会注入系统提示词,不依赖 RAG 召回。",
+    "description": "向当前用户的长期系统规则中追加一条必须遵守的指令,效果等同于用户在设置页手动添加系统提示词。该规则每轮都会注入系统提示词,不依赖 AgenticRAG 召回。",
     "name": "write_long_term_rule",
     "parameters": {
       "properties": {

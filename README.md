@@ -1,7 +1,7 @@
 # MetaWeave 元织
 > 持续引入，持续联系，持续理解，持续执行
 > 日期: 2026.9.13
-![AI Native](https://img.shields.io/badge/AI-native-8A2BE2) ![Multimodal](https://img.shields.io/badge/knowledge-multimodal-FF6F61) [![GitHub Release](https://img.shields.io/github/v/release/xiao-Huahuo/MetaWeave?include_prereleases)](https://github.com/xiao-Huahuo/MetaWeave/releases/latest) ![Agent](https://img.shields.io/badge/system-AI_Agent-8B5CF6) ![RAG](https://img.shields.io/badge/retrieval-RAG-7C3AED) ![Multi Agent](https://img.shields.io/badge/Agent-multi--agent-8B5CF6) ![Knowledge Base](https://img.shields.io/badge/product-knowledge_base-0EA5E9) ![Knowledge Graph](https://img.shields.io/badge/knowledge-graph-2563EB) ![Markdown](https://img.shields.io/badge/editor-Markdown-000000?logo=markdown&logoColor=white) ![LaTeX](https://img.shields.io/badge/typesetting-LaTeX-008080?logo=latex&logoColor=white) ![MCP](https://img.shields.io/badge/protocol-MCP-8B5CF6) ![PaddleOCR](https://img.shields.io/badge/OCR-PaddleOCR-005BAC) [![DSH Runtime SDK](https://img.shields.io/badge/DSH_Runtime_SDK-47f9438-4224EB)](https://github.com/deepseek-ai/deepseek-harness/commit/47f943859bef60e4160492346772ded9b24f765a)
+![AI Native](https://img.shields.io/badge/AI-native-8A2BE2) ![Multimodal](https://img.shields.io/badge/knowledge-multimodal-FF6F61) [![GitHub Release](https://img.shields.io/github/v/release/xiao-Huahuo/MetaWeave?include_prereleases)](https://github.com/xiao-Huahuo/MetaWeave/releases/latest) ![Agent](https://img.shields.io/badge/system-AI_Agent-8B5CF6) ![AgenticRAG](https://img.shields.io/badge/retrieval-AgenticRAG-7C3AED) ![Multi Agent](https://img.shields.io/badge/Agent-multi--agent-8B5CF6) ![Knowledge Base](https://img.shields.io/badge/product-knowledge_base-0EA5E9) ![Knowledge Graph](https://img.shields.io/badge/knowledge-graph-2563EB) ![Markdown](https://img.shields.io/badge/editor-Markdown-000000?logo=markdown&logoColor=white) ![LaTeX](https://img.shields.io/badge/typesetting-LaTeX-008080?logo=latex&logoColor=white) ![MCP](https://img.shields.io/badge/protocol-MCP-8B5CF6) ![PaddleOCR](https://img.shields.io/badge/OCR-PaddleOCR-005BAC) [![DSH Runtime SDK](https://img.shields.io/badge/DSH_Runtime_SDK-47f9438-4224EB)](https://github.com/deepseek-ai/deepseek-harness/commit/47f943859bef60e4160492346772ded9b24f765a)
 
 ## 0. 背景
 
@@ -157,7 +157,8 @@
 `│   │   ├── ` [5.2.1 模式选择](#5.2.1%20%E6%A8%A1%E5%BC%8F%E9%80%89%E6%8B%A9)  
 `│   │   ├── ` [5.2.2 ReAct 执行循环](#5.2.2%20ReAct%20%E6%89%A7%E8%A1%8C%E5%BE%AA%E7%8E%AF)  
 `│   │   ├── ` [5.2.3 Plan 规划与观察](#5.2.3%20Plan%20%E8%A7%84%E5%88%92%E4%B8%8E%E8%A7%82%E5%AF%9F)  
-`│   │   └── ` [5.2.4 工具调用与实际操作](#5.2.4%20%E5%B7%A5%E5%85%B7%E8%B0%83%E7%94%A8%E4%B8%8E%E5%AE%9E%E9%99%85%E6%93%8D%E4%BD%9C)  
+`│   │   ├── ` [5.2.4 工具调用与实际操作](#5.2.4%20%E5%B7%A5%E5%85%B7%E8%B0%83%E7%94%A8%E4%B8%8E%E5%AE%9E%E9%99%85%E6%93%8D%E4%BD%9C)  
+`│   │   └── ` [5.2.5 Agentic RAG](#5.2.5%20Agentic%20RAG)  
 `│   ├── ` [5.3 多 Agent 能力](#5.3%20%E5%A4%9A%20Agent%20%E8%83%BD%E5%8A%9B)  
 `│   │   ├── ` [5.3.1 主 Agent 与子任务](#5.3.1%20%E4%B8%BB%20Agent%20%E4%B8%8E%E5%AD%90%E4%BB%BB%E5%8A%A1)  
 `│   │   ├── ` [5.3.2 前台等待与后台并行](#5.3.2%20%E5%89%8D%E5%8F%B0%E7%AD%89%E5%BE%85%E4%B8%8E%E5%90%8E%E5%8F%B0%E5%B9%B6%E8%A1%8C)  
@@ -219,7 +220,7 @@
 `│   │   └── ` [6.4.3 隐私标记](#6.4.3%20%E9%9A%90%E7%A7%81%E6%A0%87%E8%AE%B0)  
 `│   ├── ` [6.5 Dashboard 统计](#6.5%20Dashboard%20%E7%BB%9F%E8%AE%A1)  
 `│   │   ├── ` [6.5.1 查看范围与数据更新](#6.5.1%20%E6%9F%A5%E7%9C%8B%E8%8C%83%E5%9B%B4%E4%B8%8E%E6%95%B0%E6%8D%AE%E6%9B%B4%E6%96%B0)  
-`│   │   ├── ` [6.5.2 RAG 填充率、相关性与置信度](#6.5.2%20RAG%20%E5%A1%AB%E5%85%85%E7%8E%87%E3%80%81%E7%9B%B8%E5%85%B3%E6%80%A7%E4%B8%8E%E7%BD%AE%E4%BF%A1%E5%BA%A6)  
+`│   │   ├── ` [6.5.2 AgenticRAG 填充率、相关性与置信度](#6.5.2%20AgenticRAG%20%E5%A1%AB%E5%85%85%E7%8E%87%E3%80%81%E7%9B%B8%E5%85%B3%E6%80%A7%E4%B8%8E%E7%BD%AE%E4%BF%A1%E5%BA%A6)  
 `│   │   ├── ` [6.5.3 Token 用量](#6.5.3%20Token%20%E7%94%A8%E9%87%8F)  
 `│   │   ├── ` [6.5.4 知识库规模与每日活跃](#6.5.4%20%E7%9F%A5%E8%AF%86%E5%BA%93%E8%A7%84%E6%A8%A1%E4%B8%8E%E6%AF%8F%E6%97%A5%E6%B4%BB%E8%B7%83)  
 `│   │   └── ` [6.5.5 Agent 回复耗时](#6.5.5%20Agent%20%E5%9B%9E%E5%A4%8D%E8%80%97%E6%97%B6)  
@@ -305,7 +306,7 @@
 元织依据知识的生命周期（阅读 - 组织 - 检索 - 集成） 来建立全链路功能：
 1. **阅读**： 多模态预览，多模态+Markdown+Latex联合工作区，文档扫描器（MinerU/本地PaddleOCR）
 2. **组织**： 六种组织形态的知识库，Git版本管理
-3. **检索**： RAG，四库三通道联合检索，语义知识图谱，Markdown双向链接
+3. **检索**： AgenticRAG，四库三通道联合检索，语义知识图谱，Markdown双向链接
 4. **集成**： AI Agent中央调度能力（记忆+工具+安全+引用溯源），知识库数据可视化
 #### 1.2.2 部分功能参考平台或技术来源
 - **[Obsidian](https://obsidian.md/)**：参考其 Markdown 编辑工作区、文档链接、反向链接查询与链接图谱，让独立文件能够通过引用建立联系，形成可持续整理的个人知识网络。
@@ -360,7 +361,7 @@
 | **四库三通道联合检索** | 四库指文件库、图书馆、组件库和文献库，三通道指标题、内容与语义搜索。用户可以选择资料来源和搜索方式，在同一入口查找不同形态的内容。 |
 | **召回与混合检索** | 召回是从资料中初步找出可能相关的候选内容；混合检索结合向量相似度与关键词匹配，合并、去重后再进行重排序。它描述检索内部的处理方式。 |
 | **重排序（ReRank）** | 对初步检索到的候选内容再次评估相关性，调整排列顺序，帮助筛选更适合当前问题的资料。 |
-| **RAG（检索增强生成）** | 先检索相关资料，再将资料交给模型参考并生成回答的方法。检索结果为回答提供依据，但仍需要核对原文与结论。 |
+| **AgenticRAG（检索增强生成）** | 先检索相关资料，再将资料交给模型参考并生成回答的方法。检索结果为回答提供依据，但仍需要核对原文与结论。 |
 | **知识图谱** | 用节点与连线表达对象及其关系的结构。语义知识图谱中的节点可以表示文档、人物、概念等，连线表示它们之间的关系。 |
 | **Wiki 链接与反向链接** | Wiki 链接使用 `[[文档名称]]` 等写法引用另一份资料；反向链接用于查看哪些文档引用了当前文档。两者共同支持沿引用关系浏览资料。 |
 | **引用溯源** | 将回答中的内容与实际使用的文件、网页或附件对应起来，方便用户打开来源并核对依据。 |
@@ -1541,6 +1542,35 @@ flowchart LR
 
 单轮工具调用的服务配置默认上限为 **4 次**，达到额度后，主模型基于已有结果形成本轮回答，后续工作携带会话与任务列表继续推进。工具额度按本轮调用计量，整项工作的进度由任务列表和最终交付共同记录。
 
+#### 5.2.5 Agentic RAG
+
+MetaWeave 把知识检索接入 Agent 的工具决策, 进入 ReAct 或 Plan 后，主模型先阅读用户问题和已有上下文，再决定是否调用 `get_knowledge_context`、`search_knowledge`、`read_knowledge_file` 或 `web_search`。`get_knowledge_context` 对当前查询执行向量与关键词混合检索，经过重排后返回知识片段和来源编号。主模型读取结果后继续回答或发起下一次工具调用。
+
+```mermaid
+flowchart LR
+    accTitle: Agentic RAG 的检索决策循环
+    accDescr: Agent 根据问题选择检索工具，读取结果并判断证据是否充足，需要时调整查询或阅读范围后再次检索。
+
+    user_question["用户问题"] --> model_decision["Agent 判断<br/>是否需要检索"]
+    model_decision -->|不需要| final_answer["基于已有上下文回答"]
+    model_decision -->|需要| retrieval_tool["选择工具<br/>生成查询参数"]
+    retrieval_tool --> retrieval_service["混合检索与重排"]
+    retrieval_service --> evidence["知识片段<br/>来源编号"]
+    evidence --> result_review{"结果是否足够"}
+    result_review -->|足够| final_answer
+    result_review -->|不足| model_decision
+```
+
+| Agentic RAG 行为 | MetaWeave 中的实现 |
+| --- | --- |
+| 决定检索时机 | 主模型在直接回答和调用检索工具之间选择。 |
+| 选择资料来源 | Agent 按任务选择知识库语义检索、四库联合搜索、文件阅读或联网搜索。 |
+| 调整检索方式 | 检索结果回到工作上下文，Agent 可以改写查询、更换工具或补读原文。 |
+| 审视检索结果 | ReAct 由主模型在下一轮同时观察与决策；Plan 由观察器选择继续、回答、重试或放弃当前方向。 |
+| 保留回答依据 | 知识工具为召回片段登记来源编号，回答按实际使用的编号挂载引用。 |
+
+这一循环使检索词、工具和阅读范围能够随中间结果调整，构成 MetaWeave 的 AgenticRAG 知识检索路径。Simple 模式仍可使用上下文构建器自动召回的长期记忆，但是该部分没有工具决策循环。语义切片、混合检索与重排过程见 [4.2.3 语义索引与检索过程](#423-语义索引与检索过程)，回答与来源的对应方式见 [5.5 引用溯源](#55-引用溯源)。
+
 ### 5.3 多 Agent 能力
 
 #### 5.3.1 主 Agent 与子任务
@@ -1876,7 +1906,7 @@ Agent 通过创建列表、完成列表项和结束列表三类操作维护进�
 
 #### 5.9.1 记忆类型与写入来源
 
-长期记忆采用 RAG（检索增强生成）参与回答，系统先根据当前问题找出相关记录，再将选中的正文与来源交给模型，使保存的项目约定、用户偏好和事实能够跨会话参与后续任务。每次进入回答上下文的条目由当前问题的召回结果决定。
+长期记忆采用 AgenticRAG（检索增强生成）参与回答，系统先根据当前问题找出相关记录，再将选中的正文与来源交给模型，使保存的项目约定、用户偏好和事实能够跨会话参与后续任务。每次进入回答上下文的条目由当前问题的召回结果决定。
 
 | 数据类型 | 内容如何产生 | 后续如何使用 |
 | --- | --- | --- |
@@ -2187,9 +2217,9 @@ HTML 先保存在运行时的 `visualizations/`，结果顶部的保存按钮可
 
 Dashboard 汇总当前用户的资料规模、操作活动与 Agent 记录，但各卡片的范围不同：规模跟随当前知识库，Agent 指标按会话或历史范围展示，热力图按日期记录操作。回复结束后，已加载的相关统计会刷新；缺少召回、用量或轨迹记录时，需要按卡片状态判断数据是否可用，不能直接据此认定相应操作没有发生。
 
-#### 6.5.2 RAG 填充率、相关性与置信度
+#### 6.5.2 AgenticRAG 填充率、相关性与置信度
 
-RAG 卡片显示填充率、平均相关性和置信度。填充率表示返回了多少条资料，占本次允许返回数量的比例；平均相关性使用已返回条目的最终评分。设返回记忆与知识片段共 $n$ 条，请求上限共 $N$ 条，条目评分为 $q_j$，则在 $N>0$ 且 $n>0$ 时：
+AgenticRAG 卡片显示填充率、平均相关性和置信度。填充率表示返回了多少条资料，占本次允许返回数量的比例；平均相关性使用已返回条目的最终评分。设返回记忆与知识片段共 $n$ 条，请求上限共 $N$ 条，条目评分为 $q_j$，则在 $N>0$ 且 $n>0$ 时：
 
 $$
 \mathrm{fill}=\min\left(\frac{n}{N},1\right)\times100\%,\qquad

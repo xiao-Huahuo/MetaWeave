@@ -5,7 +5,7 @@
 
 ```mermaid
 flowchart TD
-    长短记忆["长短记忆"] & 知识库RAG["知识库 RAG"] & 安全审核["安全审核"] & 上下文管理["上下文管理"] & 多模态文档处理["多模态文档处理"] --> agent
+    长短记忆["长短记忆"] & 知识库AgenticRAG["知识库 AgenticRAG"] & 安全审核["安全审核"] & 上下文管理["上下文管理"] & 多模态文档处理["多模态文档处理"] --> agent
     agent["MetaWeave<br/>Agent"]
     会话管理["会话管理"] & 规划与编排["本地文件操作"] & 可观测性["可观测性"] & 工具系统["工具系统"] & 联网搜索["联网搜索"] --> agent
 ```
@@ -112,7 +112,7 @@ flowchart TD
     F --> I["longterm_memory_specs 表"]
 ```
 
-##### RAG 召回流程
+##### AgenticRAG 召回流程
 
 ```mermaid
 flowchart TD
@@ -510,7 +510,7 @@ flowchart TD
     Q --> R["ChromaDB 向量索引"]
     Q --> S["longterm_memory_specs 元数据表"]
 
-    R --> T["Agent RAG / knowledge search 可召回"]
+    R --> T["Agent AgenticRAG / knowledge search 可召回"]
     S --> T
 ```
 
@@ -664,7 +664,7 @@ flowchart TB
 
 ```mermaid
 flowchart TD
-    A["用户提问"] --> B["自动RAG召回"]
+    A["用户提问"] --> B["自动AgenticRAG召回"]
     B --> C["系统上下文注入<br/>[1]/[2] 来源 + 片段"]
     B --> D["初始 citation_map<br/>数字编号 1/2/3..."]
 

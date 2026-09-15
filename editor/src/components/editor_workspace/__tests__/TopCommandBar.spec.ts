@@ -103,6 +103,16 @@ describe('TopCommandBar knowledge-library switcher', () => {
     expect(wrapper.emitted('toggleBrowser')).toHaveLength(1)
   })
 
+  it('opens GitHub in the existing browser sidebar', async () => {
+    const { workspaceStore } = prepareStores()
+    const openBrowserSidebar = vi.spyOn(workspaceStore, 'openBrowserSidebar')
+    const wrapper = mountTopCommandBar()
+
+    await wrapper.get('.github-btn-topbar').trigger('click')
+
+    expect(openBrowserSidebar).toHaveBeenCalledWith('https://github.com/xiao-Huahuo/MetaWeave')
+  })
+
   it('releases the collapsed search expansion area for window dragging', () => {
     const source = readFileSync(resolve(__dirname, '..', 'TopCommandBar.vue'), 'utf-8')
 

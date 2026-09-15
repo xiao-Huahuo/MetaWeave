@@ -3,7 +3,7 @@
 ![Multimodal](https://img.shields.io/badge/knowledge-multimodal-FF6F61)
 [![GitHub Release](https://img.shields.io/github/v/release/xiao-Huahuo/MetaWeave?include_prereleases)](https://github.com/xiao-Huahuo/MetaWeave/releases/latest)
 ![Agent](https://img.shields.io/badge/system-AI_Agent-8B5CF6)
-![RAG](https://img.shields.io/badge/retrieval-RAG-7C3AED)
+![AgenticRAG](https://img.shields.io/badge/retrieval-AgenticRAG-7C3AED)
 ![Multi Agent](https://img.shields.io/badge/Agent-multi--agent-8B5CF6)
 ![Knowledge Base](https://img.shields.io/badge/product-knowledge_base-0EA5E9)
 ![Knowledge Graph](https://img.shields.io/badge/knowledge-graph-2563EB)
@@ -85,7 +85,7 @@ Agent 框架不能消除模型幻觉。MetaWeave 因此优先提供检索、引�
   * MW当前锁定上游提交 [`47f943859bef60e4160492346772ded9b24f765a`](https://github.com/deepseek-ai/deepseek-harness/commit/47f943859bef60e4160492346772ded9b24f765a)，叠加仓库内 MW补丁后生产 `0.1.0-rc.5+mw.1` Runtime SDK，并将成品随 MW仓库和 EXE固定发布。
 * 关联数据库：SQLite
 * 向量数据库：ChromaDB
-* 记忆与语义检索方案：RAG（向量检索 + 关键词检索 + ReRank）
+* 记忆与语义检索方案：AgenticRAG（向量检索 + 关键词检索 + ReRank）
 * 配置管理：Pydantic / dataclass 风格 AgentConfig
 * 异步任务：asyncio
 * 知识库文件监听: watchdog
@@ -477,7 +477,7 @@ DeepSeek 接入使用专用适配器保留 `reasoning_content`,并在带工具�
 
 #### 智能体状态转移设计
 在LangGraph状态转移图入口处有一个入口节点,调用一次小模型,按照用户提问内容区分三种模式的入口,用户在同一session前后提出简单和困难的问题时,会以小模型决策以下三种图的模式:
-      1. 简答模式: 对于明显不需要思考的短输入,不经过循环,只保留 RAG 上下文构建,用小模型直接输出.
+      1. 简答模式: 对于明显不需要思考的短输入,不经过循环,只保留 AgenticRAG 上下文构建,用小模型直接输出.
       2. ReAct模式: 不经过`planner`节点和`observation`节点,标准的ReAct图.agent节点同时充当观察者和决策者,一个循环只需要调用一次LLM.
       3. 深度思考模式(Plan-and-Execute模式): 经过规划-执行-观察的循环,一个循环会调用2~3次LLM,适合长时间思考.
    auto模式会先调用小模型路由器输出`simple/react/plan`,显式选择模式时不经过路由器;当小模型认为自己能力不足、不确定能否可靠回答、需要事实核验或外部信息时,至少进入`react`,不能选择`simple`;当小模型不可用或输出无法解析时,才回退到本地保守规则.
@@ -686,7 +686,7 @@ $$
 上下文压缩采用“**大窗口滑动上下文 + 阈值摘要压缩 + 结构化状态独立保留**”的并行机制,并辅以长期记忆,使得Agent在压缩上下文的时候还能记住部分高质量的用户会话历史和事实。
 三种机制职责不同：滑动窗口限制本轮工作集，摘要保存被移出窗口的信息，结构化状态保证任务与执行过程不丢失.
 
-- **真实计量**：上下文长度由后端对本轮实际序列化消息进行模型感知的 token 统计。前端只展示后端返回的“当前工作上下文 token / 可用上下文上限”，不统计完整聊天记录，也不自行用字符数估算；工作上下文改变后，后端立即推送最新统计。模型上下文上限减去系统提示、工具定义、当前用户输入、附件/RAG 内容和预留输出 token，任何滑动或压缩都不得删除原始会话记录。
+- **真实计量**：上下文长度由后端对本轮实际序列化消息进行模型感知的 token 统计。前端只展示后端返回的“当前工作上下文 token / 可用上下文上限”，不统计完整聊天记录，也不自行用字符数估算；工作上下文改变后，后端立即推送最新统计。模型上下文上限减去系统提示、工具定义、当前用户输入、附件/AgenticRAG 内容和预留输出 token，任何滑动或压缩都不得删除原始会话记录。
 - **分级触发**：滑动窗口持续控制工作集；当实际占用达到模型窗口的一定比例时，再同步进入摘要压缩。触发阈值和压缩目标按模型窗口比例计算, 压缩后降到明显低于触发线的安全区间，避免连续多轮反复压缩。
 - **同步摘要**：压缩由小模型同步完成，成功前不得替换当前上下文。新上下文由以下成分组成:
   - 重要事实摘要
@@ -713,13 +713,13 @@ $$
 
 
 #### 长期记忆/语义召回
-采用 **RAG 检索增强生成**作为提取方式。底层数据分为以下类型：
+采用 **AgenticRAG 检索增强生成**作为提取方式。底层数据分为以下类型：
 - `会话摘要(session_summary)`：每轮异步摘要，记录对话要点。
 - `会话事实(session_fact)`：从摘要中提取的结构化事实单元，由 MemoryResolver 裁决并维护 active/superseded/expired 状态。
 - `重要事实摘要(important_fact_summary)`：ContextBuilder 内 compress 节点生成的跨会话重要事实。
 - `知识切片(knowledge_chunk)`：知识库文件的语义切片。
 - `自定义记忆(user_custom)`：用户手动写入的自定义记忆。
-- `用户规则(user_rule)`：用户自定义的长期规则，不经过 RAG 检索，以系统提示词形式直接注入。
+- `用户规则(user_rule)`：用户自定义的长期规则，不经过 AgenticRAG 检索，以系统提示词形式直接注入。
 
 ##### 语义召回
 
@@ -885,11 +885,11 @@ Agent 也可以通过 `add_automation` 工具创建自动化任务。适合的�
 
 #### Dashboard
 
-Dashboard 将知识库规模、用户活动、RAG 质量和 Agent 资源消耗放在同一页中。数据来自当前用户的知识库、图书馆、会话轨迹和持久化统计记录。Agent 完成一次回复后，已经加载的 RAG、Token 和耗时数据会随之刷新。
+Dashboard 将知识库规模、用户活动、AgenticRAG 质量和 Agent 资源消耗放在同一页中。数据来自当前用户的知识库、图书馆、会话轨迹和持久化统计记录。Agent 完成一次回复后，已经加载的 AgenticRAG、Token 和耗时数据会随之刷新。
 
-##### RAG 质量
+##### AgenticRAG 质量
 
-RAG 卡片显示填充率（fill rate）、平均相关性（avg relevance）和置信度（confidence）。设一次召回返回的记忆和知识条目数分别为 $m_i$、$k_i$，请求上限分别为 $M_i$、$K_i$，返回条目的最终相关性分数为 $q_{ij}\in[0,1]$，则该次召回的基础指标为：
+AgenticRAG 卡片显示填充率（fill rate）、平均相关性（avg relevance）和置信度（confidence）。设一次召回返回的记忆和知识条目数分别为 $m_i$、$k_i$，请求上限分别为 $M_i$、$K_i$，返回条目的最终相关性分数为 $q_{ij}\in[0,1]$，则该次召回的基础指标为：
 
 $$
 fill_i=\min\left(\frac{m_i+k_i}{M_i+K_i},1\right)\times100\%,\quad
@@ -904,7 +904,7 @@ $$
 \bar{x}_t=\frac{1}{t}\sum_{i=1}^{t}x_i,\quad x\in\{fill,relevance,confidence\}
 $$
 
-历史曲线使用相同的累计口径，并可选择最近 5、10、20、50、100、200、500、1000 次或全部 RAG 记录。
+历史曲线使用相同的累计口径，并可选择最近 5、10、20、50、100、200、500、1000 次或全部 AgenticRAG 记录。
 
 ##### Token 用量
 
