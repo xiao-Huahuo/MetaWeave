@@ -9,4 +9,21 @@
 
 
 ### BUGs
+- [ ] 修复极其顽固的bug: DSML导致思考中断,并在前端对话框里面以文字直接显现的问题:
 
+<｜｜DSML｜｜ calls>
+<｜｜DSML｜｜ invoke name="search_knowledge">
+<｜｜DSML｜｜ parameter name="query" string="true">数码管</｜｜DSML｜｜ parameter>
+<｜｜DSML｜｜ parameter name="semantic" string="false">false</｜｜DSML｜｜ parameter>
+</｜｜DSML｜｜ invoke>
+<｜｜DSML｜｜ invoke name="get_knowledge_file_status">
+<｜｜DSML｜｜ parameter name="path" string="true">.mw/forms/项目文献库/assets/超大复杂word.docx</｜｜DSML｜｜ parameter>
+</｜｜DSML｜｜ invoke>
+</｜｜DSML｜｜ calls>
+
+
+<｜｜DSML｜｜ calls>
+<｜｜DSML｜｜ invoke name="get_knowledge_job_status">
+<｜｜DSML｜｜ parameter name="job_id" string="true">job_78af38da12714dedbaebb266158c05c8</｜｜DSML｜｜ parameter>
+</｜｜DSML｜｜ invoke>
+</｜｜DSML｜｜ calls>
