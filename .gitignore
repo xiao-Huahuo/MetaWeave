@@ -8,6 +8,7 @@
 **/build/
 **/__pycache__/
 .env
+/node_modules/
 /console/node_modules/
 /editor/node_modules/
 *.db
