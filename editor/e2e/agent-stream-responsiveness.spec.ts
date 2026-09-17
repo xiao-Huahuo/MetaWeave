@@ -2,12 +2,13 @@
  * Agent buffered-stream responsiveness smoke test.
  *
  * Replays a tool call followed by a large SSE burst through the real Agent page
- * and verifies that timers, controls, and incremental final text keep updating.
+ * and verifies that timers, controls, incremental text, and the directional
+ * word-reveal schedule keep updating.
  */
 import { expect, test } from '@playwright/test'
 
 test('keeps the Agent page interactive while draining buffered tool output', async ({ page }) => {
-  const finalText = Array.from({ length: 80 }, (_, index) => String(index % 10)).join('')
+  const finalText = Array.from({ length: 24 }, (_, index) => `词${index + 1}`).join(' ')
   let sessionCreated = false
   const pageErrors: string[] = []
   page.on('pageerror', (error) => pageErrors.push(error.message))
@@ -88,13 +89,27 @@ test('keeps the Agent page interactive while draining buffered tool output', asy
   await page.locator('textarea[placeholder="输入消息..."]').fill('检查竞态')
   await page.evaluate(() => {
     const lengths: number[] = []
+    const revealSchedules: Array<{ delays: number[]; animationNames: string[] }> = []
     const observer = new MutationObserver(() => {
       const replies = document.querySelectorAll('.markdown-body')
-      const length = replies[replies.length - 1]?.textContent?.length ?? 0
+      const reply = replies[replies.length - 1]
+      const length = reply?.textContent?.length ?? 0
       if (length > 0 && lengths[lengths.length - 1] !== length) lengths.push(length)
+      const revealWords = Array.from(reply?.querySelectorAll<HTMLElement>('.stream-reveal-word') ?? [])
+      if (revealWords.length > 0) {
+        revealSchedules.push({
+          delays: revealWords.map((word) => Number.parseFloat(getComputedStyle(word).animationDelay) * 1_000),
+          animationNames: revealWords.map((word) => getComputedStyle(word).animationName),
+        })
+      }
     })
     observer.observe(document.body, { childList: true, characterData: true, subtree: true })
-    ;(window as typeof window & { __streamReplyLengths?: number[] }).__streamReplyLengths = lengths
+    const diagnostics = window as typeof window & {
+      __streamReplyLengths?: number[]
+      __streamRevealSchedules?: Array<{ delays: number[]; animationNames: string[] }>
+    }
+    diagnostics.__streamReplyLengths = lengths
+    diagnostics.__streamRevealSchedules = revealSchedules
   })
   await page.getByTitle('发送').click()
   await expect(page.getByTitle('中断输出')).toBeVisible()
@@ -111,5 +126,16 @@ test('keeps the Agent page interactive while draining buffered tool output', asy
   const replyLengths = await page.evaluate(() => (window as typeof window & { __streamReplyLengths?: number[] }).__streamReplyLengths ?? [])
   expect(replyLengths.some((length) => length > 0 && length < finalText.length)).toBe(true)
   expect(replyLengths.some((length) => length >= finalText.length)).toBe(true)
+  const revealSchedules = await page.evaluate(() => (
+    (window as typeof window & {
+      __streamRevealSchedules?: Array<{ delays: number[]; animationNames: string[] }>
+    }).__streamRevealSchedules ?? []
+  ))
+  const widestSchedule = revealSchedules.sort((left, right) => right.delays.length - left.delays.length)[0]
+  expect(widestSchedule?.delays.length).toBe(24)
+  expect(widestSchedule?.delays[0]).toBe(0)
+  expect(widestSchedule?.delays[23]).toBe(90)
+  expect(widestSchedule?.delays).toEqual([...(widestSchedule?.delays ?? [])].sort((left, right) => left - right))
+  expect(widestSchedule?.animationNames.every((name) => name !== 'none')).toBe(true)
   expect(pageErrors).toEqual([])
 })

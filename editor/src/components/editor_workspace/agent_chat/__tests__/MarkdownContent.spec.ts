@@ -226,7 +226,39 @@ describe('MarkdownContent streaming code highlight', () => {
   })
 
   afterEach(() => {
+    vi.useRealTimers()
     vi.restoreAllMocks()
+  })
+
+  it('reveals only new streaming words from left to right', async () => {
+    const now = vi.spyOn(performance, 'now').mockReturnValue(1_000)
+    const wrapper = mount(MarkdownContent, {
+      props: {
+        content: 'left middle',
+        isStreaming: true,
+        citationMap: {},
+      },
+    })
+    await nextTick()
+
+    const initialWords = wrapper.findAll('.stream-reveal-word')
+    expect(initialWords.map((word) => word.text())).toEqual(['left', 'middle'])
+    expect(initialWords.map((word) => word.attributes('style'))).toEqual([
+      '--stream-reveal-delay: 0ms;',
+      '--stream-reveal-delay: 90ms;',
+    ])
+
+    now.mockReturnValue(1_300)
+    await wrapper.setProps({ content: 'left middle right edge' })
+    await nextTick()
+
+    const newWords = wrapper.findAll('.stream-reveal-word')
+    expect(newWords.map((word) => word.text())).toEqual(['right', 'edge'])
+    expect(newWords.map((word) => word.attributes('style'))).toEqual([
+      '--stream-reveal-delay: 0ms;',
+      '--stream-reveal-delay: 90ms;',
+    ])
+    expect(wrapper.text()).toBe('left middle right edge')
   })
 
   it('highlights code blocks while still streaming (does not wait for finish)', async () => {
@@ -258,7 +290,7 @@ describe('MarkdownContent streaming code highlight', () => {
     expect(code.element.innerHTML).not.toContain('<span')
   })
 
-  it('renders growing lists, tables, and code without transient DOM wrappers', async () => {
+  it('renders growing lists, tables, and code while revealing new words', async () => {
     const wrapper = mount(MarkdownContent, {
       props: {
         content: '- 第一项',
@@ -280,7 +312,7 @@ describe('MarkdownContent streaming code highlight', () => {
     await nextTick()
 
     expect(wrapper.get('pre code').text()).toContain('const live = true')
-    expect(wrapper.find('.stream-reveal-word').exists()).toBe(false)
+    expect(wrapper.find('.stream-reveal-word').exists()).toBe(true)
     expect(wrapper.find('.stream-cursor').exists()).toBe(false)
   })
 
@@ -318,5 +350,31 @@ describe('MarkdownContent streaming code highlight', () => {
 
     expect(wrapper.find('.stream-cursor').exists()).toBe(false)
     expect(wrapper.get('strong').text()).toBe('完成内容')
+  })
+
+  it('keeps the reveal wave until it finishes before normalizing final Markdown', async () => {
+    vi.useFakeTimers()
+    let now = 2_000
+    vi.spyOn(performance, 'now').mockImplementation(() => now)
+    const wrapper = mount(MarkdownContent, {
+      props: {
+        content: 'left right',
+        isStreaming: true,
+        citationMap: {},
+      },
+    })
+    await nextTick()
+
+    await wrapper.setProps({ isStreaming: false })
+    await nextTick()
+    expect(wrapper.findAll('.stream-reveal-word')).toHaveLength(2)
+
+    now = 2_270
+    await vi.advanceTimersByTimeAsync(270)
+    await nextTick()
+
+    expect(wrapper.find('.stream-reveal-word').exists()).toBe(false)
+    expect(wrapper.text()).toBe('left right')
+    wrapper.unmount()
   })
 })

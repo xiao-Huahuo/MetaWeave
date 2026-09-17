@@ -28,6 +28,10 @@ import type { ImagePreviewItem } from '@/components/common/useImagePreviewer'
 import { createStaticMorphIcon } from '@/components/common/iconRegistry'
 import { formatSize } from '@/components/editor_workspace/fileResourceManagerUtils'
 import { materialFileIconForNode } from '@/components/editor_workspace/materialFileIcons'
+import {
+  decorateStreamingText,
+  type StreamRevealToken,
+} from '@/components/editor_workspace/agent_chat/streamingTextReveal'
 
 marked.setOptions({
   gfm: true,
@@ -137,6 +141,9 @@ let pendingBlock = ''
 let pendingLine = ''
 let fenceCharacter = ''
 let fenceLength = 0
+let activeRevealTokens: StreamRevealToken[] = []
+let revealDeadline = 0
+let finalRenderTimer: number | null = null
 
 /** Creates DOM through a template so sanitized top-level blocks need no layout wrappers. */
 function createMarkdownFragment(source: string): DocumentFragment {
@@ -151,6 +158,22 @@ function clearActiveNodes() {
   activeNodes = []
 }
 
+/** Cancel a delayed final normalization when another stream update arrives. */
+function cancelFinalRender() {
+  if (finalRenderTimer !== null) window.clearTimeout(finalRenderTimer)
+  finalRenderTimer = null
+}
+
+/** Apply directional reveal metadata and retain the latest completion deadline. */
+function decorateFragment(fragment: DocumentFragment, previous: StreamRevealToken[]) {
+  const now = performance.now()
+  const animate = typeof window.matchMedia !== 'function'
+    || !window.matchMedia('(prefers-reduced-motion: reduce)').matches
+  const result = decorateStreamingText(fragment, previous, now, animate)
+  revealDeadline = Math.max(revealDeadline, result.deadline)
+  return result.tokens
+}
+
 /** Resets the append-only scanner when an authoritative response repairs its prefix. */
 function resetStreamingState(root: HTMLElement) {
   root.replaceChildren()
@@ -160,6 +183,8 @@ function resetStreamingState(root: HTMLElement) {
   pendingLine = ''
   fenceCharacter = ''
   fenceLength = 0
+  activeRevealTokens = []
+  revealDeadline = 0
   streamBoundary = document.createComment('stream-active-tail')
   root.appendChild(streamBoundary)
 }
@@ -197,6 +222,7 @@ function consumeStreamingDelta(delta: string): string[] {
 function renderStreamingContent() {
   const root = contentRef.value
   if (!root) return
+  cancelFinalRender()
   if (!streamBoundary || !props.content.startsWith(streamedSource)) resetStreamingState(root)
 
   clearActiveNodes()
@@ -205,19 +231,25 @@ function renderStreamingContent() {
   if (completedBlocks.length > 0) {
     // One parser/sanitizer pass per draft tick prevents a buffered network
     // burst containing many paragraphs from becoming one long main-thread task.
-    root.insertBefore(createMarkdownFragment(completedBlocks.join('')), streamBoundary)
+    const completedFragment = createMarkdownFragment(completedBlocks.join(''))
+    decorateFragment(completedFragment, activeRevealTokens)
+    root.insertBefore(completedFragment, streamBoundary)
+    activeRevealTokens = []
   }
   streamedSource = props.content
   const activeTail = pendingBlock + pendingLine
   if (activeTail) {
     const fragment = createMarkdownFragment(activeTail)
+    activeRevealTokens = decorateFragment(fragment, activeRevealTokens)
     activeNodes = Array.from(fragment.childNodes)
     root.appendChild(fragment)
+  } else {
+    activeRevealTokens = []
   }
 }
 
-/** Final output is reparsed once as a whole to guarantee exact Markdown semantics. */
-function renderFinalContent() {
+/** Reparse the final output once to remove transient reveal wrappers exactly. */
+function commitFinalContent() {
   const root = contentRef.value
   if (!root) return
   root.innerHTML = renderMarkdownHtml(props.content)
@@ -227,12 +259,33 @@ function renderFinalContent() {
   pendingLine = ''
   fenceCharacter = ''
   fenceLength = 0
+  activeRevealTokens = []
+  revealDeadline = 0
   streamBoundary = null
 }
 
-function renderCurrentContent() {
-  if (props.isStreaming) renderStreamingContent()
-  else renderFinalContent()
+/** Keep the final reveal wave alive before normalizing the completed Markdown. */
+function renderFinalContent(): boolean {
+  cancelFinalRender()
+  const remaining = Math.max(0, revealDeadline - performance.now())
+  if (remaining > 0) {
+    finalRenderTimer = window.setTimeout(() => {
+      finalRenderTimer = null
+      commitFinalContent()
+      void highlightCodeBlocks()
+    }, Math.ceil(remaining))
+    return false
+  }
+  commitFinalContent()
+  return true
+}
+
+function renderCurrentContent(): boolean {
+  if (props.isStreaming) {
+    renderStreamingContent()
+    return false
+  }
+  return renderFinalContent()
 }
 
 const sourceLinkSignature = computed(() => {
@@ -577,18 +630,19 @@ async function highlightCodeBlocks() {
 
 onMounted(() => {
   contentRef.value?.addEventListener('click', handleClick)
-  renderCurrentContent()
-  if (!props.isStreaming) void highlightCodeBlocks()
+  const renderedFinal = renderCurrentContent()
+  if (renderedFinal) void highlightCodeBlocks()
 })
 
 onUnmounted(() => {
+  cancelFinalRender()
   contentRef.value?.removeEventListener('click', handleClick)
   highlightCache.clear()
 })
 
 watch(() => [props.content, props.isStreaming] as const, () => {
-  renderCurrentContent()
-  if (!props.isStreaming) void highlightCodeBlocks()
+  const renderedFinal = renderCurrentContent()
+  if (renderedFinal) void highlightCodeBlocks()
 }, { flush: 'post' })
 
 watch(sourceLinkSignature, () => {
@@ -607,6 +661,22 @@ watch(sourceLinkSignature, () => {
   font-size: var(--font-size-base);
   line-height: var(--line-height-relaxed);
   word-break: break-word;
+}
+
+.markdown-body :deep(.stream-reveal-word) {
+  opacity: 0.16;
+  animation: stream-word-reveal 180ms cubic-bezier(0.23, 1, 0.32, 1) both;
+  animation-delay: var(--stream-reveal-delay, 0ms);
+}
+
+@keyframes stream-word-reveal {
+  to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .markdown-body :deep(.stream-reveal-word) {
+    animation-delay: 0ms !important;
+  }
 }
 
 .markdown-body :deep(p) {
