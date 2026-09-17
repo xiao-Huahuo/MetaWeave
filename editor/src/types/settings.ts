@@ -36,7 +36,7 @@ export interface UserSettingsProfile {
   ocrEnabled?: boolean
   /** Whether knowledge ingestion may use the configured MinerU precision API. */
   vlmEnabled?: boolean
-  /** Whether local Qwen may add semantic understanding to uploaded images. */
+  /** Whether images may be sent to the configured remote visual model for semantic understanding. */
   visionUnderstandingEnabled?: boolean
   /** Whether missing managed models should download automatically. */
   modelAutoDownloadEnabled?: boolean

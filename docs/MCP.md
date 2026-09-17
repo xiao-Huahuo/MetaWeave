@@ -57,7 +57,7 @@ MCP 工具自动注册为 `{prefix}__{server_id}__{tool_name}` 格式：
 * `server_id` — 配置中指定的服务器标识
 * `tool_name` — MCP 服务器上报的工具名称
 
-例如 `filesystem` 服务器的 `read_file` 工具注册为 `mcp__filesystem__read_file`，Agent 在对话中调用此工具时即通过 MCP 协议转发到对应服务器进程执行。
+例如 `filesystem` 服务器的 `read_file` 工具注册为 `mcp__filesystem__read_file`，Agent 在对话中调用此工具时即通过 MCP 协议转发到对应服务器进程执行。它与 MetaWeave 内置、用于知识库路径和 `attachment://` 引用的 `read_file` 是两个不同工具，完整命名不会冲突。
 
 ### 运行机制
 

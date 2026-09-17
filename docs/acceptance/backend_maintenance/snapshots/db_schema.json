@@ -90,7 +90,7 @@
         "unique": false
       },
       {
-        "default": "<function utc_now at 0x0000016D3D0EB7E0>",
+        "default": "<function utc_now at 0x000001B409150180>",
         "foreign_keys": [],
         "index": true,
         "name": "created_at",
@@ -252,7 +252,7 @@
         "unique": false
       },
       {
-        "default": "<function utc_now at 0x0000016D3D0E8180>",
+        "default": "<function utc_now at 0x000001B4090FCB80>",
         "foreign_keys": [],
         "index": true,
         "name": "created_at",
@@ -427,7 +427,7 @@
         "unique": false
       },
       {
-        "default": "<function utc_now at 0x0000016D3D289300>",
+        "default": "<function utc_now at 0x000001B4092FF100>",
         "foreign_keys": [],
         "index": true,
         "name": "created_at",
@@ -439,7 +439,7 @@
       }
     ],
     "constraints": [
-      "ForeignKeyConstraint(<sqlalchemy.sql.base.ReadOnlyColumnCollection object at 0x0000016D3D3EFD80>, None, table=Table('agent_messages', MetaData(), Column('user_id', AutoString(length=128), table=<agent_messages>, nullable=False), Column('role', AutoString(length=32), table=<agent_messages>, nullable=False), Column('content', Text(), table=<agent_messages>), Column('tool_call_id', AutoString(length=128), table=<agent_messages>), Column('tool_calls_json', JSON(), table=<agent_messages>), Column('metadata_json', JSON(), table=<agent_messages>), Column('is_summarized', Boolean(), table=<agent_messages>, nullable=False, default=ScalarElementColumnDefault(False)), Column('message_id', AutoString(length=64), table=<agent_messages>, primary_key=True, nullable=False), Column('session_id', AutoString(length=64), ForeignKey('agent_sessions.session_id'), table=<agent_messages>, nullable=False), Column('created_at', DateTime(), table=<agent_messages>, nullable=False, default=CallableColumnDefault(<function utc_now at 0x0000016D3D289300>)), schema=None))",
+      "ForeignKeyConstraint(<sqlalchemy.sql.base.ReadOnlyColumnCollection object at 0x000001B40A4BE0C0>, None, table=Table('agent_messages', MetaData(), Column('user_id', AutoString(length=128), table=<agent_messages>, nullable=False), Column('role', AutoString(length=32), table=<agent_messages>, nullable=False), Column('content', Text(), table=<agent_messages>), Column('tool_call_id', AutoString(length=128), table=<agent_messages>), Column('tool_calls_json', JSON(), table=<agent_messages>), Column('metadata_json', JSON(), table=<agent_messages>), Column('is_summarized', Boolean(), table=<agent_messages>, nullable=False, default=ScalarElementColumnDefault(False)), Column('message_id', AutoString(length=64), table=<agent_messages>, primary_key=True, nullable=False), Column('session_id', AutoString(length=64), ForeignKey('agent_sessions.session_id'), table=<agent_messages>, nullable=False), Column('created_at', DateTime(), table=<agent_messages>, nullable=False, default=CallableColumnDefault(<function utc_now at 0x000001B4092FF100>)), schema=None))",
       "PrimaryKeyConstraint(Column('message_id', AutoString(length=64), table=<agent_messages>, primary_key=True, nullable=False))"
     ],
     "indexes": [
@@ -513,7 +513,7 @@
         "unique": false
       },
       {
-        "default": "<function utc_now at 0x0000016D3D0EAF20>",
+        "default": "<function utc_now at 0x000001B4090FF880>",
         "foreign_keys": [],
         "index": false,
         "name": "updated_at",
@@ -654,7 +654,7 @@
         "unique": false
       },
       {
-        "default": "<function utc_now at 0x0000016D3D0E9580>",
+        "default": "<function utc_now at 0x000001B4090FDEE0>",
         "foreign_keys": [],
         "index": true,
         "name": "created_at",
@@ -665,7 +665,7 @@
         "unique": false
       },
       {
-        "default": "<function utc_now at 0x0000016D3D0E9760>",
+        "default": "<function utc_now at 0x000001B4090FE0C0>",
         "foreign_keys": [],
         "index": true,
         "name": "updated_at",
@@ -768,7 +768,7 @@
         "unique": false
       },
       {
-        "default": "<function utc_now at 0x0000016D3D03E200>",
+        "default": "<function utc_now at 0x000001B40904ED40>",
         "foreign_keys": [],
         "index": true,
         "name": "created_at",
@@ -779,7 +779,7 @@
         "unique": false
       },
       {
-        "default": "<function utc_now at 0x0000016D3D03E2A0>",
+        "default": "<function utc_now at 0x000001B40904EDE0>",
         "foreign_keys": [],
         "index": true,
         "name": "updated_at",
@@ -870,7 +870,7 @@
       }
     ],
     "constraints": [
-      "ForeignKeyConstraint(<sqlalchemy.sql.base.ReadOnlyColumnCollection object at 0x0000016D3D3EFD30>, None, table=Table('agent_sessions', MetaData(), Column('user_id', AutoString(length=128), table=<agent_sessions>, nullable=False), Column('session_name', AutoString(length=255), table=<agent_sessions>, nullable=False), Column('session_id', AutoString(length=64), table=<agent_sessions>, primary_key=True, nullable=False), Column('created_at', DateTime(), table=<agent_sessions>, nullable=False, default=CallableColumnDefault(<function utc_now at 0x0000016D3D03E200>)), Column('updated_at', DateTime(), table=<agent_sessions>, nullable=False, default=CallableColumnDefault(<function utc_now at 0x0000016D3D03E2A0>)), Column('state_json', AutoString(), table=<agent_sessions>), Column('parent_session_id', AutoString(length=64), ForeignKey('agent_sessions.session_id'), table=<agent_sessions>), Column('child_agent_run_id', AutoString(length=64), table=<agent_sessions>), Column('child_agent_provider', AutoString(length=32), table=<agent_sessions>), Column('dsh_session_id', AutoString(length=64), table=<agent_sessions>), Column('child_workspace_root', AutoString(length=1024), table=<agent_sessions>), Column('dsh_runtime_version', AutoString(length=64), table=<agent_sessions>), schema=None))",
+      "ForeignKeyConstraint(<sqlalchemy.sql.base.ReadOnlyColumnCollection object at 0x000001B40A4BE250>, None, table=Table('agent_sessions', MetaData(), Column('user_id', AutoString(length=128), table=<agent_sessions>, nullable=False), Column('session_name', AutoString(length=255), table=<agent_sessions>, nullable=False), Column('session_id', AutoString(length=64), table=<agent_sessions>, primary_key=True, nullable=False), Column('created_at', DateTime(), table=<agent_sessions>, nullable=False, default=CallableColumnDefault(<function utc_now at 0x000001B40904ED40>)), Column('updated_at', DateTime(), table=<agent_sessions>, nullable=False, default=CallableColumnDefault(<function utc_now at 0x000001B40904EDE0>)), Column('state_json', AutoString(), table=<agent_sessions>), Column('parent_session_id', AutoString(length=64), ForeignKey('agent_sessions.session_id'), table=<agent_sessions>), Column('child_agent_run_id', AutoString(length=64), table=<agent_sessions>), Column('child_agent_provider', AutoString(length=32), table=<agent_sessions>), Column('dsh_session_id', AutoString(length=64), table=<agent_sessions>), Column('child_workspace_root', AutoString(length=1024), table=<agent_sessions>), Column('dsh_runtime_version', AutoString(length=64), table=<agent_sessions>), schema=None))",
       "PrimaryKeyConstraint(Column('session_id', AutoString(length=64), table=<agent_sessions>, primary_key=True, nullable=False))"
     ],
     "indexes": [
@@ -1050,7 +1050,7 @@
         "unique": false
       },
       {
-        "default": "<function utc_now at 0x0000016D3D2E2F20>",
+        "default": "<function utc_now at 0x000001B4093A8D60>",
         "foreign_keys": [],
         "index": true,
         "name": "created_at",
@@ -1171,7 +1171,7 @@
         "unique": false
       },
       {
-        "default": "<function utc_now at 0x0000016D3D13E3E0>",
+        "default": "<function utc_now at 0x000001B409152D40>",
         "foreign_keys": [],
         "index": false,
         "name": "started_at",
@@ -1404,7 +1404,7 @@
         "unique": false
       },
       {
-        "default": "<function utc_now at 0x0000016D3D13CAE0>",
+        "default": "<function utc_now at 0x000001B409151440>",
         "foreign_keys": [],
         "index": false,
         "name": "created_at",
@@ -1415,7 +1415,7 @@
         "unique": false
       },
       {
-        "default": "<function utc_now at 0x0000016D3D13CCC0>",
+        "default": "<function utc_now at 0x000001B409151620>",
         "foreign_keys": [],
         "index": false,
         "name": "updated_at",
@@ -1481,6 +1481,126 @@
         "default": null,
         "foreign_keys": [],
         "index": false,
+        "name": "metadata_id",
+        "nullable": false,
+        "primary_key": true,
+        "server_default": null,
+        "type": "VARCHAR(64)",
+        "unique": false
+      },
+      {
+        "default": null,
+        "foreign_keys": [],
+        "index": true,
+        "name": "user_id",
+        "nullable": false,
+        "primary_key": false,
+        "server_default": null,
+        "type": "VARCHAR(128)",
+        "unique": false
+      },
+      {
+        "default": null,
+        "foreign_keys": [],
+        "index": true,
+        "name": "library_id",
+        "nullable": false,
+        "primary_key": false,
+        "server_default": null,
+        "type": "VARCHAR(96)",
+        "unique": false
+      },
+      {
+        "default": null,
+        "foreign_keys": [],
+        "index": true,
+        "name": "component_id",
+        "nullable": false,
+        "primary_key": false,
+        "server_default": null,
+        "type": "VARCHAR(2048)",
+        "unique": false
+      },
+      {
+        "default": "",
+        "foreign_keys": [],
+        "index": false,
+        "name": "script_language",
+        "nullable": false,
+        "primary_key": false,
+        "server_default": null,
+        "type": "VARCHAR(128)",
+        "unique": false
+      },
+      {
+        "default": "",
+        "foreign_keys": [],
+        "index": false,
+        "name": "cover_asset_id",
+        "nullable": false,
+        "primary_key": false,
+        "server_default": null,
+        "type": "VARCHAR(64)",
+        "unique": false
+      },
+      {
+        "default": "<function utc_now at 0x000001B409153BA0>",
+        "foreign_keys": [],
+        "index": false,
+        "name": "created_at",
+        "nullable": false,
+        "primary_key": false,
+        "server_default": null,
+        "type": "DATETIME",
+        "unique": false
+      },
+      {
+        "default": "<function utc_now at 0x000001B409153C40>",
+        "foreign_keys": [],
+        "index": false,
+        "name": "updated_at",
+        "nullable": false,
+        "primary_key": false,
+        "server_default": null,
+        "type": "DATETIME",
+        "unique": false
+      }
+    ],
+    "constraints": [
+      "PrimaryKeyConstraint(Column('metadata_id', AutoString(length=64), table=<component_library_metadata>, primary_key=True, nullable=False))",
+      "UniqueConstraint(Column('user_id', AutoString(length=128), table=<component_library_metadata>, nullable=False), Column('library_id', AutoString(length=96), table=<component_library_metadata>, nullable=False), Column('component_id', AutoString(length=2048), table=<component_library_metadata>, nullable=False))"
+    ],
+    "indexes": [
+      {
+        "columns": [
+          "component_id"
+        ],
+        "name": "ix_component_library_metadata_component_id",
+        "unique": false
+      },
+      {
+        "columns": [
+          "library_id"
+        ],
+        "name": "ix_component_library_metadata_library_id",
+        "unique": false
+      },
+      {
+        "columns": [
+          "user_id"
+        ],
+        "name": "ix_component_library_metadata_user_id",
+        "unique": false
+      }
+    ],
+    "name": "component_library_metadata"
+  },
+  {
+    "columns": [
+      {
+        "default": null,
+        "foreign_keys": [],
+        "index": false,
         "name": "favorite_id",
         "nullable": false,
         "primary_key": true,
@@ -1533,7 +1653,7 @@
         "unique": false
       },
       {
-        "default": "<function utc_now at 0x0000016D3D13F2E0>",
+        "default": "<function utc_now at 0x000001B409198CC0>",
         "foreign_keys": [],
         "index": true,
         "name": "created_at",
@@ -1645,7 +1765,7 @@
         "unique": false
       },
       {
-        "default": "<function utc_now at 0x0000016D3D17D4E0>",
+        "default": "<function utc_now at 0x000001B40919AF20>",
         "foreign_keys": [],
         "index": true,
         "name": "created_at",
@@ -1676,6 +1796,165 @@
       }
     ],
     "name": "feedback"
+  },
+  {
+    "columns": [
+      {
+        "default": null,
+        "foreign_keys": [],
+        "index": false,
+        "name": "decision_id",
+        "nullable": false,
+        "primary_key": true,
+        "server_default": null,
+        "type": "VARCHAR(96)",
+        "unique": false
+      },
+      {
+        "default": null,
+        "foreign_keys": [],
+        "index": true,
+        "name": "user_id",
+        "nullable": false,
+        "primary_key": false,
+        "server_default": null,
+        "type": "VARCHAR(128)",
+        "unique": false
+      },
+      {
+        "default": null,
+        "foreign_keys": [],
+        "index": true,
+        "name": "library_id",
+        "nullable": false,
+        "primary_key": false,
+        "server_default": null,
+        "type": "VARCHAR(128)",
+        "unique": false
+      },
+      {
+        "default": null,
+        "foreign_keys": [],
+        "index": false,
+        "name": "left_label",
+        "nullable": false,
+        "primary_key": false,
+        "server_default": null,
+        "type": "VARCHAR(255)",
+        "unique": false
+      },
+      {
+        "default": null,
+        "foreign_keys": [],
+        "index": false,
+        "name": "right_label",
+        "nullable": false,
+        "primary_key": false,
+        "server_default": null,
+        "type": "VARCHAR(255)",
+        "unique": false
+      },
+      {
+        "default": null,
+        "foreign_keys": [],
+        "index": false,
+        "name": "entity_type",
+        "nullable": false,
+        "primary_key": false,
+        "server_default": null,
+        "type": "VARCHAR(64)",
+        "unique": false
+      },
+      {
+        "default": null,
+        "foreign_keys": [],
+        "index": true,
+        "name": "decision",
+        "nullable": false,
+        "primary_key": false,
+        "server_default": null,
+        "type": "VARCHAR(32)",
+        "unique": false
+      },
+      {
+        "default": "",
+        "foreign_keys": [],
+        "index": false,
+        "name": "canonical_label",
+        "nullable": false,
+        "primary_key": false,
+        "server_default": null,
+        "type": "VARCHAR(255)",
+        "unique": false
+      },
+      {
+        "default": "0.0",
+        "foreign_keys": [],
+        "index": false,
+        "name": "similarity",
+        "nullable": false,
+        "primary_key": false,
+        "server_default": null,
+        "type": "FLOAT",
+        "unique": false
+      },
+      {
+        "default": null,
+        "foreign_keys": [],
+        "index": false,
+        "name": "adjudicator_version",
+        "nullable": false,
+        "primary_key": false,
+        "server_default": null,
+        "type": "VARCHAR(64)",
+        "unique": false
+      },
+      {
+        "default": "<function utc_now at 0x000001B4092A8E00>",
+        "foreign_keys": [],
+        "index": true,
+        "name": "updated_at",
+        "nullable": false,
+        "primary_key": false,
+        "server_default": null,
+        "type": "DATETIME",
+        "unique": false
+      }
+    ],
+    "constraints": [
+      "PrimaryKeyConstraint(Column('decision_id', AutoString(length=96), table=<knowledge_graph_dedup_decisions>, primary_key=True, nullable=False))"
+    ],
+    "indexes": [
+      {
+        "columns": [
+          "decision"
+        ],
+        "name": "ix_knowledge_graph_dedup_decisions_decision",
+        "unique": false
+      },
+      {
+        "columns": [
+          "library_id"
+        ],
+        "name": "ix_knowledge_graph_dedup_decisions_library_id",
+        "unique": false
+      },
+      {
+        "columns": [
+          "updated_at"
+        ],
+        "name": "ix_knowledge_graph_dedup_decisions_updated_at",
+        "unique": false
+      },
+      {
+        "columns": [
+          "user_id"
+        ],
+        "name": "ix_knowledge_graph_dedup_decisions_user_id",
+        "unique": false
+      }
+    ],
+    "name": "knowledge_graph_dedup_decisions"
   },
   {
     "columns": [
@@ -1779,7 +2058,7 @@
         "unique": false
       },
       {
-        "default": "<function utc_now at 0x0000016D3D1DEF20>",
+        "default": "<function utc_now at 0x000001B40925A660>",
         "foreign_keys": [],
         "index": true,
         "name": "updated_at",
@@ -1963,7 +2242,7 @@
         "unique": null
       },
       {
-        "default": "<function utc_now at 0x0000016D3D1DD940>",
+        "default": "<function utc_now at 0x000001B409259080>",
         "foreign_keys": [],
         "index": true,
         "name": "created_at",
@@ -1974,7 +2253,7 @@
         "unique": false
       },
       {
-        "default": "<function utc_now at 0x0000016D3D1DD800>",
+        "default": "<function utc_now at 0x000001B409258F40>",
         "foreign_keys": [],
         "index": true,
         "name": "updated_at",
@@ -2179,7 +2458,7 @@
         "unique": null
       },
       {
-        "default": "<function utc_now at 0x0000016D3D1DC040>",
+        "default": "<function utc_now at 0x000001B4091FF880>",
         "foreign_keys": [],
         "index": true,
         "name": "created_at",
@@ -2190,7 +2469,7 @@
         "unique": false
       },
       {
-        "default": "<function utc_now at 0x0000016D3D1DC0E0>",
+        "default": "<function utc_now at 0x000001B4091FF7E0>",
         "foreign_keys": [],
         "index": true,
         "name": "updated_at",
@@ -2270,6 +2549,209 @@
       }
     ],
     "name": "knowledge_graph_nodes"
+  },
+  {
+    "columns": [
+      {
+        "default": null,
+        "foreign_keys": [],
+        "index": false,
+        "name": "cache_id",
+        "nullable": false,
+        "primary_key": true,
+        "server_default": null,
+        "type": "VARCHAR(96)",
+        "unique": false
+      },
+      {
+        "default": null,
+        "foreign_keys": [],
+        "index": true,
+        "name": "user_id",
+        "nullable": false,
+        "primary_key": false,
+        "server_default": null,
+        "type": "VARCHAR(128)",
+        "unique": false
+      },
+      {
+        "default": null,
+        "foreign_keys": [],
+        "index": true,
+        "name": "library_id",
+        "nullable": false,
+        "primary_key": false,
+        "server_default": null,
+        "type": "VARCHAR(128)",
+        "unique": false
+      },
+      {
+        "default": null,
+        "foreign_keys": [],
+        "index": true,
+        "name": "document_id",
+        "nullable": false,
+        "primary_key": false,
+        "server_default": null,
+        "type": "VARCHAR(255)",
+        "unique": false
+      },
+      {
+        "default": null,
+        "foreign_keys": [],
+        "index": true,
+        "name": "section_id",
+        "nullable": false,
+        "primary_key": false,
+        "server_default": null,
+        "type": "VARCHAR(128)",
+        "unique": false
+      },
+      {
+        "default": null,
+        "foreign_keys": [],
+        "index": true,
+        "name": "section_hash",
+        "nullable": false,
+        "primary_key": false,
+        "server_default": null,
+        "type": "VARCHAR(128)",
+        "unique": false
+      },
+      {
+        "default": null,
+        "foreign_keys": [],
+        "index": false,
+        "name": "extractor_version",
+        "nullable": false,
+        "primary_key": false,
+        "server_default": null,
+        "type": "VARCHAR(64)",
+        "unique": false
+      },
+      {
+        "default": null,
+        "foreign_keys": [],
+        "index": false,
+        "name": "rule_version",
+        "nullable": false,
+        "primary_key": false,
+        "server_default": null,
+        "type": "VARCHAR(64)",
+        "unique": false
+      },
+      {
+        "default": null,
+        "foreign_keys": [],
+        "index": false,
+        "name": "result_version",
+        "nullable": false,
+        "primary_key": false,
+        "server_default": null,
+        "type": "VARCHAR(64)",
+        "unique": false
+      },
+      {
+        "default": "completed",
+        "foreign_keys": [],
+        "index": true,
+        "name": "status",
+        "nullable": false,
+        "primary_key": false,
+        "server_default": null,
+        "type": "VARCHAR(32)",
+        "unique": false
+      },
+      {
+        "default": null,
+        "foreign_keys": [],
+        "index": null,
+        "name": "payload_json",
+        "nullable": true,
+        "primary_key": false,
+        "server_default": null,
+        "type": "JSON",
+        "unique": null
+      },
+      {
+        "default": null,
+        "foreign_keys": [],
+        "index": null,
+        "name": "pending_candidates_json",
+        "nullable": true,
+        "primary_key": false,
+        "server_default": null,
+        "type": "JSON",
+        "unique": null
+      },
+      {
+        "default": "<function utc_now at 0x000001B40925B9C0>",
+        "foreign_keys": [],
+        "index": true,
+        "name": "updated_at",
+        "nullable": false,
+        "primary_key": false,
+        "server_default": null,
+        "type": "DATETIME",
+        "unique": false
+      }
+    ],
+    "constraints": [
+      "PrimaryKeyConstraint(Column('cache_id', AutoString(length=96), table=<knowledge_graph_section_cache>, primary_key=True, nullable=False))",
+      "UniqueConstraint(Column('user_id', AutoString(length=128), table=<knowledge_graph_section_cache>, nullable=False), Column('library_id', AutoString(length=128), table=<knowledge_graph_section_cache>, nullable=False), Column('document_id', AutoString(length=255), table=<knowledge_graph_section_cache>, nullable=False), Column('section_id', AutoString(length=128), table=<knowledge_graph_section_cache>, nullable=False))"
+    ],
+    "indexes": [
+      {
+        "columns": [
+          "document_id"
+        ],
+        "name": "ix_knowledge_graph_section_cache_document_id",
+        "unique": false
+      },
+      {
+        "columns": [
+          "library_id"
+        ],
+        "name": "ix_knowledge_graph_section_cache_library_id",
+        "unique": false
+      },
+      {
+        "columns": [
+          "section_hash"
+        ],
+        "name": "ix_knowledge_graph_section_cache_section_hash",
+        "unique": false
+      },
+      {
+        "columns": [
+          "section_id"
+        ],
+        "name": "ix_knowledge_graph_section_cache_section_id",
+        "unique": false
+      },
+      {
+        "columns": [
+          "status"
+        ],
+        "name": "ix_knowledge_graph_section_cache_status",
+        "unique": false
+      },
+      {
+        "columns": [
+          "updated_at"
+        ],
+        "name": "ix_knowledge_graph_section_cache_updated_at",
+        "unique": false
+      },
+      {
+        "columns": [
+          "user_id"
+        ],
+        "name": "ix_knowledge_graph_section_cache_user_id",
+        "unique": false
+      }
+    ],
+    "name": "knowledge_graph_section_cache"
   },
   {
     "columns": [
@@ -2373,14 +2855,14 @@
         "unique": false
       },
       {
-        "default": "0",
+        "default": "0.0",
         "foreign_keys": [],
         "index": false,
         "name": "progress",
         "nullable": false,
         "primary_key": false,
         "server_default": null,
-        "type": "INTEGER",
+        "type": "FLOAT",
         "unique": false
       },
       {
@@ -2472,7 +2954,7 @@
         "unique": false
       },
       {
-        "default": "<function utc_now at 0x0000016D3D17E160>",
+        "default": "<function utc_now at 0x000001B40919BCE0>",
         "foreign_keys": [],
         "index": true,
         "name": "created_at",
@@ -2505,7 +2987,7 @@
         "unique": false
       },
       {
-        "default": "<function utc_now at 0x0000016D3D17E340>",
+        "default": "<function utc_now at 0x000001B40919BEC0>",
         "foreign_keys": [],
         "index": false,
         "name": "updated_at",
@@ -2678,7 +3160,7 @@
         "unique": false
       },
       {
-        "default": "<function utc_now at 0x0000016D3D237600>",
+        "default": "<function utc_now at 0x000001B4092FD440>",
         "foreign_keys": [],
         "index": false,
         "name": "created_at",
@@ -2964,7 +3446,7 @@
         "unique": false
       },
       {
-        "default": "<function utc_now at 0x0000016D3D2340E0>",
+        "default": "<function utc_now at 0x000001B4092A9EE0>",
         "foreign_keys": [],
         "index": false,
         "name": "created_at",
@@ -2975,7 +3457,7 @@
         "unique": false
       },
       {
-        "default": "<function utc_now at 0x0000016D3D234220>",
+        "default": "<function utc_now at 0x000001B4092AA020>",
         "foreign_keys": [],
         "index": false,
         "name": "updated_at",
@@ -3096,7 +3578,7 @@
         "unique": false
       },
       {
-        "default": "<function utc_now at 0x0000016D3D235D00>",
+        "default": "<function utc_now at 0x000001B4092ABB00>",
         "foreign_keys": [],
         "index": false,
         "name": "created_at",
@@ -3193,7 +3675,7 @@
         "unique": false
       },
       {
-        "default": "<function utc_now at 0x0000016D3D2E13A0>",
+        "default": "<function utc_now at 0x000001B40935B1A0>",
         "foreign_keys": [],
         "index": true,
         "name": "last_viewed_at",
@@ -3371,7 +3853,7 @@
         "unique": null
       },
       {
-        "default": "<function utc_now at 0x0000016D3D094D60>",
+        "default": "<function utc_now at 0x000001B4090AD4E0>",
         "foreign_keys": [],
         "index": true,
         "name": "valid_from",
@@ -3459,7 +3941,7 @@
         "unique": false
       },
       {
-        "default": "<function utc_now at 0x0000016D3D03D800>",
+        "default": "<function utc_now at 0x000001B4090AD800>",
         "foreign_keys": [],
         "index": true,
         "name": "created_at",
@@ -3470,7 +3952,7 @@
         "unique": false
       },
       {
-        "default": "<function utc_now at 0x0000016D3D03EE80>",
+        "default": "<function utc_now at 0x000001B4090AD940>",
         "foreign_keys": [],
         "index": true,
         "name": "updated_at",
@@ -3623,7 +4105,7 @@
         "unique": false
       },
       {
-        "default": "<function utc_now at 0x0000016D3D17C360>",
+        "default": "<function utc_now at 0x000001B409199DA0>",
         "foreign_keys": [],
         "index": true,
         "name": "created_at",
@@ -3676,6 +4158,308 @@
       }
     ],
     "name": "privacy_records"
+  },
+  {
+    "columns": [
+      {
+        "default": null,
+        "foreign_keys": [],
+        "index": false,
+        "name": "scan_id",
+        "nullable": false,
+        "primary_key": true,
+        "server_default": null,
+        "type": "VARCHAR(64)",
+        "unique": false
+      },
+      {
+        "default": null,
+        "foreign_keys": [],
+        "index": true,
+        "name": "user_id",
+        "nullable": false,
+        "primary_key": false,
+        "server_default": null,
+        "type": "VARCHAR(128)",
+        "unique": false
+      },
+      {
+        "default": null,
+        "foreign_keys": [],
+        "index": true,
+        "name": "library_id",
+        "nullable": false,
+        "primary_key": false,
+        "server_default": null,
+        "type": "VARCHAR(128)",
+        "unique": false
+      },
+      {
+        "default": null,
+        "foreign_keys": [],
+        "index": false,
+        "name": "source_kind",
+        "nullable": false,
+        "primary_key": false,
+        "server_default": null,
+        "type": "VARCHAR(32)",
+        "unique": false
+      },
+      {
+        "default": null,
+        "foreign_keys": [],
+        "index": false,
+        "name": "source_name",
+        "nullable": false,
+        "primary_key": false,
+        "server_default": null,
+        "type": "VARCHAR(2048)",
+        "unique": false
+      },
+      {
+        "default": "",
+        "foreign_keys": [],
+        "index": false,
+        "name": "source_path",
+        "nullable": false,
+        "primary_key": false,
+        "server_default": null,
+        "type": "VARCHAR(2048)",
+        "unique": false
+      },
+      {
+        "default": null,
+        "foreign_keys": [],
+        "index": null,
+        "name": "source_url",
+        "nullable": true,
+        "primary_key": false,
+        "server_default": null,
+        "type": "TEXT",
+        "unique": null
+      },
+      {
+        "default": "0",
+        "foreign_keys": [],
+        "index": false,
+        "name": "size",
+        "nullable": false,
+        "primary_key": false,
+        "server_default": null,
+        "type": "INTEGER",
+        "unique": false
+      },
+      {
+        "default": "True",
+        "foreign_keys": [],
+        "index": false,
+        "name": "ocr_enabled",
+        "nullable": false,
+        "primary_key": false,
+        "server_default": null,
+        "type": "BOOLEAN",
+        "unique": false
+      },
+      {
+        "default": "True",
+        "foreign_keys": [],
+        "index": false,
+        "name": "online_enabled",
+        "nullable": false,
+        "primary_key": false,
+        "server_default": null,
+        "type": "BOOLEAN",
+        "unique": false
+      },
+      {
+        "default": "pending",
+        "foreign_keys": [],
+        "index": false,
+        "name": "parser_engine",
+        "nullable": false,
+        "primary_key": false,
+        "server_default": null,
+        "type": "VARCHAR(32)",
+        "unique": false
+      },
+      {
+        "default": null,
+        "foreign_keys": [],
+        "index": null,
+        "name": "parser_fallback_reason",
+        "nullable": true,
+        "primary_key": false,
+        "server_default": null,
+        "type": "TEXT",
+        "unique": null
+      },
+      {
+        "default": "queued",
+        "foreign_keys": [],
+        "index": true,
+        "name": "status",
+        "nullable": false,
+        "primary_key": false,
+        "server_default": null,
+        "type": "VARCHAR(16)",
+        "unique": false
+      },
+      {
+        "default": "queued",
+        "foreign_keys": [],
+        "index": false,
+        "name": "stage",
+        "nullable": false,
+        "primary_key": false,
+        "server_default": null,
+        "type": "VARCHAR(32)",
+        "unique": false
+      },
+      {
+        "default": "等待解析",
+        "foreign_keys": [],
+        "index": false,
+        "name": "stage_label",
+        "nullable": false,
+        "primary_key": false,
+        "server_default": null,
+        "type": "VARCHAR(1024)",
+        "unique": false
+      },
+      {
+        "default": "0.0",
+        "foreign_keys": [],
+        "index": false,
+        "name": "progress",
+        "nullable": false,
+        "primary_key": false,
+        "server_default": null,
+        "type": "FLOAT",
+        "unique": false
+      },
+      {
+        "default": null,
+        "foreign_keys": [],
+        "index": null,
+        "name": "no_ocr_markdown",
+        "nullable": true,
+        "primary_key": false,
+        "server_default": null,
+        "type": "TEXT",
+        "unique": null
+      },
+      {
+        "default": null,
+        "foreign_keys": [],
+        "index": null,
+        "name": "ocr_markdown",
+        "nullable": true,
+        "primary_key": false,
+        "server_default": null,
+        "type": "TEXT",
+        "unique": null
+      },
+      {
+        "default": null,
+        "foreign_keys": [],
+        "index": null,
+        "name": "ocr_blocks_json",
+        "nullable": true,
+        "primary_key": false,
+        "server_default": null,
+        "type": "TEXT",
+        "unique": null
+      },
+      {
+        "default": null,
+        "foreign_keys": [],
+        "index": null,
+        "name": "assets_json",
+        "nullable": true,
+        "primary_key": false,
+        "server_default": null,
+        "type": "TEXT",
+        "unique": null
+      },
+      {
+        "default": null,
+        "foreign_keys": [],
+        "index": null,
+        "name": "error",
+        "nullable": true,
+        "primary_key": false,
+        "server_default": null,
+        "type": "TEXT",
+        "unique": null
+      },
+      {
+        "default": "<function utc_now at 0x000001B4091FDD00>",
+        "foreign_keys": [],
+        "index": true,
+        "name": "created_at",
+        "nullable": false,
+        "primary_key": false,
+        "server_default": null,
+        "type": "DATETIME",
+        "unique": false
+      },
+      {
+        "default": "<function utc_now at 0x000001B4091FDDA0>",
+        "foreign_keys": [],
+        "index": false,
+        "name": "updated_at",
+        "nullable": false,
+        "primary_key": false,
+        "server_default": null,
+        "type": "DATETIME",
+        "unique": false
+      },
+      {
+        "default": null,
+        "foreign_keys": [],
+        "index": false,
+        "name": "finished_at",
+        "nullable": true,
+        "primary_key": false,
+        "server_default": null,
+        "type": "DATETIME",
+        "unique": false
+      }
+    ],
+    "constraints": [
+      "PrimaryKeyConstraint(Column('scan_id', AutoString(length=64), table=<scanner_records>, primary_key=True, nullable=False))"
+    ],
+    "indexes": [
+      {
+        "columns": [
+          "created_at"
+        ],
+        "name": "ix_scanner_records_created_at",
+        "unique": false
+      },
+      {
+        "columns": [
+          "library_id"
+        ],
+        "name": "ix_scanner_records_library_id",
+        "unique": false
+      },
+      {
+        "columns": [
+          "status"
+        ],
+        "name": "ix_scanner_records_status",
+        "unique": false
+      },
+      {
+        "columns": [
+          "user_id"
+        ],
+        "name": "ix_scanner_records_user_id",
+        "unique": false
+      }
+    ],
+    "name": "scanner_records"
   },
   {
     "columns": [
@@ -3847,7 +4631,7 @@
         "unique": null
       },
       {
-        "default": "<function utc_now at 0x0000016D3D096A20>",
+        "default": "<function utc_now at 0x000001B4090AF420>",
         "foreign_keys": [],
         "index": true,
         "name": "created_at",
@@ -3859,7 +4643,7 @@
       }
     ],
     "constraints": [
-      "ForeignKeyConstraint(<sqlalchemy.sql.base.ReadOnlyColumnCollection object at 0x0000016D3D43C4F0>, None, table=Table('session_attachments', MetaData(), Column('attachment_id', AutoString(length=64), table=<session_attachments>, primary_key=True, nullable=False), Column('user_id', AutoString(length=128), table=<session_attachments>, nullable=False), Column('session_id', AutoString(length=64), ForeignKey('agent_sessions.session_id'), table=<session_attachments>, nullable=False), Column('library_id', AutoString(length=128), table=<session_attachments>, nullable=False), Column('library_name', AutoString(length=255), table=<session_attachments>, nullable=False, default=ScalarElementColumnDefault('')), Column('filename', AutoString(length=512), table=<session_attachments>, nullable=False), Column('stored_name', AutoString(length=512), table=<session_attachments>, nullable=False), Column('path', Text(), table=<session_attachments>), Column('text_path', Text(), table=<session_attachments>), Column('uri', Text(), table=<session_attachments>), Column('mime_type', AutoString(length=255), table=<session_attachments>, nullable=False, default=ScalarElementColumnDefault('')), Column('size', Integer(), table=<session_attachments>, nullable=False, default=ScalarElementColumnDefault(0)), Column('source_type', AutoString(length=64), table=<session_attachments>, nullable=False, default=ScalarElementColumnDefault('')), Column('summary', Text(), table=<session_attachments>), Column('metadata_json', JSON(), table=<session_attachments>), Column('created_at', DateTime(), table=<session_attachments>, nullable=False, default=CallableColumnDefault(<function utc_now at 0x0000016D3D096A20>)), schema=None))",
+      "ForeignKeyConstraint(<sqlalchemy.sql.base.ReadOnlyColumnCollection object at 0x000001B40A4BE9D0>, None, table=Table('session_attachments', MetaData(), Column('attachment_id', AutoString(length=64), table=<session_attachments>, primary_key=True, nullable=False), Column('user_id', AutoString(length=128), table=<session_attachments>, nullable=False), Column('session_id', AutoString(length=64), ForeignKey('agent_sessions.session_id'), table=<session_attachments>, nullable=False), Column('library_id', AutoString(length=128), table=<session_attachments>, nullable=False), Column('library_name', AutoString(length=255), table=<session_attachments>, nullable=False, default=ScalarElementColumnDefault('')), Column('filename', AutoString(length=512), table=<session_attachments>, nullable=False), Column('stored_name', AutoString(length=512), table=<session_attachments>, nullable=False), Column('path', Text(), table=<session_attachments>), Column('text_path', Text(), table=<session_attachments>), Column('uri', Text(), table=<session_attachments>), Column('mime_type', AutoString(length=255), table=<session_attachments>, nullable=False, default=ScalarElementColumnDefault('')), Column('size', Integer(), table=<session_attachments>, nullable=False, default=ScalarElementColumnDefault(0)), Column('source_type', AutoString(length=64), table=<session_attachments>, nullable=False, default=ScalarElementColumnDefault('')), Column('summary', Text(), table=<session_attachments>), Column('metadata_json', JSON(), table=<session_attachments>), Column('created_at', DateTime(), table=<session_attachments>, nullable=False, default=CallableColumnDefault(<function utc_now at 0x000001B4090AF420>)), schema=None))",
       "PrimaryKeyConstraint(Column('attachment_id', AutoString(length=64), table=<session_attachments>, primary_key=True, nullable=False))"
     ],
     "indexes": [
@@ -4236,7 +5020,7 @@
         "unique": false
       },
       {
-        "default": "<function utc_now at 0x0000016D3D2E02C0>",
+        "default": "<function utc_now at 0x000001B40935A0C0>",
         "foreign_keys": [],
         "index": true,
         "name": "created_at",
@@ -4247,7 +5031,7 @@
         "unique": false
       },
       {
-        "default": "<function utc_now at 0x0000016D3D2E0220>",
+        "default": "<function utc_now at 0x000001B40935A020>",
         "foreign_keys": [],
         "index": true,
         "name": "updated_at",
@@ -4381,7 +5165,7 @@
         "unique": false
       },
       {
-        "default": "<function utc_now at 0x0000016D3D288EA0>",
+        "default": "<function utc_now at 0x000001B4092FFA60>",
         "foreign_keys": [],
         "index": false,
         "name": "created_at",
@@ -4392,7 +5176,7 @@
         "unique": false
       },
       {
-        "default": "<function utc_now at 0x0000016D3D288900>",
+        "default": "<function utc_now at 0x000001B4092FF9C0>",
         "foreign_keys": [],
         "index": true,
         "name": "updated_at",
@@ -4459,7 +5243,7 @@
         "unique": false
       },
       {
-        "default": "<function utc_now at 0x0000016D3D329940>",
+        "default": "<function utc_now at 0x000001B4093AB6A0>",
         "foreign_keys": [],
         "index": false,
         "name": "imported_at",
@@ -4589,7 +5373,7 @@
         "unique": false
       },
       {
-        "default": "<function utc_now at 0x0000016D3D328680>",
+        "default": "<function utc_now at 0x000001B4093AA3E0>",
         "foreign_keys": [],
         "index": false,
         "name": "created_at",
@@ -4600,7 +5384,7 @@
         "unique": false
       },
       {
-        "default": "<function utc_now at 0x0000016D3D328540>",
+        "default": "<function utc_now at 0x000001B4093AA2A0>",
         "foreign_keys": [],
         "index": false,
         "name": "updated_at",
@@ -4694,7 +5478,7 @@
         "unique": false
       },
       {
-        "default": "<function utc_now at 0x0000016D3D389940>",
+        "default": "<function utc_now at 0x000001B4093EFD80>",
         "foreign_keys": [],
         "index": false,
         "name": "created_at",
@@ -4705,7 +5489,7 @@
         "unique": false
       },
       {
-        "default": "<function utc_now at 0x0000016D3D389BC0>",
+        "default": "<function utc_now at 0x000001B40A420040>",
         "foreign_keys": [],
         "index": false,
         "name": "updated_at",
@@ -4791,6 +5575,28 @@
         "unique": false
       },
       {
+        "default": "0",
+        "foreign_keys": [],
+        "index": false,
+        "name": "model_context_window_tokens",
+        "nullable": false,
+        "primary_key": false,
+        "server_default": null,
+        "type": "INTEGER",
+        "unique": false
+      },
+      {
+        "default": "0",
+        "foreign_keys": [],
+        "index": false,
+        "name": "model_max_output_tokens",
+        "nullable": false,
+        "primary_key": false,
+        "server_default": null,
+        "type": "INTEGER",
+        "unique": false
+      },
+      {
         "default": "",
         "foreign_keys": [],
         "index": false,
@@ -4824,7 +5630,62 @@
         "unique": false
       },
       {
-        "default": "<function utc_now at 0x0000016D3D38AC00>",
+        "default": "0",
+        "foreign_keys": [],
+        "index": false,
+        "name": "small_model_context_window_tokens",
+        "nullable": false,
+        "primary_key": false,
+        "server_default": null,
+        "type": "INTEGER",
+        "unique": false
+      },
+      {
+        "default": "0",
+        "foreign_keys": [],
+        "index": false,
+        "name": "small_model_max_output_tokens",
+        "nullable": false,
+        "primary_key": false,
+        "server_default": null,
+        "type": "INTEGER",
+        "unique": false
+      },
+      {
+        "default": "",
+        "foreign_keys": [],
+        "index": false,
+        "name": "vision_api_key",
+        "nullable": false,
+        "primary_key": false,
+        "server_default": null,
+        "type": "VARCHAR(1024)",
+        "unique": false
+      },
+      {
+        "default": "",
+        "foreign_keys": [],
+        "index": false,
+        "name": "vision_base_url",
+        "nullable": false,
+        "primary_key": false,
+        "server_default": null,
+        "type": "VARCHAR(1024)",
+        "unique": false
+      },
+      {
+        "default": "",
+        "foreign_keys": [],
+        "index": false,
+        "name": "vision_model_name",
+        "nullable": false,
+        "primary_key": false,
+        "server_default": null,
+        "type": "VARCHAR(256)",
+        "unique": false
+      },
+      {
+        "default": "<function utc_now at 0x000001B40A420F40>",
         "foreign_keys": [],
         "index": false,
         "name": "updated_at",
@@ -4910,7 +5771,7 @@
         "unique": false
       },
       {
-        "default": "<function utc_now at 0x0000016D3D38B880>",
+        "default": "<function utc_now at 0x000001B40A422160>",
         "foreign_keys": [],
         "index": false,
         "name": "created_at",
@@ -4921,7 +5782,7 @@
         "unique": false
       },
       {
-        "default": "<function utc_now at 0x0000016D3D38B9C0>",
+        "default": "<function utc_now at 0x000001B40A4222A0>",
         "foreign_keys": [],
         "index": false,
         "name": "updated_at",
@@ -5045,6 +5906,94 @@
         "primary_key": false,
         "server_default": null,
         "type": "BOOLEAN",
+        "unique": false
+      },
+      {
+        "default": "False",
+        "foreign_keys": [],
+        "index": false,
+        "name": "vlm_enabled",
+        "nullable": false,
+        "primary_key": false,
+        "server_default": null,
+        "type": "BOOLEAN",
+        "unique": false
+      },
+      {
+        "default": "",
+        "foreign_keys": [],
+        "index": false,
+        "name": "vlm_api_key",
+        "nullable": false,
+        "primary_key": false,
+        "server_default": null,
+        "type": "VARCHAR(1024)",
+        "unique": false
+      },
+      {
+        "default": "",
+        "foreign_keys": [],
+        "index": false,
+        "name": "vlm_model",
+        "nullable": false,
+        "primary_key": false,
+        "server_default": null,
+        "type": "VARCHAR(32)",
+        "unique": false
+      },
+      {
+        "default": "0",
+        "foreign_keys": [],
+        "index": false,
+        "name": "vlm_max_concurrency",
+        "nullable": false,
+        "primary_key": false,
+        "server_default": null,
+        "type": "INTEGER",
+        "unique": false
+      },
+      {
+        "default": "0",
+        "foreign_keys": [],
+        "index": false,
+        "name": "vlm_max_file_bytes",
+        "nullable": false,
+        "primary_key": false,
+        "server_default": null,
+        "type": "INTEGER",
+        "unique": false
+      },
+      {
+        "default": "0",
+        "foreign_keys": [],
+        "index": false,
+        "name": "vlm_max_pages",
+        "nullable": false,
+        "primary_key": false,
+        "server_default": null,
+        "type": "INTEGER",
+        "unique": false
+      },
+      {
+        "default": "0",
+        "foreign_keys": [],
+        "index": false,
+        "name": "vlm_submit_rate_per_minute",
+        "nullable": false,
+        "primary_key": false,
+        "server_default": null,
+        "type": "INTEGER",
+        "unique": false
+      },
+      {
+        "default": "0",
+        "foreign_keys": [],
+        "index": false,
+        "name": "vlm_result_rate_per_minute",
+        "nullable": false,
+        "primary_key": false,
+        "server_default": null,
+        "type": "INTEGER",
         "unique": false
       },
       {
@@ -5202,6 +6151,28 @@
         "unique": false
       },
       {
+        "default": null,
+        "foreign_keys": [],
+        "index": null,
+        "name": "tag_colors",
+        "nullable": true,
+        "primary_key": false,
+        "server_default": null,
+        "type": "TEXT",
+        "unique": null
+      },
+      {
+        "default": null,
+        "foreign_keys": [],
+        "index": false,
+        "name": "tag_colors_translucent",
+        "nullable": true,
+        "primary_key": false,
+        "server_default": null,
+        "type": "BOOLEAN",
+        "unique": false
+      },
+      {
         "default": "",
         "foreign_keys": [],
         "index": false,
@@ -5268,7 +6239,7 @@
         "unique": null
       },
       {
-        "default": "<function utc_now at 0x0000016D3D32BD80>",
+        "default": "<function utc_now at 0x000001B4093EDBC0>",
         "foreign_keys": [],
         "index": false,
         "name": "created_at",
@@ -5279,7 +6250,7 @@
         "unique": false
       },
       {
-        "default": "<function utc_now at 0x0000016D3D32BE20>",
+        "default": "<function utc_now at 0x000001B4093EDC60>",
         "foreign_keys": [],
         "index": false,
         "name": "updated_at",
@@ -5332,7 +6303,7 @@
         "unique": null
       },
       {
-        "default": "<function utc_now at 0x0000016D3D32A480>",
+        "default": "<function utc_now at 0x000001B4093EC180>",
         "foreign_keys": [],
         "index": false,
         "name": "created_at",
@@ -5356,6 +6327,155 @@
       }
     ],
     "name": "user_system_prompts"
+  },
+  {
+    "columns": [
+      {
+        "default": null,
+        "foreign_keys": [],
+        "index": false,
+        "name": "config_id",
+        "nullable": false,
+        "primary_key": true,
+        "server_default": null,
+        "type": "VARCHAR(64)",
+        "unique": false
+      },
+      {
+        "default": null,
+        "foreign_keys": [],
+        "index": true,
+        "name": "user_id",
+        "nullable": false,
+        "primary_key": false,
+        "server_default": null,
+        "type": "VARCHAR(128)",
+        "unique": false
+      },
+      {
+        "default": "",
+        "foreign_keys": [],
+        "index": false,
+        "name": "label",
+        "nullable": false,
+        "primary_key": false,
+        "server_default": null,
+        "type": "VARCHAR(256)",
+        "unique": false
+      },
+      {
+        "default": "",
+        "foreign_keys": [],
+        "index": false,
+        "name": "api_key",
+        "nullable": false,
+        "primary_key": false,
+        "server_default": null,
+        "type": "VARCHAR(1024)",
+        "unique": false
+      },
+      {
+        "default": "vlm",
+        "foreign_keys": [],
+        "index": false,
+        "name": "model",
+        "nullable": false,
+        "primary_key": false,
+        "server_default": null,
+        "type": "VARCHAR(32)",
+        "unique": false
+      },
+      {
+        "default": "2",
+        "foreign_keys": [],
+        "index": false,
+        "name": "max_concurrency",
+        "nullable": false,
+        "primary_key": false,
+        "server_default": null,
+        "type": "INTEGER",
+        "unique": false
+      },
+      {
+        "default": "209715200",
+        "foreign_keys": [],
+        "index": false,
+        "name": "max_file_bytes",
+        "nullable": false,
+        "primary_key": false,
+        "server_default": null,
+        "type": "INTEGER",
+        "unique": false
+      },
+      {
+        "default": "600",
+        "foreign_keys": [],
+        "index": false,
+        "name": "max_pages",
+        "nullable": false,
+        "primary_key": false,
+        "server_default": null,
+        "type": "INTEGER",
+        "unique": false
+      },
+      {
+        "default": "300",
+        "foreign_keys": [],
+        "index": false,
+        "name": "submit_rate_per_minute",
+        "nullable": false,
+        "primary_key": false,
+        "server_default": null,
+        "type": "INTEGER",
+        "unique": false
+      },
+      {
+        "default": "1000",
+        "foreign_keys": [],
+        "index": false,
+        "name": "result_rate_per_minute",
+        "nullable": false,
+        "primary_key": false,
+        "server_default": null,
+        "type": "INTEGER",
+        "unique": false
+      },
+      {
+        "default": "<function utc_now at 0x000001B40A422FC0>",
+        "foreign_keys": [],
+        "index": false,
+        "name": "created_at",
+        "nullable": false,
+        "primary_key": false,
+        "server_default": null,
+        "type": "DATETIME",
+        "unique": false
+      },
+      {
+        "default": "<function utc_now at 0x000001B40A423100>",
+        "foreign_keys": [],
+        "index": false,
+        "name": "updated_at",
+        "nullable": false,
+        "primary_key": false,
+        "server_default": null,
+        "type": "DATETIME",
+        "unique": false
+      }
+    ],
+    "constraints": [
+      "PrimaryKeyConstraint(Column('config_id', AutoString(length=64), table=<user_vlm_config_presets>, primary_key=True, nullable=False))"
+    ],
+    "indexes": [
+      {
+        "columns": [
+          "user_id"
+        ],
+        "name": "ix_user_vlm_config_presets_user_id",
+        "unique": false
+      }
+    ],
+    "name": "user_vlm_config_presets"
   },
   {
     "columns": [
@@ -5437,7 +6557,7 @@
         "unique": false
       },
       {
-        "default": "<function utc_now at 0x0000016D3D3CFB00>",
+        "default": "<function utc_now at 0x000001B40A46F560>",
         "foreign_keys": [],
         "index": false,
         "name": "created_at",
@@ -5558,7 +6678,7 @@
         "unique": false
       },
       {
-        "default": "<function utc_now at 0x0000016D3D3CD580>",
+        "default": "<function utc_now at 0x000001B40A46CFE0>",
         "foreign_keys": [],
         "index": false,
         "name": "created_at",
@@ -5569,7 +6689,7 @@
         "unique": false
       },
       {
-        "default": "<function utc_now at 0x0000016D3D3CD4E0>",
+        "default": "<function utc_now at 0x000001B40A46CF40>",
         "foreign_keys": [],
         "index": false,
         "name": "updated_at",
@@ -5666,7 +6786,7 @@
         "unique": false
       },
       {
-        "default": "<function utc_now at 0x0000016D3D3CC7C0>",
+        "default": "<function utc_now at 0x000001B40A46C220>",
         "foreign_keys": [],
         "index": false,
         "name": "created_at",
@@ -5677,7 +6797,7 @@
         "unique": false
       },
       {
-        "default": "<function utc_now at 0x0000016D3D3CC720>",
+        "default": "<function utc_now at 0x000001B40A46C180>",
         "foreign_keys": [],
         "index": false,
         "name": "updated_at",
@@ -5730,7 +6850,7 @@
         "unique": false
       },
       {
-        "default": "<function utc_now at 0x0000016D3D3CE480>",
+        "default": "<function utc_now at 0x000001B40A46DEE0>",
         "foreign_keys": [],
         "index": false,
         "name": "created_at",

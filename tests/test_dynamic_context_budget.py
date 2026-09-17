@@ -342,7 +342,6 @@ def test_model_input_producers_do_not_reintroduce_fixed_prefix_slices() -> None:
         "agent_service/tools/builtin/knowledge.py": ["content[:max_chars"],
         "agent_service/tools/builtin/web.py": ["text[:limits.web_fetch"],
         "agent_service/services/skill/service.py": ["read_text(encoding=\"utf-8\")[:"],
-        "agent_service/services/local_qwen/service.py": ["ocr_text.strip()[:", "_LOCAL_SYSTEM_CONTEXT_CHARS"],
         "agent_service/services/knowledge_graph/service.py": ["content[:self.config.limits"],
         "agent_service/services/structured_generation/service.py": ["request.source.content[:"],
     }

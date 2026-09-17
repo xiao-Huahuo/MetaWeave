@@ -205,11 +205,6 @@
     "output": "............                                                             [100%]\n12 passed in 7.43s\n"
   },
   {
-    "path": "tests/test_local_qwen_service.py",
-    "returncode": 0,
-    "output": ".............                                                            [100%]\n13 passed in 6.82s\n"
-  },
-  {
     "path": "tests/test_management_api.py",
     "returncode": 0,
     "output": "...                                                                      [100%]\n============================== warnings summary ===============================\n..\\..\\..\\Softwares\\Python\\Python312\\Lib\\site-packages\\langgraph\\cache\\base\\__init__.py:8\n  D:\\Softwares\\Python\\Python312\\Lib\\site-packages\\langgraph\\cache\\base\\__init__.py:8: LangChainPendingDeprecationWarning: The default value of `allowed_objects` will change in a future version. Pass an explicit value (e.g., allowed_objects='messages' or allowed_objects='core') to suppress this warning.\n    from langgraph.checkpoint.serde.jsonplus import JsonPlusSerializer\n\n-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html\n3 passed, 1 warning in 7.30s\n"

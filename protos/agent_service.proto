@@ -696,6 +696,9 @@ message LLMConfigSaveRequest {
   int64 model_max_output_tokens = 9;
   int64 small_model_context_window_tokens = 10;
   int64 small_model_max_output_tokens = 11;
+  string vision_api_key = 12;
+  string vision_base_url = 13;
+  string vision_model_name = 14;
 }
 
 message LLMConfigResponse {
@@ -719,6 +722,13 @@ message LLMConfigResponse {
   int64 model_max_output_tokens = 18;
   int64 small_model_context_window_tokens = 19;
   int64 small_model_max_output_tokens = 20;
+  string vision_api_key = 21;
+  string vision_base_url = 22;
+  string vision_model_name = 23;
+  string effective_vision_api_key = 24;
+  string effective_vision_base_url = 25;
+  string effective_vision_model_name = 26;
+  string effective_vision_model_source = 27;
 }
 
 message LLMConfigPresetSaveRequest {

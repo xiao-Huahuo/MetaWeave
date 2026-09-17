@@ -143,7 +143,7 @@ describe('chat reference history', () => {
         mode: 'background',
         status: 'completed',
         access_mode: 'readonly',
-        allowed_tools: ['read_knowledge_file'],
+        allowed_tools: ['read_file'],
         summary: '完成',
       },
     }
@@ -481,7 +481,7 @@ describe('chat reference history', () => {
       yield {
         node: 'agent',
         content: '我先读取目标文档。',
-        tool_calls: [{ id: 'call_read_1', name: 'read_knowledge_file', args: { path: 'notes/a.md' } }],
+        tool_calls: [{ id: 'call_read_1', name: 'read_file', args: { path: 'notes/a.md' } }],
       }
     })
     const store = useChatStore()
@@ -660,18 +660,18 @@ describe('chat reference history', () => {
         node: 'agent',
         content: '',
         tool_calls: [
-          { id: 'call_a', name: 'read_knowledge_file', args: { path: 'a.md' } },
-          { id: 'call_b', name: 'read_knowledge_file', args: { path: 'b.md' } },
+          { id: 'call_a', name: 'read_file', args: { path: 'a.md' } },
+          { id: 'call_b', name: 'read_file', args: { path: 'b.md' } },
         ],
       }
       yield {
         node: 'action',
-        trace: [{ event: 'tool_call_end', tool_call_id: 'call_b', tool_name: 'read_knowledge_file', raw_content: 'B' }],
+        trace: [{ event: 'tool_call_end', tool_call_id: 'call_b', tool_name: 'read_file', raw_content: 'B' }],
       }
       yield { node: 'agent', content: '两个结果并发返回。' }
       yield {
         node: 'action',
-        trace: [{ event: 'tool_call_end', tool_call_id: 'call_a', tool_name: 'read_knowledge_file', raw_content: 'A' }],
+        trace: [{ event: 'tool_call_end', tool_call_id: 'call_a', tool_name: 'read_file', raw_content: 'A' }],
       }
     })
     const store = useChatStore()

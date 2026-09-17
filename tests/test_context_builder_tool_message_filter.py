@@ -19,7 +19,7 @@ def _ai_with_tool_calls(*tool_call_ids: str) -> AIMessage:
     return AIMessage(
         content="",
         tool_calls=[
-            {"id": tool_call_id, "name": "read_knowledge_file", "args": {}}
+            {"id": tool_call_id, "name": "read_file", "args": {}}
             for tool_call_id in tool_call_ids
         ],
     )

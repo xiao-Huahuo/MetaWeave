@@ -35,15 +35,18 @@ from agent_service.services.scheduler.types import (
     BACKGROUND_SUMMARY_TASK,
     FOREGROUND_AGENT_TASK,
     LLMOperation,
+    LLMConfigurationError,
     LLMTaskHandle,
     LLMTaskOverloadedError,
     LARGE_MODEL_TIER,
     SMALL_MODEL_TIER,
+    VISION_MODEL_TIER,
+    VISION_UNDERSTANDING_TASK,
     SUPPORTED_MODEL_TIERS,
     SUPPORTED_TASK_TYPES,
     ScheduledLLMTask,
 )
-from agent_service.core.context_budget import ModelCapacity
+from agent_service.core.context_budget import ContextBudget, ModelCapacity
 
 
 _DSML_TOOL_BLOCK_RE = re.compile(
@@ -288,20 +291,6 @@ class LLMTaskRuntimeMixin:
             small_base_url=small_base_url,
             small_model_name=small_model_name,
         )
-        use_local_qwen = (
-            model_name == self.config.model.local_model_name
-            and not resolved_api_key
-            and not resolved_base_url
-        )
-        if not resolved_api_key and not use_local_qwen:
-            logger = __import__("logging").getLogger(__name__)
-            logger.error(
-                "_get_chat_model: MISSING API KEY tier=%s model=%s has_api_key_param=%s has_small_api_key_param=%s",
-                model_tier,
-                model_name,
-                bool(api_key),
-                bool(small_api_key),
-            )
         cache_key = (
             model_tier,
             model_name,
@@ -315,29 +304,21 @@ class LLMTaskRuntimeMixin:
             model = self._model_cache.get(cache_key)
             if model is not None:
                 return model
-            if use_local_qwen:
-                from agent_service.services.local_qwen.service import LocalQwenChatModel, get_local_qwen_service
-
-                model = LocalQwenChatModel(
-                    service=get_local_qwen_service(self.config),
-                    temperature=final_temperature,
-                )
-            else:
-                model_kwargs = self.config.model.get_model_kwargs(model_name)
-                model_class = (
-                    DeepSeekChatOpenAI
-                    if DeepSeekChatOpenAI.supports_model(model_name)
-                    else ChatOpenAI
-                )
-                model = model_class(
-                    model=model_name,
-                    api_key=resolved_api_key,
-                    base_url=resolved_base_url,
-                    temperature=final_temperature,
-                    timeout=timeout_seconds,
-                    max_retries=0,
-                    **model_kwargs,
-                )
+            model_kwargs = self.config.model.get_model_kwargs(model_name)
+            model_class = (
+                DeepSeekChatOpenAI
+                if DeepSeekChatOpenAI.supports_model(model_name)
+                else ChatOpenAI
+            )
+            model = model_class(
+                model=model_name,
+                api_key=resolved_api_key,
+                base_url=resolved_base_url,
+                temperature=final_temperature,
+                timeout=timeout_seconds,
+                max_retries=0,
+                **model_kwargs,
+            )
             if tool_names:
                 tool_registry = self._get_tool_registry()
                 tools = [
@@ -453,6 +434,30 @@ class LLMTaskRuntimeMixin:
             context_window_tokens=context_window_tokens,
             max_output_tokens=max_output_tokens,
         )
+        if model_tier == VISION_MODEL_TIER:
+            source_messages = list(messages)
+            budget_messages = [
+                message.model_copy(update={"content": self._vision_budget_content(message.content)})
+                for message in source_messages
+            ]
+            budget = ContextBudget.from_config(config=self.config, capacity=capacity)
+            final_tokens = ContextBuilder.estimate_messages_tokens(
+                budget_messages,
+                model_name=resolved_model,
+            )
+            if final_tokens > budget.input_budget_tokens:
+                raise ValueError(
+                    "context_capacity_exceeded: 视觉问题与 OCR 文本超过模型输入预算 "
+                    f"{final_tokens}/{budget.input_budget_tokens} tokens。"
+                )
+            return source_messages, {
+                **budget.to_dict(),
+                "fixed_tokens": final_tokens,
+                "flexible_budget_tokens": 0,
+                "final_input_tokens": final_tokens,
+                "remaining_tokens": budget.input_budget_tokens - final_tokens,
+                "representations": [],
+            }
         selected_name_set = set(tool_names or [])
         selected_tools = [
             tool
@@ -483,6 +488,23 @@ class LLMTaskRuntimeMixin:
             capacity=capacity,
             tool_definition_tokens=tool_definition_tokens,
         )
+
+    @staticmethod
+    def _vision_budget_content(content: Any) -> str:
+        """只计量多模态消息的文本块，图片字节由提供商视觉 tokenizer 处理。"""
+
+        if not isinstance(content, list):
+            return str(content or "")
+        text_parts = [
+            str(block.get("text") or "")
+            for block in content
+            if isinstance(block, dict) and block.get("type") == "text"
+        ]
+        image_count = sum(
+            isinstance(block, dict) and block.get("type") in {"image", "image_url"}
+            for block in content
+        )
+        return "\n".join([*text_parts, *("[image]" for _ in range(image_count))])
 
     @staticmethod
     def _serialize_observability_messages(messages: list[BaseMessage]) -> list[dict[str, Any]]:
@@ -519,18 +541,37 @@ class LLMTaskRuntimeMixin:
         configured_primary_model = (model_name or self.config.model.model_name or "").strip()
         primary_api_key = (api_key or self.config.model.api_key or "").strip()
         primary_base_url = (base_url or self.config.model.base_url or "").strip()
-        primary_is_remote = bool(configured_primary_model and primary_api_key)
-        primary_model_name = configured_primary_model if primary_is_remote else self.config.model.local_model_name
-        resolved_small_model_name = (
-            (
-                small_model_name
-                or self.config.model.small_model_name
-                or configured_primary_model
+        if not configured_primary_model or not primary_api_key:
+            raise LLMConfigurationError(
+                "Missing API Key or model name: 请先在设置中配置有效的大模型名称和 API Key。"
             )
-            if primary_is_remote
-            else self.config.model.local_model_name
-        ).strip()
+        primary_model_name = configured_primary_model
         if model_tier == SMALL_MODEL_TIER:
+            configured_small_model = (
+                small_model_name or self.config.model.small_model_name or ""
+            ).strip()
+            if not configured_small_model:
+                resolved_small_model_name = primary_model_name
+                resolved_small_api_key = primary_api_key
+                resolved_small_base_url = primary_base_url
+            else:
+                resolved_small_model_name = configured_small_model
+                configured_small_api_key = (
+                    small_api_key or self.config.model.small_model_api_key or ""
+                ).strip()
+                configured_small_base_url = (
+                    small_base_url or self.config.model.small_model_base_url or ""
+                ).strip()
+                if (
+                    configured_small_base_url
+                    and configured_small_base_url != primary_base_url
+                    and not configured_small_api_key
+                ):
+                    raise LLMConfigurationError(
+                        "Missing API Key: 小模型使用独立 Base URL 时必须配置独立 API Key。"
+                    )
+                resolved_small_api_key = configured_small_api_key or primary_api_key
+                resolved_small_base_url = configured_small_base_url or primary_base_url
             small_temperature = self.config.model._normalize_temperature_for_model(
                 model_name=resolved_small_model_name,
                 requested_temperature=(
@@ -539,12 +580,10 @@ class LLMTaskRuntimeMixin:
                     else requested_temperature
                 ),
             )
-            if not primary_is_remote:
-                return resolved_small_model_name, "", "", small_temperature
             return (
                 resolved_small_model_name,
-                (small_api_key or self.config.model.small_model_api_key or primary_api_key or "").strip(),
-                (small_base_url or self.config.model.small_model_base_url or primary_base_url or "").strip(),
+                resolved_small_api_key,
+                resolved_small_base_url,
                 small_temperature,
             )
         primary_temperature = self.config.model._normalize_temperature_for_model(
@@ -555,8 +594,6 @@ class LLMTaskRuntimeMixin:
                 else requested_temperature
             ),
         )
-        if not primary_is_remote:
-            return primary_model_name, "", "", primary_temperature
         return primary_model_name, primary_api_key, primary_base_url, primary_temperature
 
     @contextmanager
@@ -654,7 +691,7 @@ class LLMTaskRuntimeMixin:
             return float(self.task_config.foreground_timeout_seconds)
         if task_type == BACKGROUND_SUMMARY_TASK:
             return float(self.task_config.summary_timeout_seconds)
-        if task_type == BACKGROUND_FACT_RESOLUTION_TASK:
+        if task_type in {BACKGROUND_FACT_RESOLUTION_TASK, VISION_UNDERSTANDING_TASK}:
             return float(self.task_config.fact_resolution_timeout_seconds)
         return float(self.task_config.default_timeout_seconds)
 

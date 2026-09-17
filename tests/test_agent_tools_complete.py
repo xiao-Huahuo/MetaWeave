@@ -90,7 +90,7 @@ def test_all_registered_tools_build_langchain_schemas() -> None:
     registry = ToolRegistry.with_builtin_tools()
     converted = registry.to_langchain_tools()
 
-    assert len(registry.definitions) == 107
+    assert len(registry.definitions) == 106
     assert {tool.name for tool in converted} == set(registry.definitions)
     assert all(callable(definition.function) for definition in registry.definitions.values())
 
@@ -358,7 +358,7 @@ def test_missing_knowledge_file_adapters_execute(runtime: SimpleNamespace, monke
     })
 
     assert "a.md" in knowledge.list_knowledge_files()
-    assert "old text" in knowledge.read_knowledge_file("a.md")
+    assert "old text" in knowledge.read_file("a.md")
     assert "a.md" in knowledge.patch_knowledge_file("a.md", "old", "new")
     assert "a.md" in knowledge.write_knowledge_file("a.md", "content")
     assert "visualization generated" in knowledge.show_markdown_html("Title", "<p>ok</p>")

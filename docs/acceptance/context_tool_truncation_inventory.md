@@ -21,7 +21,9 @@
 | `model.small_model_context_window_tokens` / `model.small_model_max_output_tokens` | 0 / 0 | 小模型能力覆盖；0 表示继承或继续解析。 |
 | `model.model_capabilities` | `{}` | 按模型名登记明确窗口和最大输出。 |
 
-真实请求统一经过 `ContextBuilder.assemble_request_messages`：固定块先扣除，弹性候选按原子组竞争剩余 token；放不下时按 full、structured、head-tail、reference 降级，最终重新计量并校验 tool call / result 配对。非完整工具结果携带 `content_ref` 与 continuation，可通过 `read_tool_result`、`read_session_attachment` 或原资源范围读取继续获取。
+真实请求统一经过 `ContextBuilder.assemble_request_messages`：固定块先扣除，弹性候选按原子组竞争剩余 token；放不下时按 full、structured、head-tail、reference 降级，最终重新计量并校验 tool call / result 配对。非完整工具结果携带 `content_ref` 与 continuation，可通过 `read_tool_result`、`read_file` 或原资源范围读取继续获取。
+
+当前会话附件上传不产生模型可见正文：只保存原文件和 `attachment://` 引用。Agent 首次调用 `read_file` 时才按 OCR/VLM 设置解析并持久化缓存，长结果通过行范围或 cursor 续读；`understand_image` 直接读取原图，并仅把已经存在的 OCR 缓存作为可选辅助。
 
 ## 迁移前审计结论
 
@@ -60,7 +62,7 @@
 | `limits.agent_tool_recent_full_result_count` | 最近 4 条 | 决定特殊大型工具是否仍享受大型预算。 |
 | `limits.agent_tool_recent_result_count` | 最近 8 条 | 普通工具中，前 8 条使用“最近结果”预算，更旧结果使用“旧结果”预算。 |
 | `limits.agent_tool_registry_result_chars` | 6,000 字符 | `list_available_tools` 始终使用；最近 4 条 `run_terminal_command` 也使用。 |
-| `limits.agent_tool_large_result_chars` | 12,000 字符 | 最近 4 条 `read_knowledge_file`、图谱查询、智能表单、组件和自定义 Skill 结果。 |
+| `limits.agent_tool_large_result_chars` | 12,000 字符 | 最近 4 条 `read_file`、图谱查询、智能表单、组件和自定义 Skill 结果。 |
 | `limits.agent_tool_recent_result_chars` | 900 字符 | 未命中特殊类型的最近 8 条普通工具结果。 |
 | `limits.agent_tool_old_result_chars` | 240 字符 | 第 9 条及更早的普通工具结果，以及超过“最近 4 条”保护范围后的大型工具结果。 |
 
@@ -92,7 +94,7 @@
 | `limits.terminal_read_max_lines` | 1,000 行 | Terminal 内置读取 | 允许请求的最大读取行数。 |
 | `limits.web_fetch_max_chars` | 3,000 字符/页 | `web_search` | 每个网页正文抽取上限。 |
 | `limits.default_web_search_max_results` | 10 条 | `web_search` / 用户设置降级值 | 默认搜索结果数量；用户级设置可覆盖。 |
-| `limits.tool_markdown_projection_max_chars` | 6,000 字符 | `read_knowledge_file` | Markdown 投影返回前缀。 |
+| `limits.tool_markdown_projection_max_chars` | 6,000 字符 | `read_file` | Markdown 投影返回前缀。 |
 | `limits.knowledge_content_search_limit` | 20 条 | 知识文件内容搜索 | 默认匹配条数。 |
 | `memory.knowledge_search_semantic_top_k` | 5 条 | 知识搜索 | 默认语义召回条数。 |
 | `limits.graph_search_default_limit` | 20 条 | 图谱节点搜索 | 默认返回条数。 |
@@ -106,7 +108,7 @@
 | `limits.tool_memory_mutation_result_chars` | 200 字符 | 删除长期记忆/规则 | 成功回执中的原内容前缀；本次从裸数字迁入 Config。 |
 | `limits.memory_delete_scan_limit` | 200 条 | 删除长期记忆工具 | 按内容匹配删除时最多扫描的记录数。 |
 | `limits.structured_prompt_source_chars` | 60,000 字符 | 结构化字段生成 | 发送给结构化生成模型的源文本上限。 |
-| `limits.local_vision_ocr_context_chars` | 6,000 字符 | 本地识图 | 发送给视觉模型的先行 OCR 文本；本次从裸数字迁入 Config。 |
+| `limits.local_vision_ocr_context_chars` | 6,000 字符 | 已删除的旧视觉路径 | 迁移前用于裁剪 OCR 辅助文本；当前字段和运行路径均不存在。 |
 | `limits.graph_single_section_max_chars` | 6,000 字符 | 单章节图谱抽取 | 发送给图谱抽取小模型的章节正文；本次从裸数字迁入 Config。 |
 | `limits.graph_batch_max_chars` | 12,000 字符/批 | 批量图谱抽取 | 合批字符预算。 |
 | `limits.graph_batch_max_sections` | 4 章/批 | 批量图谱抽取 | 单批最多章节数。 |
@@ -134,7 +136,7 @@
 ## 验收对应
 
 - 根本来源：迁移前四层硬截断仍由第 1～5 节完整留档；当前模型可见容量字段全部收敛到 `AgentConfig` 的模型能力与动态预算配置。
-- 上下文拼装：主 Agent、Simple、Planner、Observation、压缩、结构化生成、图谱与本地识图均使用实际模型容量派生的 token 预算。
+- 上下文拼装：主 Agent、Simple、Planner、Observation、压缩、结构化生成、图谱与远程视觉理解均使用实际模型容量派生的 token 预算。
 - 工具结果：运行时生成 `ToolResultEnvelope` 并持久化完整事实；非 full 表示包含状态、原始 token 数、引用与继续读取方法。
 - 专项迁移：Terminal 改为显式 head-tail 资源保护；Web、Skill、知识文件、附件、OCR、结构化生成和图谱不再静默保留字符前缀；记忆内容删除改为数据库精确/包含查询。
 - 静态门禁：`tests/test_dynamic_context_budget.py` 检查旧字段、旧 compactor 和关键生产路径固定数字切片不得回归；`tests/test_context_tool_truncation_config.py` 保留对非上下文业务限制的配置消费验证。

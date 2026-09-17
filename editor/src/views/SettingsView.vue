@@ -3,7 +3,7 @@ import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 import FormHeightTransition from '@/components/common/FormHeightTransition.vue'
 import { DEFAULT_MODEL_CONTEXT_WINDOW_TOKENS, fetchSystemPrompts, addSystemPromptEntry, deleteSystemPromptEntry, fetchMemories, addMemory, deleteMemory, fetchMemoryConfig, saveMemoryConfig, fetchLLMConfig, saveLLMConfig, fetchSavedLLMConfigs, saveLLMConfigPreset, deleteLLMConfigPreset, fetchWebSearchConfig, saveWebSearchConfig, fetchTerminalSandboxConfig, saveTerminalSandboxConfig } from '@/api/settings'
-import type { LLMConfigResponse, SystemPromptEntry, MemoryEntry, SavedLLMConfig, TerminalSandboxConfig, TerminalSandboxConfigResponse, TerminalSegmentInfo, TerminalShellKey } from '@/api/settings'
+import type { EffectiveLLMModelSource, EffectiveVisionModelSource, LLMConfigResponse, SystemPromptEntry, MemoryEntry, SavedLLMConfig, TerminalSandboxConfig, TerminalSandboxConfigResponse, TerminalSegmentInfo, TerminalShellKey } from '@/api/settings'
 import AppearanceSettingsSection from '@/components/settings_view/AppearanceSettingsSection.vue'
 import BasicSettingsSection from '@/components/settings_view/BasicSettingsSection.vue'
 import BrowserSettingsSection from '@/components/settings_view/BrowserSettingsSection.vue'
@@ -595,22 +595,32 @@ const largeApiKey = ref('')
 const smallModelName = ref('')
 const smallBaseUrl = ref('')
 const smallApiKey = ref('')
+const visionModelName = ref('')
+const visionBaseUrl = ref('')
+const visionApiKey = ref('')
 const largeContextWindowTokens = ref(DEFAULT_MODEL_CONTEXT_WINDOW_TOKENS)
 const largeMaxOutputTokens = ref(0)
 const smallContextWindowTokens = ref(DEFAULT_MODEL_CONTEXT_WINDOW_TOKENS)
 const smallMaxOutputTokens = ref(0)
 const showLargeKey = ref(false)
 const showSmallKey = ref(false)
+const showVisionKey = ref(false)
 const modelSaving = ref(false)
 const modelMsg = ref('')
 const modelEditing = ref(false)
 const modelConfigLoaded = ref(false)
 const effectiveLargeModelName = ref('')
-const effectiveLargeModelSource = ref<'remote' | 'local' | ''>('')
+const effectiveLargeModelSource = ref<EffectiveLLMModelSource | ''>('')
 const effectiveSmallModelName = ref('')
-const effectiveSmallModelSource = ref<'remote' | 'local' | ''>('')
+const effectiveSmallModelSource = ref<EffectiveLLMModelSource | ''>('')
+const effectiveVisionModelName = ref('')
+const effectiveVisionModelSource = ref<EffectiveVisionModelSource | ''>('')
 const savedSmallModelConfigured = ref(false)
-const modelConfigSaved = computed(() => !!(largeModelName.value || largeBaseUrl.value || largeApiKey.value))
+const modelConfigSaved = computed(() => Boolean(
+  largeModelName.value || largeBaseUrl.value || largeApiKey.value ||
+  smallModelName.value || smallBaseUrl.value || smallApiKey.value ||
+  visionModelName.value || visionBaseUrl.value || visionApiKey.value,
+))
 const savedModelConfigs = ref<SavedLLMConfig[]>([])
 
 /** Store only backend-resolved values so unsaved drafts are never shown as active models. */
@@ -619,6 +629,8 @@ function applyEffectiveModelConfig(config: LLMConfigResponse) {
   effectiveLargeModelSource.value = config.effective_model_source || ''
   effectiveSmallModelName.value = config.effective_small_model_name || ''
   effectiveSmallModelSource.value = config.effective_small_model_source || ''
+  effectiveVisionModelName.value = config.effective_vision_model_name || ''
+  effectiveVisionModelSource.value = config.effective_vision_model_source || ''
   savedSmallModelConfigured.value = Boolean(config.small_model_name?.trim())
 }
 
@@ -634,6 +646,9 @@ async function loadModelConfig() {
     smallModelName.value = cfg.small_model_name || ''
     smallBaseUrl.value = cfg.small_base_url || ''
     smallApiKey.value = cfg.small_api_key || ''
+    visionModelName.value = cfg.vision_model_name || ''
+    visionBaseUrl.value = cfg.vision_base_url || ''
+    visionApiKey.value = cfg.vision_api_key || ''
     largeContextWindowTokens.value = cfg.model_context_window_tokens || DEFAULT_MODEL_CONTEXT_WINDOW_TOKENS
     largeMaxOutputTokens.value = cfg.model_max_output_tokens || 0
     smallContextWindowTokens.value = cfg.small_model_context_window_tokens || DEFAULT_MODEL_CONTEXT_WINDOW_TOKENS
@@ -665,6 +680,9 @@ async function handleSaveModel() {
       smallApiKey: smallApiKey.value,
       smallBaseUrl: smallBaseUrl.value,
       smallModelName: smallModelName.value,
+      visionApiKey: visionApiKey.value,
+      visionBaseUrl: visionBaseUrl.value,
+      visionModelName: visionModelName.value,
       modelContextWindowTokens: largeContextWindowTokens.value,
       modelMaxOutputTokens: largeMaxOutputTokens.value,
       smallModelContextWindowTokens: smallContextWindowTokens.value,
@@ -677,18 +695,20 @@ async function handleSaveModel() {
       detail: { modelName: saved.effective_model_name || saved.model_name },
     }))
     showMessage(modelMsg, '已保存')
-  } catch {
-    showMessage(modelMsg, '保存失败')
+  } catch (error) {
+    showMessage(modelMsg, error instanceof Error ? error.message : '保存失败')
   } finally {
     modelSaving.value = false
   }
 }
 
-async function handleSaveModelPreset(target: 'large' | 'small') {
+async function handleSaveModelPreset(target: 'large' | 'small' | 'vision') {
   if (!settingsStore.profile.userId) return
   const source = target === 'large'
     ? { modelName: largeModelName.value, baseUrl: largeBaseUrl.value, apiKey: largeApiKey.value, label: '大模型配置' }
-    : { modelName: smallModelName.value, baseUrl: smallBaseUrl.value, apiKey: smallApiKey.value, label: '小模型配置' }
+    : target === 'small'
+      ? { modelName: smallModelName.value, baseUrl: smallBaseUrl.value, apiKey: smallApiKey.value, label: '小模型配置' }
+      : { modelName: visionModelName.value, baseUrl: visionBaseUrl.value, apiKey: visionApiKey.value, label: '视觉模型配置' }
   try {
     await saveLLMConfigPreset(settingsStore.profile.userId, {
       label: source.modelName || source.baseUrl || source.label,
@@ -703,15 +723,19 @@ async function handleSaveModelPreset(target: 'large' | 'small') {
   }
 }
 
-function importSavedModelConfig(config: SavedLLMConfig, target: 'large' | 'small') {
+function importSavedModelConfig(config: SavedLLMConfig, target: 'large' | 'small' | 'vision') {
   if (target === 'large') {
     largeModelName.value = config.model_name || ''
     largeBaseUrl.value = config.base_url || ''
     largeApiKey.value = config.api_key || ''
-  } else {
+  } else if (target === 'small') {
     smallModelName.value = config.model_name || ''
     smallBaseUrl.value = config.base_url || ''
     smallApiKey.value = config.api_key || ''
+  } else {
+    visionModelName.value = config.model_name || ''
+    visionBaseUrl.value = config.base_url || ''
+    visionApiKey.value = config.api_key || ''
   }
   modelEditing.value = true
 }
@@ -863,11 +887,15 @@ onBeforeUnmount(() => {
         v-model:model-editing="modelEditing"
         v-model:show-large-key="showLargeKey"
         v-model:show-small-key="showSmallKey"
+        v-model:show-vision-key="showVisionKey"
         v-model:small-api-key="smallApiKey"
         v-model:small-base-url="smallBaseUrl"
         v-model:small-model-name="smallModelName"
         v-model:small-context-window-tokens="smallContextWindowTokens"
         v-model:small-max-output-tokens="smallMaxOutputTokens"
+        v-model:vision-api-key="visionApiKey"
+        v-model:vision-base-url="visionBaseUrl"
+        v-model:vision-model-name="visionModelName"
         :model-config-saved="modelConfigSaved"
         :model-config-loaded="modelConfigLoaded"
         :model-msg="modelMsg"
@@ -877,6 +905,8 @@ onBeforeUnmount(() => {
         :effective-large-model-source="effectiveLargeModelSource"
         :effective-small-model-name="effectiveSmallModelName"
         :effective-small-model-source="effectiveSmallModelSource"
+        :effective-vision-model-name="effectiveVisionModelName"
+        :effective-vision-model-source="effectiveVisionModelSource"
         :saved-small-model-configured="savedSmallModelConfigured"
         @cancel="modelEditing = false; loadModelConfig()"
         @delete-saved-config="handleDeleteSavedModelConfig"

@@ -67,7 +67,7 @@ def test_pyinstaller_spec_collects_runtime_files_without_all_service_submodules(
     assert "collect_submodules('paddlex.inference.pipelines')" in spec
     assert "collect_submodules('paddlex.inference.models')" in spec
     assert "collect_data_files('paddlex', includes=['configs/**/*.yaml'])" in spec
-    assert "['xlrd', 'torchvision', *_paddlex_hiddenimports]" in spec
+    assert "['xlrd', *_paddlex_hiddenimports]" in spec
 
 
 def test_checked_in_dsh_sdk_bundle_matches_locked_release() -> None:
@@ -93,6 +93,9 @@ def test_backend_direct_runtime_dependencies_are_declared() -> None:
     assert "paddleocr[doc-parser]==3.7.0" in requirements
     assert "paddlepaddle==3.3.1" in requirements
     assert "paddlex[ocr]==3.7.2" in requirements
+    assert "torch==2.11.0" in requirements
+    assert "torchvision" not in requirements
+    assert "download.pytorch.org/whl/cpu" not in requirements
 
 
 def test_paddlex_ocr_extra_is_actually_importable() -> None:

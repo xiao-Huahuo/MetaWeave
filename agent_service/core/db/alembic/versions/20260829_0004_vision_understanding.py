@@ -1,4 +1,4 @@
-"""Add the opt-in user setting for local-Qwen image understanding.
+"""Add the opt-in user setting for remote image understanding.
 
 Revision ID: 20260829_0004
 Revises: 20260829_0003

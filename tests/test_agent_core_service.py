@@ -921,7 +921,7 @@ def test_message_service_compacts_observability_trace_payload() -> None:
                     "node": "action",
                     "event": "tool_call_end",
                     "duration_ms": 120,
-                    "tool_name": "read_knowledge_file",
+                    "tool_name": "read_file",
                     "result_count": 1,
                     "raw_content": "very large tool response",
                     "human_readable": "工具执行完成",
@@ -939,7 +939,7 @@ def test_message_service_compacts_observability_trace_payload() -> None:
                 "node": "action",
                 "event": "tool_call_end",
                 "duration_ms": 120,
-                "tool_name": "read_knowledge_file",
+                "tool_name": "read_file",
                 "result_count": 1,
             }
         ],
@@ -1855,7 +1855,7 @@ def test_agent_core_drops_unmapped_citation_anchors() -> None:
     assert "[1]" not in empty_map_content
 
 
-def test_read_knowledge_file_registers_tool_citation(monkeypatch: Any) -> None:
+def test_read_file_registers_tool_citation(monkeypatch: Any) -> None:
     class FakeKnowledgeService:
         def read_markdown_projection(self, *, user_id: str, path: str) -> dict[str, Any]:
             assert user_id == "user_1"
@@ -1881,7 +1881,7 @@ def test_read_knowledge_file_registers_tool_citation(monkeypatch: Any) -> None:
     )
     executor = ToolExecutor(registry=ToolRegistry.with_builtin_tools())
 
-    result = executor.execute("read_knowledge_file", {"path": "docs/a.pdf"})
+    result = executor.execute("read_file", {"path": "docs/a.pdf"})
     citation_map = get_tool_citation_map()
     clear_tool_runtime()
 
@@ -1897,7 +1897,9 @@ def test_multimodal_read_tool_is_not_registered() -> None:
 
     registry = ToolRegistry.with_builtin_tools()
 
-    assert registry.get("read_knowledge_file") is not None
+    assert registry.get("read_file") is not None
+    assert registry.get("read_knowledge_file") is None
+    assert registry.get("read_session_attachment") is None
     assert registry.get("read_multimodal_file_info") is None
 
 
@@ -2282,8 +2284,8 @@ def test_ocr_paddle_env_overrides_are_loaded(monkeypatch: Any) -> None:
     assert config.ocr.device == "cpu"
 
 
-def test_agent_core_init_checks_local_models(monkeypatch: Any) -> None:
-    """验证 AgentCore 初始化时会强制触发本地模型检查。"""
+def test_agent_core_init_does_not_trigger_model_download_checks(monkeypatch: Any) -> None:
+    """AgentCore 初始化不得隐式检查或下载可选的本地检索模型。"""
 
     config = make_test_config()
     calls: list[AgentConfig] = []
@@ -2297,7 +2299,7 @@ def test_agent_core_init_checks_local_models(monkeypatch: Any) -> None:
 
     AgentCore(config=config, graph=FakeCompiledGraph())
 
-    assert calls == [config]
+    assert calls == []
 
 
 def test_tool_registry_exports_builtin_langchain_tools() -> None:

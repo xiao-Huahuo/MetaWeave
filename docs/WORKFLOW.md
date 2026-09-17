@@ -309,10 +309,10 @@ flowchart TD
     S4 --> SA
 
     LA --> C1{"是否配置了大模型?"}
-    C1 -->|"否"| LQ["CPU 本地 Qwen3.5-2B"]
+    C1 -->|"否"| ERR["返回明确配置错误<br/>引导设置远程大模型"]
     C1 -->|"是"| ML["用户大模型\\n(AGENT_MODEL_NAME / API_KEY / BASE_URL)"]
     SA --> C2{"是否配置了大模型?"}
-    C2 -->|"否"| LQ
+    C2 -->|"否"| ERR
     C2 -->|"是"| M2{"是否配置了独立小模型?\\n(AGENT_SMALL_MODEL_*)"}
     M2 -->|"是"| ML2["用户独立小模型"]
     M2 -->|"否"| MF2["复用用户大模型\\n(仍占 small pool 配额)"]
@@ -442,7 +442,7 @@ MinerU 配置采用服务默认与用户覆盖合并：默认 `vlm`、200 MB、6
 - `.docx`：将文件作为 ZIP 包读取，解析 `word/document.xml` 及图片关系引用。段落按标题样式或段落结构生成文本块；表格保留结构并生成检索摘要；图片优先使用替代文本，否则执行 OCR。提取出的图片保存到 `.mw/assets/`，并在 Markdown 中登记资源位置。
 - `.pptx`：将文件作为 ZIP 包读取并解析 `ppt/slides/slide*.xml`。旧版 `.ppt` 不属于支持格式。
 - `.xlsx`：将文件作为 ZIP 包读取，解析 `xl/sharedStrings.xml` 和 `xl/worksheets/sheet*.xml`。小表完整提取行列；大表提取结构、表头、样例、统计信息和工作表摘要；超大或不适合语义检索的表格只索引工作表名、列名、数据范围等元信息。
-- 图片（`.jpg`、`.jpeg`、`.png`、`.webp`）：知识库入库在 VLM 开启时优先使用 MinerU，任务显式本地或断网回退时使用 PP-StructureV3。直接上传到 Agent 会话的图片保持本地 OCR，并交给 CPU 本地 Qwen 补充视觉语义，不受知识库联网开关影响。
+- 图片（`.jpg`、`.jpeg`、`.png`、`.webp`）：知识库入库和 Agent 的 `read_file` 在 VLM 开启时优先使用 MinerU，显式本地或断网回退时使用 PP-StructureV3。会话上传阶段不解析；`understand_image` 可直接把原图交给 LLM 设置中的视觉模型，不以前置 OCR 为条件。
 - `.pdf`：文档型 PDF 优先提取文本层、表格和图片；扫描型 PDF 按页渲染并执行 OCR；混合型 PDF 逐页判断是否存在文本层；表格无法稳定识别时至少输出文本块和页码范围。
 - 文档内嵌图片：图片本体不作为独立语义文档写入向量库，结构化 JSON 记录图片引用、OCR 状态和识别结果。PDF 与 Office 文档提取的图片统一保存在 `.mw/assets/`，并结合相邻标题、段落、表格编号和图注形成检索上下文。
 - 其他格式：系统先检查支持的后缀白名单；白名单外文件读取前 8192 字节，通过空字节、UTF-8/GBK 等编码解码结果和控制字符占比判断是文本还是二进制。可解码文本按普通文本处理；无法识别的二进制文件登记为资源占位并禁止入库。
@@ -560,61 +560,52 @@ flowchart TD
 flowchart TD
     A["用户拖拽文件到 Agent 页面"] --> B["前端 FormData<br/>POST /agent/attachments/upload"]
     B --> C["SessionAttachmentService<br/>校验 user_id/session_id/active library"]
-    C --> D["保存原文件<br/>runtime/uploads/{user_id}/{library}/{session_id}/"]
-    D --> E["统一解析器<br/>FrontmatterBootstrapService + MultimodalDocumentCleaner"]
-    E --> E1{"是否为直接上传图片?"}
-    E1 -->|"否"| F["抽取结构化章节/正文<br/>写入 .attachments/{attachment_id}.txt"]
-    E1 -->|"是"| V1["PP-StructureV3 结构化 OCR<br/>版面、文字、表格、公式与阅读顺序"]
-    V1 --> V2["CPU 本地 Qwen 读取原图 + OCR<br/>补充对象、空间关系和图表语义"]
-    V2 --> F
-    F --> G["SQLite: session_attachments<br/>保存 uri、路径、摘要、metadata"]
-    G --> H["ContextBuilder.build_messages()"]
-    H --> I{"当前问题是否指向上传附件?"}
-    I -->|"文件名/最近上传/这个文件"| J["注入相关附件正文片段"]
-    I -->|"无明确指向"| K["仅注入会话附件目录摘要"]
-    J --> L["Agent LLM 上下文"]
-    K --> L
-    D -. "不执行" .-> M["KnowledgeIngestionService / ChromaDB"]
+    C --> D["线程池内原子保存原文件<br/>并行同名上传不覆盖"]
+    D --> E["SQLite 登记 uploaded/unparsed<br/>立即返回 attachment:// 引用"]
+    E --> F["ContextBuilder 只提供附件目录"]
+    F --> G{"Agent 是否需要文件内容?"}
+    G -->|"文字/文档结构"| H["read_file"]
+    H --> I{"是否已有解析缓存?"}
+    I -->|"是"| J["直接读取缓存"]
+    I -->|"否"| K["FrontmatterBootstrapService<br/>MinerU 或本地解析/OCR"]
+    K --> L["持久化正文缓存"]
+    L --> J
+    G -->|"图片视觉语义"| V["understand_image<br/>远程视觉模型直接读取原图"]
+    J --> M["工具结果进入本轮上下文"]
+    V --> M
+    D -. "不自动执行" .-> N["OCR / 文档解析 / 视觉模型 / 知识灌库"]
 ```
 
 - 上传附件是 session-scoped context asset, 不是知识库资产; 它不写入知识库目录, 不生成可灌库 frontmatter, 不进入 Embedding/ChromaDB。
-- 附件复用统一文档结构合同，但保持本地解析，不读取知识库的 MinerU VLM 总开关，也不会自动把会话附件上传到第三方解析服务。
-- 图片附件的 OCR 文本和本地 Qwen 视觉描述写入同一份附件正文；OCR 负责精确文字，本地模型补充非文字视觉信息。视觉模型异常时保留已完成的 OCR 结果，不让附件上传整体失败。
-- 同一个 session 的后续提问会保留附件目录; 当用户说“这个文件”“刚才上传的文件”或直接提到文件名时, ContextBuilder 会把相关附件正文片段放进本轮 system context。
-- `understand_image`（界面显示为“识图”）允许 Agent 按 attachment_id、文件名或关键词重新读取当前会话图片，并向同一 CPU 本地 Qwen 提出新的视觉问题。
+- 上传请求只落盘与登记；前端为每个文件独立发起请求，后端把同步文件与 SQLite 操作放入线程池，不让一个附件占住其他上传或 FastAPI 事件循环。
+- `read_file` 统一读取知识库路径与 `attachment://` 引用。会话附件首次读取时复用正式文档结构合同及 OCR/VLM 设置进行解析，随后持久化正文缓存。
+- `understand_image`（界面显示为“识图”）允许 Agent 按 attachment_id、文件名或关键词直接读取当前会话原图；已有 OCR 缓存时可作为辅助，但 OCR 不是视觉调用的前置条件。
+- 同一个 session 的后续提问保留附件目录；只有已按需解析且与问题相关的缓存正文才可能进入后续 system context，未解析附件必须由 Agent 主动调用工具。
 
 ##### 知识图谱实体提取
 
 ```mermaid
 flowchart TB
-    accTitle: 本地优先的增量图谱抽取
-    accDescr: 文档先按文档和章节哈希复用已有结果，变化章节由本地模型抽取，仅将无法确定的最小证据片段交给联网模型裁决，最后本地去重并原子写入数据库。
+    accTitle: 远程小模型与确定性规则组合的增量图谱抽取
+    accDescr: 文档先按文档和章节哈希复用已有结果，变化章节由远程小模型抽取全文并合并确定性关系规则，远程失败时保留规则结果，最后本地去重并原子写入数据库。
 
     start(["多模态文档已结构化"]) --> document_cache{"文档指纹未变化?"}
     document_cache -->|"是"| reuse_document["复用整篇图谱"]
     document_cache -->|"否"| section_cache{"章节缓存仍有效?"}
 
-    subgraph local_extract ["本地抽取与校验"]
+    subgraph extraction ["远程抽取与规则兜底"]
         section_cache -->|"是"| reuse_section["复用章节候选"]
-        section_cache -->|"否"| local_scan["本地模型扫描正文"]
-        local_scan --> local_rules["规则过滤与证据校验"]
-        local_rules --> confidence_route{"候选是否明确?"}
-        confidence_route -->|"高置信"| accepted_local["接受本地结果"]
-        confidence_route -->|"低置信"| discard_candidate["丢弃无证据候选"]
-    end
-
-    subgraph remote_judge ["联网灰区裁决"]
-        confidence_route -->|"灰区"| minimal_context["组装最短证据片段"]
-        minimal_context --> remote_model["联网小模型裁决"]
-        remote_model --> accepted_remote["返回确定候选"]
-        remote_model -.->|"超时或熔断"| pending_retry["保留本地结果并待重试"]
+        section_cache -->|"否"| model_available{"小模型配置有效?"}
+        model_available -->|"是"| remote_extract["远程小模型扫描完整章节"]
+        model_available -->|"否"| rules_only["只运行确定性显式关系规则"]
+        remote_extract --> merge_rules["合并中英文显式关系规则"]
+        remote_extract -.->|"超时、限流或熔断"| rules_only
+        rules_only --> merge_rules
     end
 
     subgraph local_dedup ["本地分层去重"]
         reuse_section --> normalize_entities["规范名称与明确别名"]
-        accepted_local --> normalize_entities
-        accepted_remote --> normalize_entities
-        pending_retry --> normalize_entities
+        merge_rules --> normalize_entities
         normalize_entities --> embedding_match["Embedding 相似候选检索"]
         embedding_match --> dedup_route{"相似度是否明确?"}
         dedup_route -->|"高或低"| remap_edges["本地合并或保持独立"]
@@ -629,22 +620,21 @@ flowchart TB
     end
 
     reuse_document --> done(["图谱可查询"])
-    discard_candidate --> normalize_entities
     graph_tables --> done
 
     classDef cache fill:#e8eefc,stroke:#476bf7,stroke-width:2px,color:#172554
-    classDef local fill:#ecfdf3,stroke:#16845b,stroke-width:2px,color:#12372a
+    classDef rules fill:#ecfdf3,stroke:#16845b,stroke-width:2px,color:#12372a
     classDef remote fill:#fff7db,stroke:#b7791f,stroke-width:2px,color:#4a2d08
     classDef result fill:#f4f4f5,stroke:#52525b,stroke-width:2px,color:#18181b
 
     class document_cache,section_cache,reuse_document,reuse_section cache
-    class local_scan,local_rules,accepted_local,discard_candidate,normalize_entities,embedding_match,dedup_route,remap_edges,clean_edges local
-    class confidence_route,minimal_context,remote_model,accepted_remote,pending_retry,dedup_remote remote
+    class rules_only,merge_rules,normalize_entities,embedding_match,dedup_route,remap_edges,clean_edges rules
+    class model_available,remote_extract,dedup_remote remote
     class start,commit_graph,graph_tables,done result
 
 ```
 
-流程中的联网模型不承担全文扫描。实体关系抽取和去重都先在本地完成确定性部分,联网请求只包含灰区候选及其最短证据。文档和章节缓存共同保证重复执行不产生费用,单段修改也不会触发整篇重算;联网服务不可用时,系统继续保存本地高置信结果并仅记录待重试候选。
+变化章节会发送到用户配置的远程小模型执行全文实体关系抽取，并与本地显式关系规则合并。文档和章节缓存共同避免重复请求，单段修改不会触发整篇重算；远程模型未配置或暂时不可用时，系统仍保存确定性规则能够确认的结果，不会删除已有图谱。实体去重继续优先在本地完成，只有相似度灰区候选才交给远程模型裁决。
 
 ### Agent 内置业务工具
 
@@ -657,7 +647,7 @@ flowchart TB
 - 业务资源：用户 Skill 定制/修改/删除/启停/校验/试用，用户反馈增删改查，图书馆查询筛选与单项读取，组件增删改查/按类型筛选/校验，收藏增查删。
 - 智能表格：创建智能文献表或普通表、列表/结构/完整内容读取、整表与行级编辑、表项文献读取、CSV/Markdown/JSON 导出、CSV/JSON 导入、智能填充预览与持久化填充。
 
-`rebuild_knowledge_base` 已由语义明确的 `ingest_all_knowledge_files` 替代；文件正文统一通过 `read_knowledge_file` 读取 Markdown 中间层，缺失或过期时自动触发单文件灌库。
+`rebuild_knowledge_base` 已由语义明确的 `ingest_all_knowledge_files` 替代；知识库文件与会话附件正文统一通过 `read_file` 读取。知识库投影缺失或过期时自动触发单文件灌库，会话附件则在首次读取时解析并缓存。
 
 ### 其他设计
 ##### 引用溯源
@@ -674,7 +664,7 @@ flowchart TD
     G --> H["工具返回文本携带<br/>Citation ID / [Kx]"]
     G --> I["工具 trace.citation_map"]
     F --> Q{"来源类型"}
-    Q -->|"get_knowledge_context<br/>read_knowledge_file"| R["adopted_by_default=true<br/>明确读入正文"]
+    Q -->|"get_knowledge_context<br/>read_file"| R["adopted_by_default=true<br/>明确读入正文"]
     Q -->|"search_knowledge"| S["仅搜索候选<br/>不默认采纳"]
 
     E --> X["联网搜索工具<br/>web_search"]

@@ -105,10 +105,15 @@ def test_supported_unversioned_database_is_backed_up_stamped_and_upgraded(tmp_pa
 
     with engine.connect() as connection:
         version = connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
-    assert version == "20260911_0017"
+    assert version == "20260917_0018"
     assert "component_library_metadata" in inspect(engine).get_table_names()
     assert {"knowledge_graph_section_cache", "knowledge_graph_dedup_decisions"} <= set(inspect(engine).get_table_names())
-    assert "small_model_name" in {
+    assert {
+        "small_model_name",
+        "vision_api_key",
+        "vision_base_url",
+        "vision_model_name",
+    } <= {
         column["name"] for column in inspect(engine).get_columns("user_llm_config")
     }
     assert {"ui_font_size_percent", "text_font_size_percent"} <= {
@@ -165,5 +170,48 @@ def test_compatibility_revision_downgrade_and_upgrade_round_trip(tmp_path: Path)
     command.upgrade(alembic_config, "head")
 
     with engine.connect() as connection:
-        assert connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == "20260911_0017"
+        assert connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == "20260917_0018"
     assert set(SQLModel.metadata.tables) <= set(inspect(engine).get_table_names())
+
+
+def test_vision_llm_columns_downgrade_and_upgrade_without_touching_existing_models(tmp_path: Path) -> None:
+    """0018 往返迁移只能增删视觉字段，已有大/小模型配置必须保持不变。"""
+
+    config = _config(tmp_path)
+    engine = create_database_engine(config)
+    upgrade_database(config=config, engine=engine)
+    alembic_config = build_alembic_config(config)
+    with engine.begin() as connection:
+        connection.execute(text(
+            "INSERT INTO user_llm_config ("
+            "user_id, api_key, base_url, model_name, small_api_key, small_base_url, small_model_name, "
+            "vision_api_key, vision_base_url, vision_model_name, updated_at"
+            ") VALUES ("
+            "'migration-user', 'large-key', 'https://large.example/v1', 'large-model', "
+            "'small-key', 'https://small.example/v1', 'small-model', "
+            "'vision-key', 'https://vision.example/v1', 'vision-model', CURRENT_TIMESTAMP"
+            ")"
+        ))
+
+    command.downgrade(alembic_config, "20260911_0017")
+    with engine.connect() as connection:
+        existing = connection.execute(text(
+            "SELECT api_key, base_url, model_name, small_api_key, small_base_url, small_model_name "
+            "FROM user_llm_config WHERE user_id = 'migration-user'"
+        )).one()
+    command.upgrade(alembic_config, "head")
+
+    assert tuple(existing) == (
+        "large-key",
+        "https://large.example/v1",
+        "large-model",
+        "small-key",
+        "https://small.example/v1",
+        "small-model",
+    )
+    with engine.connect() as connection:
+        restored = connection.execute(text(
+            "SELECT vision_api_key, vision_base_url, vision_model_name "
+            "FROM user_llm_config WHERE user_id = 'migration-user'"
+        )).one()
+    assert tuple(restored) == ("", "", "")

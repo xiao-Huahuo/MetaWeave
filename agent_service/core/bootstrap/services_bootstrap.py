@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
-from typing import Any
 
 from sqlalchemy.engine import Engine
 
@@ -49,6 +48,7 @@ from agent_service.services.task_list.service import TaskListService
 from agent_service.services.todo.service import TodoService
 from agent_service.services.unified_search import UnifiedSearchService
 from agent_service.services.vault.service import VaultService
+from agent_service.services.vision.service import VisionModelService
 
 logger = logging.getLogger(__name__)
 
@@ -97,7 +97,7 @@ class ApplicationServices:
     memory_service: LongTermMemoryService
     automation_scheduler: AutomationScheduler
     agent_queue_scheduler: AgentQueueScheduler
-    local_qwen_service: Any
+    vision_service: VisionModelService
     database_engine: Engine
 
     def start_background_services(self) -> None:
@@ -126,10 +126,11 @@ def create_application_services(config: AgentConfig, *, database_engine: Engine)
     task_list_service = TaskListService(session_service=session_service)
     memory_service = LongTermMemoryService(config=config, engine=database_engine, create_tables=False)
     settings_service = SettingsService(config=config, memory_service=memory_service)
-    model_management_service, local_qwen_service = create_model_services(
+    model_management_service = create_model_services(
         config=config,
         settings_service=settings_service,
     )
+    vision_service = VisionModelService(config=config, settings_service=settings_service)
     dsh_runtime_manager = DshRuntimePackageManager(config=config)
     activity_service = ActivityService(engine=database_engine, config=config, create_tables=False)
     knowledge_graph_service = KnowledgeGraphService(config=config, engine=database_engine, create_tables=False)
@@ -160,7 +161,6 @@ def create_application_services(config: AgentConfig, *, database_engine: Engine)
     attachment_service = SessionAttachmentService(
         config=config,
         settings_service=settings_service,
-        vision_service=local_qwen_service,
     )
     agent.attachment_service = attachment_service
     agent.attachment_runtime.bind(service=attachment_service, context_builder=agent.context_builder)
@@ -252,6 +252,8 @@ def create_application_services(config: AgentConfig, *, database_engine: Engine)
         "favorite": favorite_service,
         "smart_form": smart_form_service,
         "structured_generation": structured_generation_service,
+        "vision": vision_service,
+        "session_attachment": attachment_service,
     }
     return ApplicationServices(
         config=config,
@@ -290,6 +292,6 @@ def create_application_services(config: AgentConfig, *, database_engine: Engine)
         memory_service=memory_service,
         automation_scheduler=automation_scheduler,
         agent_queue_scheduler=agent_queue_scheduler,
-        local_qwen_service=local_qwen_service,
+        vision_service=vision_service,
         database_engine=database_engine,
     )

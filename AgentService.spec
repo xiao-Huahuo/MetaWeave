@@ -80,7 +80,7 @@ a = Analysis(
         _required_dsh_sdk_bundle(),
         *_paddlex_config_data,
     ],
-    hiddenimports=['xlrd', 'torchvision', *_paddlex_hiddenimports],
+    hiddenimports=['xlrd', *_paddlex_hiddenimports],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],

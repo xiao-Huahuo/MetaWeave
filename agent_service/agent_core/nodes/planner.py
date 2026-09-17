@@ -203,7 +203,9 @@ class PlannerNode:
             model_name=str(
                 llm_config.get("small_model_name")
                 or llm_config.get("model_name")
-                or self.config.model.local_model_name
+                or self.config.model.small_model_name
+                or self.config.model.model_name
+                or ""
             ),
             model_tier="small",
             context_window_tokens=(

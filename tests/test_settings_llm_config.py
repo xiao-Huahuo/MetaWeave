@@ -1,10 +1,12 @@
 """
 用户 LLM 配置测试。
 
-覆盖大/小模型配置继承和已保存模型配置的持久化行为。
+覆盖大/小/视觉模型配置继承和已保存模型配置的持久化行为。
 """
 
 from __future__ import annotations
+
+from typing import Any
 
 from tests.db_test_utils import create_test_engine as create_engine
 
@@ -106,8 +108,8 @@ def test_llm_config_small_model_inherits_large_model_fields() -> None:
     assert config["effective_small_model_name"] == "large-model"
 
 
-def test_llm_config_without_remote_models_reports_local_qwen_fallback() -> None:
-    """没有任何用户模型配置时，前端和运行时都应看到本地 Qwen 的有效配置。"""
+def test_llm_config_without_remote_models_reports_unconfigured() -> None:
+    """没有有效远程大模型时，三类模型都必须明确报告未配置。"""
 
     service = make_settings_service()
 
@@ -115,14 +117,16 @@ def test_llm_config_without_remote_models_reports_local_qwen_fallback() -> None:
 
     assert config["model_name"] == ""
     assert config["small_model_name"] == ""
-    assert config["effective_model_name"] == service.config.model.local_model_name
-    assert config["effective_small_model_name"] == service.config.model.local_model_name
-    assert config["effective_model_source"] == "local"
-    assert config["effective_small_model_source"] == "local"
+    assert config["effective_model_name"] == ""
+    assert config["effective_small_model_name"] == ""
+    assert config["effective_vision_model_name"] == ""
+    assert config["effective_model_source"] == "unconfigured"
+    assert config["effective_small_model_source"] == "unconfigured"
+    assert config["effective_vision_model_source"] == "unconfigured"
 
 
 def test_llm_config_without_large_model_ignores_orphan_small_model() -> None:
-    """只配置小模型不构成有效远程配置，大小模型仍统一回退本地 Qwen。"""
+    """只配置小模型不构成有效远程配置，大小模型都保持未配置。"""
 
     service = make_settings_service()
 
@@ -133,21 +137,187 @@ def test_llm_config_without_large_model_ignores_orphan_small_model() -> None:
         small_model_name="small-model",
     )
 
-    assert config["effective_model_name"] == service.config.model.local_model_name
-    assert config["effective_small_model_name"] == service.config.model.local_model_name
+    assert config["effective_model_name"] == ""
+    assert config["effective_small_model_name"] == ""
     assert config["effective_small_api_key"] == ""
+    assert config["effective_model_source"] == "unconfigured"
+    assert config["effective_small_model_source"] == "unconfigured"
 
 
-def test_llm_config_with_model_name_but_without_key_uses_local_qwen() -> None:
-    """未填写 API Key 的远程模型配置不得阻断本地回退。"""
+def test_llm_config_with_model_name_but_without_key_is_unconfigured() -> None:
+    """未填写 API Key 的远程模型配置不得伪装成可用模型。"""
 
     service = make_settings_service()
 
     config = service.save_llm_config(user_id="u-incomplete", model_name="remote-without-key")
 
-    assert config["effective_model_name"] == service.config.model.local_model_name
-    assert config["effective_small_model_name"] == service.config.model.local_model_name
-    assert config["effective_model_source"] == "local"
+    assert config["effective_model_name"] == ""
+    assert config["effective_small_model_name"] == ""
+    assert config["effective_model_source"] == "unconfigured"
+
+
+def test_llm_config_empty_vision_fields_inherit_large_model() -> None:
+    """视觉模型三项全空时必须整组继承有效大模型。"""
+
+    service = make_settings_service()
+
+    config = service.save_llm_config(
+        user_id="u-vision-inherit",
+        api_key="large-key",
+        base_url="https://large.example.com/v1",
+        model_name="large-model",
+        vision_api_key="",
+        vision_base_url="",
+        vision_model_name="",
+    )
+
+    assert config["vision_api_key"] == ""
+    assert config["vision_base_url"] == ""
+    assert config["vision_model_name"] == ""
+    assert config["effective_vision_api_key"] == "large-key"
+    assert config["effective_vision_base_url"] == "https://large.example.com/v1"
+    assert config["effective_vision_model_name"] == "large-model"
+    assert config["effective_vision_model_source"] == "large"
+
+
+def test_llm_config_vision_model_only_reuses_large_endpoint_credentials() -> None:
+    """只覆盖视觉模型名时，凭据和端点可以安全继承同一个大模型端点。"""
+
+    service = make_settings_service()
+
+    config = service.save_llm_config(
+        user_id="u-vision-model",
+        api_key="large-key",
+        base_url="https://api.deepseek.com/v1",
+        model_name="deepseek-chat",
+        vision_model_name="deepseek-flash",
+    )
+
+    assert config["effective_vision_api_key"] == "large-key"
+    assert config["effective_vision_base_url"] == "https://api.deepseek.com/v1"
+    assert config["effective_vision_model_name"] == "deepseek-flash"
+    assert config["effective_vision_model_source"] == "explicit"
+
+
+def test_llm_config_changed_vision_endpoint_requires_explicit_key() -> None:
+    """视觉 Base URL 改到其他端点时不得泄露大模型 API Key。"""
+
+    service = make_settings_service()
+
+    try:
+        service.save_llm_config(
+            user_id="u-vision-isolated",
+            api_key="large-key",
+            base_url="https://large.example.com/v1",
+            model_name="large-model",
+            vision_base_url="https://vision.example.com/v1",
+            vision_model_name="vision-model",
+        )
+    except ValueError as exc:
+        assert "vision_api_key" in str(exc)
+    else:
+        raise AssertionError("a different vision endpoint must require its own key")
+
+    config = service.save_llm_config(
+        user_id="u-vision-isolated",
+        api_key="large-key",
+        base_url="https://large.example.com/v1",
+        model_name="large-model",
+        vision_api_key="vision-key",
+        vision_base_url="https://vision.example.com/v1",
+        vision_model_name="vision-model",
+    )
+
+    assert config["effective_vision_api_key"] == "vision-key"
+    assert config["effective_vision_base_url"] == "https://vision.example.com/v1"
+    assert config["effective_vision_model_source"] == "explicit"
+
+
+def test_explicit_vision_model_works_without_a_large_model() -> None:
+    """完整独立视觉配置不依赖大模型是否已配置。"""
+
+    service = make_settings_service()
+
+    config = service.save_llm_config(
+        user_id="u-vision-only",
+        vision_api_key="vision-key",
+        vision_base_url="https://vision.example.com/v1",
+        vision_model_name="vision-model",
+    )
+
+    assert config["effective_model_source"] == "unconfigured"
+    assert config["effective_vision_api_key"] == "vision-key"
+    assert config["effective_vision_base_url"] == "https://vision.example.com/v1"
+    assert config["effective_vision_model_name"] == "vision-model"
+    assert config["effective_vision_model_source"] == "explicit"
+
+
+def test_agent_config_exposes_remote_vision_runtime_limits(monkeypatch: Any) -> None:
+    """远程视觉服务限制必须集中在 AgentConfig 并支持环境变量覆盖。"""
+
+    config = AgentConfig.load_config(
+        {},
+        load_env=False,
+        ensure_directories=False,
+        ensure_models=False,
+    )
+    assert config.model.vision_timeout_seconds == 60
+    assert config.model.vision_max_image_bytes == 32 * 1024 * 1024
+    assert config.model.vision_max_dimension == 8192
+    assert config.model.vision_max_output_tokens == 1024
+    assert config.model.vision_api_key == ""
+    assert config.model.vision_base_url == ""
+    assert config.model.vision_model_name == ""
+
+    monkeypatch.setenv("AGENT_VISION_TIMEOUT_SECONDS", "45")
+    monkeypatch.setenv("AGENT_VISION_MAX_IMAGE_BYTES", "1048576")
+    monkeypatch.setenv("AGENT_VISION_MAX_DIMENSION", "4096")
+    monkeypatch.setenv("AGENT_VISION_MAX_OUTPUT_TOKENS", "512")
+    monkeypatch.setenv("AGENT_VISION_API_KEY", "service-vision-key")
+    monkeypatch.setenv("AGENT_VISION_BASE_URL", "https://service-vision.example/v1")
+    monkeypatch.setenv("AGENT_VISION_MODEL_NAME", "service-vision-model")
+    overridden = AgentConfig.load_config(
+        {},
+        load_env=True,
+        load_dotenv=False,
+        ensure_directories=False,
+        ensure_models=False,
+    )
+    assert overridden.model.vision_timeout_seconds == 45
+    assert overridden.model.vision_max_image_bytes == 1_048_576
+    assert overridden.model.vision_max_dimension == 4096
+    assert overridden.model.vision_max_output_tokens == 512
+    assert overridden.model.vision_api_key == "service-vision-key"
+    assert overridden.model.vision_base_url == "https://service-vision.example/v1"
+    assert overridden.model.vision_model_name == "service-vision-model"
+
+
+def test_llm_config_uses_grouped_service_vision_defaults() -> None:
+    """用户未覆盖视觉三项时，SettingsService 必须使用服务级视觉配置。"""
+
+    config = AgentConfig.load_config(
+        {
+            "model": {
+                "api_key": "large-key",
+                "base_url": "https://large.example/v1",
+                "model_name": "large-model",
+                "vision_api_key": "vision-key",
+                "vision_base_url": "https://vision.example/v1",
+                "vision_model_name": "vision-model",
+            }
+        },
+        load_env=False,
+        ensure_directories=False,
+        ensure_models=False,
+    )
+    service = SettingsService(config=config, memory_service=_MemoryServiceStub())  # type: ignore[arg-type]
+
+    effective = service.get_llm_config(user_id="u-service-vision")
+
+    assert effective["effective_vision_api_key"] == "vision-key"
+    assert effective["effective_vision_base_url"] == "https://vision.example/v1"
+    assert effective["effective_vision_model_name"] == "vision-model"
+    assert effective["effective_vision_model_source"] == "explicit"
 
 
 def test_llm_config_empty_small_fields_clear_stale_values() -> None:

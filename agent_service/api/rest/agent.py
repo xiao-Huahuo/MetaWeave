@@ -76,10 +76,11 @@ async def upload_agent_attachment(
     session_id: str = Form(..., min_length=DEFAULT_BUSINESS_LIMITS.nonempty_min_length),
     file: UploadFile = File(...),
 ) -> dict[str, Any]:
-    """Upload a file into the current Agent session context without knowledge ingestion."""
+    """并行友好地保存会话附件；不在上传请求中执行解析、OCR 或视觉调用。"""
 
     content = await file.read()
-    attachment = _require_attachment_service().upload_file(
+    attachment = await run_in_threadpool(
+        _require_attachment_service().upload_file,
         user_id=user_id,
         session_id=session_id,
         filename=file.filename or "upload.bin",
@@ -129,7 +130,7 @@ async def get_agent_attachment(
     user_id: str = Query(..., min_length=DEFAULT_BUSINESS_LIMITS.nonempty_min_length),
     session_id: str = Query(..., min_length=DEFAULT_BUSINESS_LIMITS.nonempty_min_length),
 ) -> dict[str, Any]:
-    """返回单个会话附件的最新后台解析状态。"""
+    """返回单个会话附件的上传或按需解析状态。"""
 
     try:
         attachment = _require_attachment_service().get_attachment(

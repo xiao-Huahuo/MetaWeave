@@ -10,7 +10,9 @@ import type { RagHistoryPoint, RagMetrics } from '@/composable/useObsData'
 const KNOWLEDGE_RECALL_TOOLS = new Set([
   'get_knowledge_context',
   'search_knowledge',
+  'read_file',
   'read_knowledge_file',
+  'read_session_attachment',
   'search_knowledge_graph_nodes',
   'find_knowledge_graph_paths',
 ])

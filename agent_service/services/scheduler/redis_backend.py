@@ -39,7 +39,7 @@ class SerializedChatRequest:
     max_retries: 最大重试次数。
     dedup_key: 可选去重键。
     temperature: 可选温度覆盖值。
-    model_tier: 模型池等级,支持 `large` 或 `small`。
+    model_tier: 模型池等级,支持 `large`、`small` 或 `vision`。
     """
 
     task_id: str

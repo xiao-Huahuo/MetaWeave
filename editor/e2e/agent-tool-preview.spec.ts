@@ -3,8 +3,8 @@
  *
  * Usage:
  * Replays an announcement/start/end burst through the real workspace UI and
- * verifies that Agent prose stays visible while one keyed toolbar paints its
- * locked shimmer state before changing to the completed Chinese summary.
+ * verifies that Agent prose stays visible while the unified read_file toolbar
+ * paints its locked shimmer state before changing to the completed file summary.
  */
 import { expect, test } from '@playwright/test'
 
@@ -35,7 +35,7 @@ test(`paints a locked tool preview in ${chatMode} mode before completing in plac
         {
           node: 'agent',
           content: '我先保留这段中间输出。',
-          tool_calls: [{ id: 'call_e2e_tools', name: 'list_available_tools', args: {} }],
+          tool_calls: [{ id: 'call_e2e_read', name: 'read_file', args: { path: 'attachment://att_e2e' } }],
           trace: [],
         },
         {
@@ -45,9 +45,9 @@ test(`paints a locked tool preview in ${chatMode} mode before completing in plac
           trace: [{
             node: 'action',
             event: 'tool_call_start',
-            tool_call_id: 'call_e2e_tools',
-            tool_name: 'list_available_tools',
-            display_name: '查看可用工具',
+            tool_call_id: 'call_e2e_read',
+            tool_name: 'read_file',
+            display_name: '阅读文件',
             chat_visible: true,
           }],
         },
@@ -58,10 +58,10 @@ test(`paints a locked tool preview in ${chatMode} mode before completing in plac
           trace: [{
             node: 'action',
             event: 'tool_call_end',
-            tool_call_id: 'call_e2e_tools',
-            tool_name: 'list_available_tools',
-            display_name: '查看可用工具',
-            raw_content: '- 查看可用工具(list_available_tools): 列出全部正式工具。',
+            tool_call_id: 'call_e2e_read',
+            tool_name: 'read_file',
+            display_name: '阅读文件',
+            raw_content: JSON.stringify({ path: 'attachment://att_e2e', filename: 'report.pdf', content: '正文' }),
             chat_visible: true,
           }],
         },
@@ -225,7 +225,7 @@ test(`paints a locked tool preview in ${chatMode} mode before completing in plac
   await expect.poll(() => streamServed).toBe(true)
   await expect(page.getByText('我先保留这段中间输出。')).toBeVisible()
   await expect(page.getByText('这是工具返回后的流式回答。')).toBeVisible()
-  await expect(page.locator('.tool-text.pending')).toHaveText('正在查看可用工具')
+  await expect(page.locator('.tool-text.pending')).toHaveText('正在阅读文件')
   await expect(page.locator('.tool-call-box .tool-expand-btn')).toHaveCount(0)
   const categoryIcon = page.locator('.tool-static-icon .tool-category-icon')
   await expect(categoryIcon).toBeVisible()
@@ -269,14 +269,14 @@ test(`paints a locked tool preview in ${chatMode} mode before completing in plac
   expect(pendingStyle.flexGrow).toBe('0')
   expect(pendingStyle.textWidth).toBeLessThan(pendingStyle.headerWidth / 2)
   await page.screenshot({ path: testInfo.outputPath(`${chatMode}-pending.png`), fullPage: true })
-  await expect(page.locator('.tool-text')).toHaveText('查看可用工具')
+  await expect(page.locator('.tool-text')).toHaveText('阅读文件：report.pdf')
   expect(pageErrors, apiRequests.join('\n')).toEqual([])
 
   const transitions = await page.evaluate(() => (
     (window as typeof window & { __toolbarTransitions?: ToolbarTransition[] }).__toolbarTransitions ?? []
   ))
-  const pending = transitions.find((transition) => transition.pending && transition.text === '正在查看可用工具')
-  const completed = transitions.find((transition) => !transition.pending && transition.text === '查看可用工具')
+  const pending = transitions.find((transition) => transition.pending && transition.text === '正在阅读文件')
+  const completed = transitions.find((transition) => !transition.pending && transition.text === '阅读文件：report.pdf')
   expect(pending).toBeDefined()
   expect(pending?.expandable).toBe(false)
   expect(completed).toBeDefined()

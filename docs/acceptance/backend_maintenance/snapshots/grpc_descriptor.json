@@ -1737,6 +1737,24 @@
               "name": "small_model_max_output_tokens",
               "number": 11,
               "type": "TYPE_INT64"
+            },
+            {
+              "label": "LABEL_OPTIONAL",
+              "name": "vision_api_key",
+              "number": 12,
+              "type": "TYPE_STRING"
+            },
+            {
+              "label": "LABEL_OPTIONAL",
+              "name": "vision_base_url",
+              "number": 13,
+              "type": "TYPE_STRING"
+            },
+            {
+              "label": "LABEL_OPTIONAL",
+              "name": "vision_model_name",
+              "number": 14,
+              "type": "TYPE_STRING"
             }
           ],
           "name": "LLMConfigSaveRequest"
@@ -1862,6 +1880,48 @@
               "name": "small_model_max_output_tokens",
               "number": 20,
               "type": "TYPE_INT64"
+            },
+            {
+              "label": "LABEL_OPTIONAL",
+              "name": "vision_api_key",
+              "number": 21,
+              "type": "TYPE_STRING"
+            },
+            {
+              "label": "LABEL_OPTIONAL",
+              "name": "vision_base_url",
+              "number": 22,
+              "type": "TYPE_STRING"
+            },
+            {
+              "label": "LABEL_OPTIONAL",
+              "name": "vision_model_name",
+              "number": 23,
+              "type": "TYPE_STRING"
+            },
+            {
+              "label": "LABEL_OPTIONAL",
+              "name": "effective_vision_api_key",
+              "number": 24,
+              "type": "TYPE_STRING"
+            },
+            {
+              "label": "LABEL_OPTIONAL",
+              "name": "effective_vision_base_url",
+              "number": 25,
+              "type": "TYPE_STRING"
+            },
+            {
+              "label": "LABEL_OPTIONAL",
+              "name": "effective_vision_model_name",
+              "number": 26,
+              "type": "TYPE_STRING"
+            },
+            {
+              "label": "LABEL_OPTIONAL",
+              "name": "effective_vision_model_source",
+              "number": 27,
+              "type": "TYPE_STRING"
             }
           ],
           "name": "LLMConfigResponse"
@@ -2814,6 +2874,21 @@
             {
               "input_type": ".google.protobuf.Struct",
               "name": "SaveVlmConfig",
+              "output_type": ".google.protobuf.Struct"
+            },
+            {
+              "input_type": ".google.protobuf.Struct",
+              "name": "ListVlmConfigPresets",
+              "output_type": ".google.protobuf.Struct"
+            },
+            {
+              "input_type": ".google.protobuf.Struct",
+              "name": "SaveVlmConfigPreset",
+              "output_type": ".google.protobuf.Struct"
+            },
+            {
+              "input_type": ".google.protobuf.Struct",
+              "name": "DeleteVlmConfigPreset",
               "output_type": ".google.protobuf.Struct"
             },
             {

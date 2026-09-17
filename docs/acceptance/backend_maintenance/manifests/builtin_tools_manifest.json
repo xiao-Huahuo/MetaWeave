@@ -12,17 +12,31 @@
     "target_file": "pending"
   },
   {
-    "callable": "agent_service.tools.builtin.utility.get_current_time",
-    "description": "获取指定 IANA 时区的当前时间。默认使用 UTC。",
-    "name": "get_current_time",
+    "callable": "agent_service.tools.builtin.utility.read_tool_result",
+    "description": "按 tool-result:// 引用继续读取当前会话中已经执行过的完整工具结果。支持 start_line/end_line 或 cursor；不要为查看被省略内容而重新执行原工具。",
+    "name": "read_tool_result",
     "parameters": {
       "properties": {
-        "timezone_name": {
-          "description": "IANA 时区名称,例如 UTC、Asia/Shanghai。",
+        "content_ref": {
+          "description": "工具结果返回的 tool-result:// 引用。",
           "type": "string"
+        },
+        "cursor": {
+          "description": "可选 continuation cursor。",
+          "type": "integer"
+        },
+        "end_line": {
+          "description": "可选结束行，不包含该行。",
+          "type": "integer"
+        },
+        "start_line": {
+          "description": "可选起始行，0-based。",
+          "type": "integer"
         }
       },
-      "required": [],
+      "required": [
+        "content_ref"
+      ],
       "type": "object"
     },
     "status": "pending",
@@ -30,7 +44,7 @@
   },
   {
     "callable": "agent_service.tools.builtin.terminal.run_terminal_command",
-    "description": "在项目终端沙盒中执行一个或多个结构化指令段。必须传 shell、segments、cwd; 禁止传整条 shell 字符串。\n\n内部读取指令(internal_command 类型): pwd(当前目录), ls/dir(列出目录,支持 -a/R/l 和 /s/b 等标志,支持 *.docx 通配符), cat/type(读文件), head/tail -n N 文件(行窗口), stat(文件状态), wc(统计行/词/字符数,可用 -c/-l/-w 筛选但始终显示三项;未指定文件则返回总计数)。\n内部写入指令: write(覆写), append(追加), touch(创建/时间戳), mkdir(始终 -p 模式), rm/del(目录递归删除), mv/move(移动/重命名)。\n\n外部程序段(external_program 类型): 在沙盒/只读模式下需在白名单内,白名单程序包括 python/pytest/pip/git/npm/node/eslint/vitest/go/cargo/find/wc 等;find 用于搜索文件(如 find . -name '*.docx' -type f), wc 用于带标志统计(如 wc -l file.txt)。完全访问模式下所有外部程序都允许(嵌套 shell 仍禁止)。\n\n权限模式影响:\n- readonly: 仅内部读取指令(pwd/ls/cat/head/tail/stat/wc),禁止写入和外部程序。\n- sandbox(默认): 内部读取可穿透工作区根目录;写入和外部程序限制在工作区内。\n- full_access: 所有内部指令和外部程序放开限制,额外支持 kill/taskkill 杀进程,rm -rf/mkdir -p/批量 cat/mv 等都允许。\n\n注意事项:\n- 读取或解析知识库中的文档正文时, 不要使用本工具; 统一用 read_knowledge_file 读取源文件的 Markdown 投影。\n- 文件搜索优先用 ls/dir *.docx /s /b 或 find . -name '*.docx'。\n- 需要标志的 wc(如 wc -l)用 external_program 类型;仅统计用 internal_command。\n- 所有 internal_command 都无需 shell 程序支持,在任何环境下可用。",
+    "description": "在项目终端沙盒中执行一个或多个结构化指令段。必须传 shell、segments、cwd; 禁止传整条 shell 字符串。\n\n内部读取指令(internal_command 类型): pwd(当前目录), ls/dir(列出目录,支持 -a/R/l 和 /s/b 等标志,支持 *.docx 通配符), cat/type(读文件), head/tail -n N 文件(行窗口), stat(文件状态), wc(统计行/词/字符数,可用 -c/-l/-w 筛选但始终显示三项;未指定文件则返回总计数)。\n内部写入指令: write(覆写), append(追加), touch(创建/时间戳), mkdir(始终 -p 模式), rm/del(目录递归删除), mv/move(移动/重命名)。\n\n外部程序段(external_program 类型): 在沙盒/只读模式下需在白名单内,白名单程序包括 python/pytest/pip/git/npm/node/eslint/vitest/go/cargo/find/wc 等;find 用于搜索文件(如 find . -name '*.docx' -type f), wc 用于带标志统计(如 wc -l file.txt)。完全访问模式下所有外部程序都允许(嵌套 shell 仍禁止)。\n\n权限模式影响:\n- readonly: 仅内部读取指令(pwd/ls/cat/head/tail/stat/wc),禁止写入和外部程序。\n- sandbox(默认): 内部读取可穿透工作区根目录;写入和外部程序限制在工作区内。\n- full_access: 所有内部指令和外部程序放开限制,额外支持 kill/taskkill 杀进程,rm -rf/mkdir -p/批量 cat/mv 等都允许。\n\n注意事项:\n- 读取或解析知识库文件、会话附件正文时, 不要使用本工具; 统一用 read_file。\n- 文件搜索优先用 ls/dir *.docx /s /b 或 find . -name '*.docx'。\n- 需要标志的 wc(如 wc -l)用 external_program 类型;仅统计用 internal_command。\n- 所有 internal_command 都无需 shell 程序支持,在任何环境下可用。",
     "name": "run_terminal_command",
     "parameters": {
       "properties": {
@@ -414,7 +428,7 @@
   },
   {
     "callable": "agent_service.tools.builtin.memory.write_long_term_rule",
-    "description": "向当前用户的长期系统规则中追加一条必须遵守的指令,效果等同于用户在设置页手动添加系统提示词。该规则每轮都会注入系统提示词,不依赖 AgenticRAG 召回。",
+    "description": "向当前用户的长期系统规则中追加一条必须遵守的指令,效果等同于用户在设置页手动添加系统提示词。该规则每轮都会注入系统提示词,不依赖 RAG 召回。",
     "name": "write_long_term_rule",
     "parameters": {
       "properties": {
@@ -494,7 +508,7 @@
   },
   {
     "callable": "agent_service.tools.builtin.knowledge.search_knowledge",
-    "description": "全库联合搜索: 在当前用户知识库中同时做文件名/路径关键词匹配、全文内容匹配,并可选语义搜索。适合用户要找某个文件、确认哪些文件包含关键词、或不知道路径但记得文件名/主题时使用。如果只需要完整列出目录树和所有文件路径,请使用 list_knowledge_files;如果已经要回答正文内容,请使用 get_knowledge_context。",
+    "description": "四库联合搜索: 与前端统一搜索框相同,可搜索文件库、图书馆、组件库和文献库,并支持全文与语义搜索。适合用户要跨库定位文件、图书、组件或文献,也可用 sources 严格限定搜索范围。最终回答引用结果的 [K#] 编号时,前端会把该结果挂载为可点击的原生库块。如果只需要完整列出目录树和所有文件路径,请使用 list_knowledge_files;如果已经要回答正文内容,请使用 get_knowledge_context。",
     "name": "search_knowledge",
     "parameters": {
       "properties": {
@@ -509,6 +523,19 @@
         "semantic": {
           "description": "是否启用语义搜索,默认 false。",
           "type": "boolean"
+        },
+        "sources": {
+          "description": "搜索来源；默认同时搜索文件库、图书馆、组件库和文献库。",
+          "items": {
+            "enum": [
+              "files",
+              "library",
+              "components",
+              "literature"
+            ],
+            "type": "string"
+          },
+          "type": "array"
         }
       },
       "required": [
@@ -550,7 +577,7 @@
   },
   {
     "callable": "agent_service.tools.builtin.knowledge.understand_image",
-    "description": "使用 CPU 本地 Qwen 理解当前会话中用户直接上传的图片。系统会同时提供先行 OCR 文本，适合分析对象、布局、空间关系、图表趋势和图片语义；需要重新观察图片或回答特定视觉问题时调用。",
+    "description": "使用用户在 LLM 设置中配置的远程视觉模型理解当前会话中直接上传的图片。系统会同时提供先行 OCR 文本，适合分析对象、布局、空间关系、图表趋势和图片语义；需要重新观察图片或回答特定视觉问题时调用。",
     "name": "understand_image",
     "parameters": {
       "properties": {
@@ -559,7 +586,7 @@
           "type": "string"
         },
         "prompt": {
-          "description": "可选。希望本地模型针对图片回答的问题。",
+          "description": "可选。希望视觉模型针对图片回答的问题。",
           "type": "string"
         }
       },
@@ -774,7 +801,7 @@
   },
   {
     "callable": "agent_service.tools.builtin.knowledge.get_current_viewing_document",
-    "description": "获取当前用户在 editor 前端正在观看的文档基本信息;如需正文请继续调用 read_knowledge_file。",
+    "description": "获取当前用户在 editor 前端正在观看的文档基本信息;如需正文请继续调用 read_file。",
     "name": "get_current_viewing_document",
     "parameters": {
       "properties": {},
@@ -786,7 +813,7 @@
   },
   {
     "callable": "agent_service.tools.builtin.knowledge.list_knowledge_files",
-    "description": "列出当前用户知识库的完整文件树,返回所有文件和文件夹的路径、类型和修改时间。适合需要浏览目录结构、获得可传给 read_knowledge_file 的准确路径、或全面盘点文件数量时使用。它不会按关键词过滤;如果用户要按文件名、路径或正文关键词搜索,请使用 search_knowledge。",
+    "description": "列出当前用户知识库的完整文件树,返回所有文件和文件夹的路径、类型和修改时间。适合需要浏览目录结构、获得可传给 read_file 的准确路径、或全面盘点文件数量时使用。它不会按关键词过滤;如果用户要按文件名、路径或正文关键词搜索,请使用 search_knowledge。",
     "name": "list_knowledge_files",
     "parameters": {
       "properties": {},
@@ -797,14 +824,26 @@
     "target_file": "pending"
   },
   {
-    "callable": "agent_service.tools.builtin.knowledge.read_knowledge_file",
-    "description": "读取知识库中任意支持源文件的 Markdown 中间层正文，包括文本、Markdown、代码、PDF、图片、扫描件、Office 和表格。传入源文件相对于当前知识库根目录的准确 path；工具会读取 `.mw/md` 投影，尚未灌库或投影过期时自动执行单文件灌库。不要传 `.mw/md` 内部路径，也不要调用 run_terminal_command、get_knowledge_file_url、download_file 或 Python 库自行解析源文件。",
-    "name": "read_knowledge_file",
+    "callable": "agent_service.tools.builtin.knowledge.read_file",
+    "description": "统一读取知识库文件或当前会话附件。传入知识库相对路径时读取 Markdown 投影；传入 attachment:// 引用时首次按需解析原文件并缓存，后续直接读取缓存。图片文字可由本工具按需 OCR；理解对象、布局、图表和空间关系请使用 understand_image。不要传 `.mw/md` 内部路径，也不要调用 run_terminal_command、get_knowledge_file_url、download_file 或 Python 库自行解析源文件。",
+    "name": "read_file",
     "parameters": {
       "properties": {
+        "cursor": {
+          "description": "附件正文可选 continuation cursor。",
+          "type": "integer"
+        },
+        "end_line": {
+          "description": "附件正文可选结束行，不包含该行。",
+          "type": "integer"
+        },
         "path": {
-          "description": "源文件相对于当前知识库根目录的路径。",
+          "description": "知识库相对路径，或附件目录中的 attachment:// 引用。",
           "type": "string"
+        },
+        "start_line": {
+          "description": "附件正文可选起始行，0-based。",
+          "type": "integer"
         }
       },
       "required": [
@@ -870,7 +909,7 @@
   },
   {
     "callable": "agent_service.tools.builtin.knowledge.show_markdown_html",
-    "description": "Display a generated Markdown/document HTML visualization in the editor front-end. Use this only after you have produced the final complete HTML for the current document visualization. The tool saves the HTML under runtime/visualizations, returns the local path and URL, and automatically triggers the front-end iframe mount. For any knowledge document, first read its canonical Markdown projection with read_knowledge_file and build the HTML from that content.",
+    "description": "Display a generated Markdown/document HTML visualization in the editor front-end. Use this only after you have produced the final complete HTML for the current document visualization. The tool saves the HTML under runtime/visualizations, returns the local path and URL, and automatically triggers the front-end iframe mount. For any knowledge document, first read its canonical Markdown projection with read_file and build the HTML from that content.",
     "name": "show_markdown_html",
     "parameters": {
       "properties": {
@@ -1044,7 +1083,7 @@
   },
   {
     "callable": "agent_service.tools.builtin.agent.spawn_child_agent",
-    "description": "【何时必须使用】当用户请求需要彻底调研或全面盘点一个范围(如调研整个知识库含有什么内容、理解项目全部文件/代码结构)、或需要并行分析多个相互独立的方向(如分别比较多个方案)时,必须先调用本工具创建只读 explore 子 Agent 分头探索,再用 wait_for_child_agents 收取结果。不确定是否需要并行探索时,优先派 explore 子 Agent 探索,它只读不写、成本更低。创建一个不能继续召唤其他子 Agent 的子 Agent。必须提供明确目标。mode=foreground 会阻塞直到子 Agent 完成并返回结果;mode=background 只启动后台子 Agent 并立即返回 run_id,不会等待最终结果。一旦使用 background 创建了本轮所需的全部子 Agent,必须反复调用 wait_for_child_agents 逐个收取结果;只要还有 created/running 子 Agent,就继续等待,不要输出最终结论。子 Agent 默认继承主 Agent 工具,但主 Agent 可缩小工具范围和沙盒权限。",
+    "description": "【何时必须使用】当用户请求需要彻底调研或全面盘点一个范围(如调研整个知识库含有什么内容、理解项目全部文件/代码结构)、或需要并行分析多个相互独立的方向(如分别比较多个方案)时,必须先调用本工具创建只读 explore 子 Agent 分头探索,再用 wait_for_child_agents 收取结果。不确定是否需要并行探索时,优先派 explore 子 Agent 探索,它只读不写、成本更低。创建一个不能继续召唤其他子 Agent 的子 Agent。必须提供明确目标。mode=foreground 会阻塞直到子 Agent 完成并返回结果;mode=background 只启动后台子 Agent 并立即返回 run_id,不会等待最终结果。一旦使用 background 创建了本轮所需的全部子 Agent,必须反复调用 wait_for_child_agents 逐个收取结果;只要还有 created/running 子 Agent,就继续等待,不要输出最终结论。子 Agent 默认继承主 Agent 工具,但主 Agent 可缩小工具范围和沙盒权限。创建前台或后台子 Agent；provider与工作区选择遵循当前系统提示。",
     "name": "spawn_child_agent",
     "parameters": {
       "properties": {
@@ -1052,13 +1091,18 @@
           "description": "readonly、sandbox 或 full_access。",
           "type": "string"
         },
+        "agent_type": {
+          "description": "真实子 Agent类型；代码任务有DSH时用dsh，否则用coding。",
+          "enum": [
+            "explore",
+            "dsh",
+            "coding"
+          ],
+          "type": "string"
+        },
         "allowed_tools": {
           "description": "允许子 Agent 使用的工具名列表。",
           "type": "array"
-        },
-        "category": {
-          "description": "子 Agent 能力模板:agent(全能执行)/explore(只读探索)/plan(只读规划研究),或自定义角色描述。留空则不注入角色设定。",
-          "type": "string"
         },
         "goal": {
           "description": "子 Agent 必须完成的具体目标。",
@@ -1079,10 +1123,15 @@
         "output_contract": {
           "description": "对子 Agent 结果格式的要求。",
           "type": "object"
+        },
+        "workspace_root": {
+          "description": "agent_type为dsh或coding时必填的工作区绝对路径。",
+          "type": "string"
         }
       },
       "required": [
-        "goal"
+        "goal",
+        "agent_type"
       ],
       "type": "object"
     },
@@ -1105,6 +1154,38 @@
         }
       },
       "required": [],
+      "type": "object"
+    },
+    "status": "pending",
+    "target_file": "pending"
+  },
+  {
+    "callable": "agent_service.tools.builtin.agent.continue_child_agent",
+    "description": "向已完成或失败的 DSH 子 Agent提交下一轮指令,复用原 run_id、Runtime和会话上下文。用于修复刚才失败的测试、继续检查调用链或完善同一代码任务。提交background后继续使用wait_for_child_agents收取结果。",
+    "name": "continue_child_agent",
+    "parameters": {
+      "properties": {
+        "mode": {
+          "description": "默认background。",
+          "enum": [
+            "foreground",
+            "background"
+          ],
+          "type": "string"
+        },
+        "prompt": {
+          "description": "基于现有上下文继续执行的明确指令。",
+          "type": "string"
+        },
+        "run_id": {
+          "description": "原 DSH 子 Agent run_id。",
+          "type": "string"
+        }
+      },
+      "required": [
+        "run_id",
+        "prompt"
+      ],
       "type": "object"
     },
     "status": "pending",
@@ -1167,6 +1248,14 @@
           "description": "到时间后交给 Agent 执行的任务说明。",
           "type": "string"
         },
+        "provider": {
+          "description": "native为通用知识子 Agent；dsh为专用代码子 Agent。默认native。",
+          "enum": [
+            "native",
+            "dsh"
+          ],
+          "type": "string"
+        },
         "recurrence_frequency": {
           "description": "循环频率，默认 none（仅执行一次）。",
           "enum": [
@@ -1188,6 +1277,10 @@
         },
         "timezone_name": {
           "description": "循环使用的 IANA 时区,默认 Asia/Shanghai。",
+          "type": "string"
+        },
+        "workspace_root": {
+          "description": "provider=dsh时要修改和测试的工作区绝对路径。",
           "type": "string"
         }
       },

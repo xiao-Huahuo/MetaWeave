@@ -73,7 +73,9 @@ const FALLBACK_DISPLAY: Record<string, string> = {
   // 文件管理工具
   get_current_viewing_document: '获取当前文档',
   list_knowledge_files: '列出文件',
-  read_knowledge_file: '阅读文件',
+  read_file: '阅读文件',
+  read_knowledge_file: '阅读文件', // 兼容旧会话轨迹。
+  read_session_attachment: '阅读文件',
   write_knowledge_file: '创作文件',
   show_markdown_html: '展示Markdown-HTML',
   delete_knowledge_file: '删除文件',

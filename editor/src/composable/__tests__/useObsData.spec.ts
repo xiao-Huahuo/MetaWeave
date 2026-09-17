@@ -211,7 +211,7 @@ describe('buildRagMetrics', () => {
             node: 'action',
             event: 'tool_call_end',
             tool_call_id: 'read_1',
-            tool_name: 'read_knowledge_file',
+            tool_name: 'read_file',
             raw_content: '## 崩铁\\n完整文件内容',
           },
         ],

@@ -980,6 +980,28 @@ class SettingsService:
 
         return str(value or "").strip()
 
+    def _vision_override_or_service_default(
+        self,
+        *,
+        api_key: str,
+        base_url: str,
+        model_name: str,
+    ) -> tuple[str, str, str]:
+        """Apply service-level vision defaults only when the user trio is entirely empty."""
+
+        user_fields = (
+            self._normalize_optional_text(api_key),
+            self._normalize_optional_text(base_url),
+            self._normalize_optional_text(model_name),
+        )
+        if any(user_fields):
+            return user_fields
+        return (
+            self._normalize_optional_text(self.config.model.vision_api_key),
+            self._normalize_optional_text(self.config.model.vision_base_url),
+            self._normalize_optional_text(self.config.model.vision_model_name),
+        )
+
     def _effective_llm_fields(
         self,
         *,
@@ -989,31 +1011,69 @@ class SettingsService:
         small_api_key: str,
         small_base_url: str,
         small_model_name: str,
+        vision_api_key: str,
+        vision_base_url: str,
+        vision_model_name: str,
     ) -> dict[str, str]:
-        """Resolve the documented remote/remote/local model fallback matrix."""
+        """Resolve remote model inheritance without any implicit local-model fallback."""
 
-        local_model_name = self._normalize_optional_text(self.config.model.local_model_name)
         large_is_remote = bool(large_model_name and large_api_key)
-        effective_model_name = large_model_name if large_is_remote else local_model_name
-        effective_small_model_name = (
-            (small_model_name or large_model_name)
-            if large_is_remote
-            else local_model_name
+        effective_model_name = large_model_name if large_is_remote else ""
+        effective_small_model_name = (small_model_name or large_model_name) if large_is_remote else ""
+        vision_is_empty = not any((vision_api_key, vision_base_url, vision_model_name))
+        vision_same_endpoint = not vision_base_url or self._same_model_endpoint(
+            vision_base_url,
+            large_base_url,
         )
-        small_uses_remote = large_is_remote
+        effective_vision_api_key = vision_api_key or (
+            large_api_key if large_is_remote and vision_same_endpoint else ""
+        )
+        effective_vision_base_url = vision_base_url or (large_base_url if large_is_remote else "")
+        effective_vision_model_name = vision_model_name or (large_model_name if large_is_remote else "")
+        vision_is_remote = bool(effective_vision_model_name and effective_vision_api_key)
         return {
             "effective_api_key": large_api_key if large_is_remote else "",
             "effective_base_url": large_base_url if large_is_remote else "",
             "effective_model_name": effective_model_name,
-            "effective_model_source": "remote" if large_is_remote else "local",
-            "effective_small_api_key": (small_api_key or large_api_key) if small_uses_remote else "",
-            "effective_small_base_url": (small_base_url or large_base_url) if small_uses_remote else "",
+            "effective_model_source": "remote" if large_is_remote else "unconfigured",
+            "effective_small_api_key": (small_api_key or large_api_key) if large_is_remote else "",
+            "effective_small_base_url": (small_base_url or large_base_url) if large_is_remote else "",
             "effective_small_model_name": effective_small_model_name,
-            "effective_small_model_source": "remote" if small_uses_remote else "local",
+            "effective_small_model_source": "remote" if large_is_remote else "unconfigured",
+            "effective_vision_api_key": effective_vision_api_key if vision_is_remote else "",
+            "effective_vision_base_url": effective_vision_base_url if vision_is_remote else "",
+            "effective_vision_model_name": effective_vision_model_name if vision_is_remote else "",
+            "effective_vision_model_source": (
+                "large" if vision_is_empty and vision_is_remote
+                else "explicit" if vision_is_remote
+                else "unconfigured"
+            ),
         }
 
+    @staticmethod
+    def _same_model_endpoint(left: str, right: str) -> bool:
+        """Compare endpoint overrides conservatively while tolerating trailing slashes."""
+
+        return left.rstrip("/") == right.rstrip("/")
+
+    def _validate_vision_endpoint_credentials(
+        self,
+        *,
+        large_base_url: str,
+        vision_api_key: str,
+        vision_base_url: str,
+    ) -> None:
+        """Prevent a large-model credential from being inherited by another endpoint."""
+
+        if (
+            vision_base_url
+            and not self._same_model_endpoint(vision_base_url, large_base_url)
+            and not vision_api_key
+        ):
+            raise ValueError("vision_api_key is required when vision_base_url differs from base_url")
+
     def _serialize_llm_config(self, config: UserLLMConfig) -> dict:
-        """Serialize current LLM settings and expose effective small-model fallback fields."""
+        """Serialize stored/default settings and expose every effective remote endpoint."""
 
         large_api_key = self._normalize_optional_text(config.api_key)
         large_base_url = self._normalize_optional_text(config.base_url)
@@ -1021,6 +1081,11 @@ class SettingsService:
         small_api_key = self._normalize_optional_text(config.small_api_key)
         small_base_url = self._normalize_optional_text(config.small_base_url)
         small_model_name = self._normalize_optional_text(config.small_model_name)
+        vision_api_key, vision_base_url, vision_model_name = self._vision_override_or_service_default(
+            api_key=config.vision_api_key,
+            base_url=config.vision_base_url,
+            model_name=config.vision_model_name,
+        )
         large_context_tokens, small_context_tokens = self._resolve_context_window_defaults(
             large_value=config.model_context_window_tokens,
             small_value=config.small_model_context_window_tokens,
@@ -1033,6 +1098,9 @@ class SettingsService:
             small_api_key=small_api_key,
             small_base_url=small_base_url,
             small_model_name=small_model_name,
+            vision_api_key=vision_api_key,
+            vision_base_url=vision_base_url,
+            vision_model_name=vision_model_name,
         )
         return {
             "user_id": config.user_id,
@@ -1042,6 +1110,9 @@ class SettingsService:
             "small_api_key": small_api_key,
             "small_base_url": small_base_url,
             "small_model_name": small_model_name,
+            "vision_api_key": vision_api_key,
+            "vision_base_url": vision_base_url,
+            "vision_model_name": vision_model_name,
             "model_context_window_tokens": large_context_tokens,
             "model_max_output_tokens": int(config.model_max_output_tokens or 0),
             "small_model_context_window_tokens": small_context_tokens,
@@ -1066,6 +1137,11 @@ class SettingsService:
         small_api_key = self._normalize_optional_text(m.small_model_api_key)
         small_base_url = self._normalize_optional_text(m.small_model_base_url)
         small_model_name = self._normalize_optional_text(m.small_model_name)
+        vision_api_key, vision_base_url, vision_model_name = self._vision_override_or_service_default(
+            api_key="",
+            base_url="",
+            model_name="",
+        )
         large_context_tokens, small_context_tokens = self._resolve_context_window_defaults(
             large_value=m.model_context_window_tokens,
             small_value=m.small_model_context_window_tokens,
@@ -1078,6 +1154,9 @@ class SettingsService:
             small_api_key=small_api_key,
             small_base_url=small_base_url,
             small_model_name=small_model_name,
+            vision_api_key=vision_api_key,
+            vision_base_url=vision_base_url,
+            vision_model_name=vision_model_name,
         )
         return {
             "user_id": user_id,
@@ -1087,6 +1166,9 @@ class SettingsService:
             "small_api_key": small_api_key,
             "small_base_url": small_base_url,
             "small_model_name": small_model_name,
+            "vision_api_key": vision_api_key,
+            "vision_base_url": vision_base_url,
+            "vision_model_name": vision_model_name,
             "model_context_window_tokens": large_context_tokens,
             "model_max_output_tokens": int(m.model_max_output_tokens or 0),
             "small_model_context_window_tokens": small_context_tokens,
@@ -1135,16 +1217,35 @@ class SettingsService:
         small_api_key: str | None = None,
         small_base_url: str | None = None,
         small_model_name: str | None = None,
+        vision_api_key: str | None = None,
+        vision_base_url: str | None = None,
+        vision_model_name: str | None = None,
         model_context_window_tokens: int | None = None,
         model_max_output_tokens: int | None = None,
         small_model_context_window_tokens: int | None = None,
         small_model_max_output_tokens: int | None = None,
     ) -> dict:
-        """保存用户自定义 LLM 配置，包含大模型和小模型两套。"""
+        """保存用户自定义的大、小和视觉模型配置。"""
         normalized_user_id = user_id.strip()
+        if not normalized_user_id:
+            raise ValueError("user_id is required")
         now = self._utc_now()
         with Session(self.engine) as db:
             config = db.get(UserLLMConfig, normalized_user_id)
+            final_large_base_url = self._normalize_optional_text(
+                base_url if base_url is not None else (config.base_url if config else "")
+            )
+            final_vision_api_key = self._normalize_optional_text(
+                vision_api_key if vision_api_key is not None else (config.vision_api_key if config else "")
+            )
+            final_vision_base_url = self._normalize_optional_text(
+                vision_base_url if vision_base_url is not None else (config.vision_base_url if config else "")
+            )
+            self._validate_vision_endpoint_credentials(
+                large_base_url=final_large_base_url,
+                vision_api_key=final_vision_api_key,
+                vision_base_url=final_vision_base_url,
+            )
             if config is None:
                 config = UserLLMConfig(
                     user_id=normalized_user_id,
@@ -1154,6 +1255,9 @@ class SettingsService:
                     small_api_key=small_api_key or "",
                     small_base_url=small_base_url or "",
                     small_model_name=small_model_name or "",
+                    vision_api_key=vision_api_key or "",
+                    vision_base_url=vision_base_url or "",
+                    vision_model_name=vision_model_name or "",
                     model_context_window_tokens=max(int(model_context_window_tokens or 0), 0),
                     model_max_output_tokens=max(int(model_max_output_tokens or 0), 0),
                     small_model_context_window_tokens=max(int(small_model_context_window_tokens or 0), 0),
@@ -1173,6 +1277,12 @@ class SettingsService:
                     config.small_base_url = small_base_url
                 if small_model_name is not None:
                     config.small_model_name = small_model_name
+                if vision_api_key is not None:
+                    config.vision_api_key = vision_api_key
+                if vision_base_url is not None:
+                    config.vision_base_url = vision_base_url
+                if vision_model_name is not None:
+                    config.vision_model_name = vision_model_name
                 if model_context_window_tokens is not None:
                     config.model_context_window_tokens = max(int(model_context_window_tokens), 0)
                 if model_max_output_tokens is not None:
@@ -1979,7 +2089,7 @@ class SettingsService:
             return bool(value)
 
     def is_vision_understanding_enabled_for_user(self, *, user_id: str) -> bool:
-        """返回用户是否显式允许本地 Qwen 执行图片语义识别。"""
+        """返回用户是否显式允许已配置的远程视觉模型处理图片。"""
 
         normalized_user_id = user_id.strip()
         if not normalized_user_id:

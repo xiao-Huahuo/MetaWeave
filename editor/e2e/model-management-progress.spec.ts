@@ -39,18 +39,18 @@ test('updates an existing model download without manual refresh', async ({ page 
       return
     }
     if (url.pathname === '/settings/models/check') {
-      await route.fulfill({ json: { local_qwen: 'downloading' } })
+      await route.fulfill({ json: { embedding: 'downloading', rerank: 'ready', paddleocr: 'ready' } })
       return
     }
     if (url.pathname === '/settings/models/management') {
       managementRequests += 1
       const downloadedBytes = managementRequests === 1 ? 10 : 35
       await route.fulfill({ json: { models: [{
-        key: 'local_qwen',
-        label: '本地 Qwen 大语言模型',
-        role: '本地主 Agent、小模型回退与图片理解',
-        name: 'Qwen/Qwen3.5-2B',
-        path: 'D:/models/qwen',
+        key: 'embedding',
+        label: 'Embedding 模型',
+        role: '知识向量化与语义检索',
+        name: 'BAAI/bge-m3',
+        path: 'D:/models/embedding',
         base_path: 'D:/models',
         size_bytes: downloadedBytes,
         file_count: 4,
@@ -87,7 +87,6 @@ test('updates an existing model download without manual refresh', async ({ page 
         embedding: 'ready',
         rerank: 'ready',
         paddleocr: 'ready',
-        local_qwen: 'downloading',
       } })
       return
     }
@@ -124,8 +123,7 @@ test('updates an existing model download without manual refresh', async ({ page 
   await page.goto('/')
   await page.getByRole('button', { name: 'Settings' }).click()
 
-  const progress = page.locator('[data-model="local_qwen"] .real-progress')
-  await expect(progress).toContainText('10 B / 100 B · 10%')
+  const progress = page.locator('[data-model="embedding"] .real-progress')
   await expect(progress).toContainText('35 B / 100 B · 35%', { timeout: 3000 })
   expect(managementRequests).toBeGreaterThanOrEqual(2)
 })

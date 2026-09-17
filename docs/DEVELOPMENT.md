@@ -7,13 +7,13 @@
 * Python 3.12+
 * Node.js 22.18，或 Node.js 24.12 及以上版本
 * npm 10+
-* 使用 Agent 时至少准备一种模型入口：OpenAI 兼容远程模型，或在客户端确认下载 CPU 本地 Qwen；模型缺失不影响基础服务启动
+* 使用 Agent 时必须准备一个可用的 OpenAI-compatible 远程大模型；模型未配置不影响基础服务启动，但 Agent 调用会返回明确配置错误
 
 ### 1. 配置模型
 
-推荐直接在 Editor 客户端的设置页填写主模型与小模型的名称、API Key 和 OpenAI 兼容 API 地址。根目录 `.env` 只用于提供服务级默认值，例如 `AGENT_MODEL_NAME`、`AGENT_MODEL_API_KEY`、`AGENT_MODEL_BASE_URL` 和对应的 `AGENT_SMALL_MODEL_*`。
+推荐直接在 Editor 客户端的设置页填写大模型、小模型和视觉模型的名称、API Key 与 OpenAI-compatible API 地址。小模型和视觉模型留空时继承大模型。根目录 `.env` 只用于提供服务级默认值，例如 `AGENT_MODEL_NAME`、`AGENT_MODEL_API_KEY`、`AGENT_MODEL_BASE_URL` 和对应的 `AGENT_SMALL_MODEL_*`、`AGENT_VISION_MODEL_*`。
 
-没有配置可用远程大模型时，Agent 会回退到 CPU 本地 Qwen；模型不存在时必须由用户在“设置 → 存储管理 → 模型管理”中确认下载。Embedding、ReRank、PaddleOCR 和本地 Qwen 都不在后端启动路径中自动下载，缺失模型不会阻止 API 和桌面窗口启动。
+没有配置可用远程大模型时，Agent 会立即提示完成 LLM 配置，不再下载或回退到本地语言模型。Embedding、ReRank 和 PaddleOCR 仍由模型管理按用户选择准备；缺失这些可选模型不会阻止 API 和桌面窗口启动。
 
 ### 2. 启动后端（FastAPI）
 
@@ -28,6 +28,8 @@ python -m uvicorn main:app --host 127.0.0.1 --port 8002
 `AgentConfig` 的默认 HTTP 监听地址仍是 `0.0.0.0`；开发机一般应像上面一样显式绑定 `127.0.0.1`，不要把无通用认证的开发服务直接暴露到不可信网络。gRPC 默认监听 `50051`，由 FastAPI lifespan 同步启动和关闭。
 
 开发模式默认将项目目录下的 `resources/knowledge/` 作为知识库根目录，用户可在前端重新选择知识库。服务启动和切换知识库都不会自动重建全部索引；灌库由前端的全库、目录或单文件操作按需触发。启动时会执行 Alembic 数据库迁移，但不会下载或同步加载全部模型。
+
+会话附件上传遵循“原文件先落盘、Agent 按需解析”：`POST /agent/attachments/upload` 只在线程池中保存文件和写入 `uploaded/unparsed` 记录，不执行 OCR、MinerU 或视觉模型。多个文件请求可以并行；发送消息只等待这些网络上传取得正式 `attachment://` 引用。Agent 随后使用 `read_file` 读取文字/文档结构，或使用 `understand_image` 分析图片语义。
 
 ### 3. 启动前端（Electron + Vite + Vue 3）
 
@@ -55,8 +57,8 @@ curl http://127.0.0.1:8002/health
 
 ### 5. 必要设置
 
-1. 使用远程模型时，在 Editor 设置中配置模型名称、API Key 和 OpenAI 兼容 API 地址；不使用远程模型时，在模型管理中确认下载本地 Qwen。
-2. Embedding、ReRank、PaddleOCR 和图片理解均按用户设置与实际业务入口启用，不要通过启动脚本预下载模型。
+1. 在 Editor 的 LLM 设置中配置远程大模型；需要独立小模型或视觉模型时填写对应区块，否则保持为空以继承大模型。
+2. Embedding、ReRank、PaddleOCR 按用户设置与实际业务入口启用；远程识图还必须显式开启图片外发许可。
 3. 如果需要联网搜索，在设置中配置当前网络可用的代理地址；无法访问搜索服务时，联网工具会失败，但不影响本地功能启动。
 
 ## 测试与质量检查
@@ -259,9 +261,9 @@ MetaWeave/
 AgentService.exe
 ```
 
-后端单独运行时提供 API 和前端页面：`http://127.0.0.1:8002`。`runtime/`、外置 `resources/` 目录骨架和 `.env` 模板会在首次启动时自动生成。Agent 可以使用 `.env` 或客户端设置中的远程模型，也可以使用用户确认下载的本地 Qwen。单独运行后端 exe 时如果希望模拟安装包行为，可手动设置 `AGENT_PROJECT_ROOT` 和 `AGENT_BASE_DATA_DIR`。
+后端单独运行时提供 API 和前端页面：`http://127.0.0.1:8002`。`runtime/`、外置 `resources/` 目录骨架和 `.env` 模板会在首次启动时自动生成。Agent 使用 `.env` 服务默认值或客户端保存的远程模型配置。单独运行后端 exe 时如果希望模拟安装包行为，可手动设置 `AGENT_PROJECT_ROOT` 和 `AGENT_BASE_DATA_DIR`。
 
-单独运行 exe 只会创建 `resources/` 目录骨架，不会像 Electron 安装包一样复制默认 MCP、安全规则和 Skill。需要完整默认资源时，应把安装包的 `default-resources` 内容复制到项目根目录的 `resources/`，或直接从 `win-unpacked/MetaWeave.exe` 启动桌面应用。未配置远程模型时，也可以在客户端确认下载本地 Qwen 后使用 Agent。
+单独运行 exe 只会创建 `resources/` 目录骨架，不会像 Electron 安装包一样复制默认 MCP、安全规则和 Skill。需要完整默认资源时，应把安装包的 `default-resources` 内容复制到项目根目录的 `resources/`，或直接从 `win-unpacked/MetaWeave.exe` 启动桌面应用。未配置远程大模型时，Agent 功能保持不可用并给出设置提示。
 
 ## 构建产物与清理
 

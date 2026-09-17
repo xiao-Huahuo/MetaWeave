@@ -12,6 +12,7 @@ from fastapi import APIRouter, HTTPException, Query
 from starlette.concurrency import run_in_threadpool
 
 from agent_service.core.agent_config import DEFAULT_BUSINESS_LIMITS
+from agent_service.schemas.settings import LLMConfigResponse, LLMConfigSaveRequest
 from agent_service.services.document_parsing import MinerUClient
 from agent_service.services.memory.rag.image_ocr import ImageOcrService
 from agent_service.api.rest.deps import (
@@ -42,24 +43,18 @@ async def get_model_status() -> dict[str, Any]:
 async def download_model(body: dict[str, Any]) -> dict[str, Any]:
     """异步触发指定模型的后台下载。
 
-    body: { "model": "embedding" | "rerank" | "paddleocr" | "local_qwen" }
+    body: { "model": "embedding" | "rerank" | "paddleocr" }
     返回后前端轮询 GET /settings/models/status 获取进度。
     """
 
     model = str(body.get("model") or "").strip()
-    if model not in ("embedding", "rerank", "paddleocr", "local_qwen"):
-        raise HTTPException(status_code=422, detail="model 必须是 embedding / rerank / paddleocr / local_qwen")
+    if model not in ("embedding", "rerank", "paddleocr"):
+        raise HTTPException(status_code=422, detail="model 必须是 embedding / rerank / paddleocr")
 
     from agent_service.core.model_status import ModelState, set_model_state
 
     svc = _require_settings_service()
     config = svc.config
-
-    if model == "local_qwen":
-        from agent_service.services.local_qwen.service import start_local_qwen_download
-
-        started = start_local_qwen_download(config, load_after=True)
-        return {"status": "started" if started else "already_running", "model": model}
 
     def _download_embedding() -> None:
         try:
@@ -234,41 +229,23 @@ def _trigger_rerank_load(config: Any) -> None:
         pass
 
 
-def _trigger_local_qwen_load(config: Any) -> None:
-    """在后台线程中加载共享 CPU Qwen 实例。"""
-
-    def _load() -> None:
-        try:
-            from agent_service.services.local_qwen.service import get_local_qwen_service
-
-            get_local_qwen_service(config).ensure_loaded()
-        except Exception:
-            logger.exception("本地 Qwen 后台加载失败")
-
-    threading.Thread(target=_load, daemon=True, name="local-qwen-load").start()
-
-
 @router.post("/settings/models/load")
 async def load_model(body: dict[str, Any]) -> dict[str, Any]:
     """触发指定模型的后台加载（不下载，只加载到内存）。
 
-    body: { "model": "embedding" | "rerank" | "local_qwen" }
+    body: { "model": "embedding" | "rerank" }
     """
     model = str(body.get("model") or "").strip()
-    if model not in ("embedding", "rerank", "local_qwen"):
-        raise HTTPException(status_code=422, detail="model 必须是 embedding / rerank / local_qwen")
-
-    from agent_service.core.model_status import ModelState, set_model_state
+    if model not in ("embedding", "rerank"):
+        raise HTTPException(status_code=422, detail="model 必须是 embedding / rerank")
 
     svc = _require_settings_service()
     config = svc.config
 
     if model == "embedding":
         _trigger_embedding_load(config)
-    elif model == "rerank":
-        _trigger_rerank_load(config)
     else:
-        _trigger_local_qwen_load(config)
+        _trigger_rerank_load(config)
 
     return {"status": "triggered", "model": model}
 
@@ -318,7 +295,7 @@ async def save_model_preferences(body: dict[str, Any]) -> dict[str, Any]:
 
 @router.post("/settings/models/initialize")
 async def initialize_models(body: dict[str, Any]) -> dict[str, Any]:
-    """在前端完整启动后触发四类模型的独立后台验证任务。"""
+    """在前端完整启动后触发受管模型的独立后台验证任务。"""
 
     user_id = str(body.get("user_id") or "").strip()
     if not user_id:
@@ -368,15 +345,13 @@ async def check_model_disk() -> dict[str, Any]:
     models = {
         "embedding": config.model.embedding_model_name,
         "rerank": config.model.rerank_model_name,
-        "local_qwen": config.model.local_model_name,
     }
     dirs = {
         "embedding": config.storage.embedding_model_dir,
         "rerank": config.storage.rerank_model_dir,
-        "local_qwen": config.storage.local_model_dir,
     }
 
-    for key in ("embedding", "rerank", "local_qwen"):
+    for key in ("embedding", "rerank"):
         progress = get_download_progress(key)
         if progress.get("status") == "downloading":
             set_model_state(key, ModelState.DOWNLOADING)
@@ -542,7 +517,7 @@ async def get_knowledge_ingestion_config(user_id: str = Query(..., min_length=DE
 
 @router.put("/settings/profile/ingestion")
 async def save_knowledge_ingestion_config(body: dict[str, Any]) -> dict[str, Any]:
-    """保存知识库灌库、OCR 与本地识图配置。"""
+    """保存知识库灌库、OCR 与远程视觉理解配置。"""
 
     user_id = str(body.get("user_id") or "").strip()
     if not user_id:
@@ -728,56 +703,30 @@ async def delete_system_prompt_entry(prompt_id: str) -> dict[str, Any]:
 
 # ---- 用户 LLM 配置 ----
 
-@router.get("/settings/llm/config")
-async def get_llm_config(user_id: str = Query(..., min_length=DEFAULT_BUSINESS_LIMITS.nonempty_min_length, description="用户 ID")) -> dict[str, Any]:
+@router.get("/settings/llm/config", response_model=LLMConfigResponse)
+async def get_llm_config(user_id: str = Query(..., min_length=DEFAULT_BUSINESS_LIMITS.nonempty_min_length, description="用户 ID")) -> LLMConfigResponse:
     """获取用户的 LLM 配置（返回明文 API Key）。"""
     svc = _require_settings_service()
-    return svc.get_llm_config(user_id=user_id)
+    return LLMConfigResponse.model_validate(svc.get_llm_config(user_id=user_id))
 
 
-@router.put("/settings/llm/config")
-async def save_llm_config(body: dict[str, Any]) -> dict[str, Any]:
-    """保存用户的 LLM 配置。body: user_id 必填，其余字段可选。"""
-    user_id = str(body.get("user_id") or "").strip()
+@router.put("/settings/llm/config", response_model=LLMConfigResponse)
+async def save_llm_config(body: LLMConfigSaveRequest) -> LLMConfigResponse:
+    """保存用户的大、小和视觉模型覆盖配置。"""
+
+    payload = body.model_dump()
+    user_id = str(payload.pop("user_id") or "").strip()
     if not user_id:
         raise HTTPException(status_code=422, detail="user_id is required")
-    def _unwrap(field: str) -> str | None:
-        if field not in body:
-            return None
-        value = body.get(field)
-        if value is None or isinstance(value, bool):
-            return None
-        s = str(value).strip()
-        return s
-
-    def _unwrap_nonnegative_int(field: str) -> int | None:
-        if field not in body:
-            return None
-        value = body.get(field)
-        if value is None or isinstance(value, bool):
-            return None
-        try:
-            parsed = int(value)
-        except (TypeError, ValueError) as exc:
-            raise HTTPException(status_code=422, detail=f"{field} must be an integer") from exc
-        if parsed < 0:
-            raise HTTPException(status_code=422, detail=f"{field} must be nonnegative")
-        return parsed
-
+    for field_name, value in payload.items():
+        if isinstance(value, str):
+            payload[field_name] = value.strip()
     svc = _require_settings_service()
-    return svc.save_llm_config(
-        user_id=user_id,
-        api_key=_unwrap("api_key"),
-        base_url=_unwrap("base_url"),
-        model_name=_unwrap("model_name"),
-        small_api_key=_unwrap("small_api_key"),
-        small_base_url=_unwrap("small_base_url"),
-        small_model_name=_unwrap("small_model_name"),
-        model_context_window_tokens=_unwrap_nonnegative_int("model_context_window_tokens"),
-        model_max_output_tokens=_unwrap_nonnegative_int("model_max_output_tokens"),
-        small_model_context_window_tokens=_unwrap_nonnegative_int("small_model_context_window_tokens"),
-        small_model_max_output_tokens=_unwrap_nonnegative_int("small_model_max_output_tokens"),
-    )
+    try:
+        result = svc.save_llm_config(user_id=user_id, **payload)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    return LLMConfigResponse.model_validate(result)
 
 
 # ---- 联网搜索配置 ----

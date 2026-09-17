@@ -6,10 +6,8 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
 
 from agent_service.core.agent_config import AgentConfig
-from agent_service.services.local_qwen.service import get_local_qwen_service
 from agent_service.services.model_management.service import ModelManagementService
 from agent_service.services.settings.service import SettingsService
 
@@ -20,12 +18,10 @@ def create_model_services(
     *,
     config: AgentConfig,
     settings_service: SettingsService,
-) -> tuple[ModelManagementService, Any]:
-    """创建模型管理和本地 Qwen 服务，不在启动装配阶段触碰模型文件。"""
+) -> ModelManagementService:
+    """创建本地受管模型服务，不在启动装配阶段触碰模型文件。"""
 
-    model_management_service = ModelManagementService(config=config, settings_service=settings_service)
-    local_qwen_service = get_local_qwen_service(config)
-    return model_management_service, local_qwen_service
+    return ModelManagementService(config=config, settings_service=settings_service)
 
 
 def autoload_available_embedding_models(config: AgentConfig) -> None:

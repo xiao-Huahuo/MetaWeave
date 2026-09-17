@@ -382,7 +382,7 @@ def test_tool_call_node_defers_excessive_parallel_tool_calls() -> None:
     executor = _FakeToolExecutor()
     node = ToolCallNode(config=AgentConfig(), tool_executor=executor)
     tool_calls = [
-        {"id": f"call_{index}", "name": "read_knowledge_file", "args": {"path": f"file_{index}.md"}}
+        {"id": f"call_{index}", "name": "read_file", "args": {"path": f"file_{index}.md"}}
         for index in range(6)
     ]
 
@@ -407,7 +407,7 @@ def test_model_decision_keeps_complete_tool_messages_for_dynamic_assembler() -> 
     system = SystemMessage(content="system")
     messages = [
         HumanMessage(content="read file"),
-        AIMessage(content="", tool_calls=[{"id": "call_1", "name": "read_knowledge_file", "args": {}}]),
+        AIMessage(content="", tool_calls=[{"id": "call_1", "name": "read_file", "args": {}}]),
         ToolMessage(content="x" * 2000, tool_call_id="call_1"),
     ]
 

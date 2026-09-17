@@ -6,11 +6,8 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
-from PIL import Image
-
 from agent_service.core.agent_config import AgentConfig
 from agent_service.services.knowledge_graph import LLMKnowledgeGraphExtractor
-from agent_service.services.local_qwen.service import LocalQwenService
 from agent_service.services.memory.rag.frontmatter_document import (
     StructuredKnowledgeDocument,
     StructuredKnowledgeSection,
@@ -83,28 +80,6 @@ def test_memory_tool_deletion_uses_exact_service_lookup_without_result_truncatio
         clear_tool_runtime()
 
     assert result == "已删除长期记忆: abcdefghij"
-
-
-def test_local_vision_ocr_context_is_not_cut_by_fixed_character_limit(tmp_path: Path, monkeypatch) -> None:
-    """识图请求拼装的 OCR 文本长度必须读取全局配置。"""
-
-    config = _config(tmp_path)
-    service = LocalQwenService(config=config)
-    captured: dict[str, object] = {}
-
-    def fake_generate_text(**kwargs):
-        captured.update(kwargs)
-        return "ok"
-
-    monkeypatch.setattr(service, "_generate_text", fake_generate_text)
-    image_path = tmp_path / "image.png"
-    Image.new("RGB", (2, 2)).save(image_path)
-
-    assert service.understand_image(image_path=image_path, ocr_text="abcdefghij") == "ok"
-    messages = captured["messages"]
-    text_block = messages[0]["content"][1]["text"]
-    assert "abcdef" in text_block
-    assert "abcdefghij" in text_block
 
 
 def test_graph_single_section_context_is_not_cut_by_fixed_character_limit(tmp_path: Path) -> None:

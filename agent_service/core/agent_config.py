@@ -127,7 +127,6 @@ class AgentConfig:
         vector_db_dir: 向量数据库运行数据目录 (chroma_persist_dir 父目录)。
         embedding_model_dir: Embedding 模型本地缓存目录。
         rerank_model_dir: ReRank 模型本地缓存目录。
-        local_model_dir: CPU 本地 Qwen 大语言模型缓存目录。
         paddleocr_model_dir: PaddleOCR 模型本地缓存目录。
         knowledge_dir: 本地知识库原始资源目录,用于 frontmatter 结构化预处理扫描。
         frontmatter_dir: 结构化知识文档 JSON 目录,用于 frontmatter_bootstrap 输出与 knowledge_bootstrap 输入。
@@ -147,7 +146,6 @@ class AgentConfig:
         vector_db_dir: Path = field(default_factory=lambda: Path("db/vector"))
         embedding_model_dir: Path = field(default_factory=lambda: Path("models/embedding"))
         rerank_model_dir: Path = field(default_factory=lambda: Path("models/rerank"))
-        local_model_dir: Path = field(default_factory=lambda: Path("models/local-llm"))
         paddleocr_model_dir: Path = field(default_factory=lambda: Path("models/paddleocr"))
         knowledge_dir: Path = field(default_factory=lambda: Path("resources/knowledge"))
         frontmatter_dir: Path = field(default_factory=lambda: Path("frontmatter"))
@@ -168,7 +166,6 @@ class AgentConfig:
             self.vector_db_dir = self._resolve_runtime_path(self.vector_db_dir)
             self.embedding_model_dir = self._resolve_runtime_path(self.embedding_model_dir)
             self.rerank_model_dir = self._resolve_runtime_path(self.rerank_model_dir)
-            self.local_model_dir = self._resolve_runtime_path(self.local_model_dir)
             self.paddleocr_model_dir = self._resolve_runtime_path(self.paddleocr_model_dir)
             self.knowledge_dir = self._resolve_project_path(self.knowledge_dir)
             self.frontmatter_dir = self._resolve_runtime_path(self.frontmatter_dir)
@@ -225,7 +222,6 @@ class AgentConfig:
             self.vector_db_dir.mkdir(parents=True, exist_ok=True)
             self.embedding_model_dir.mkdir(parents=True, exist_ok=True)
             self.rerank_model_dir.mkdir(parents=True, exist_ok=True)
-            self.local_model_dir.mkdir(parents=True, exist_ok=True)
             self.paddleocr_model_dir.mkdir(parents=True, exist_ok=True)
             self.knowledge_dir.mkdir(parents=True, exist_ok=True)
             self.frontmatter_dir.mkdir(parents=True, exist_ok=True)
@@ -253,9 +249,9 @@ class AgentConfig:
         small_model_base_url: 小模型 API 基础地址。
         small_model_temperature: 小模型采样温度。
         small_model_timeout_seconds: 小模型请求超时时间,单位为秒。
-        local_model_name: 未配置远程大模型时使用的 CPU 本地 Qwen 仓库名称。
-        local_model_max_new_tokens: 本地 Qwen 普通文本与工具调用的最大生成 token 数。
-        local_model_vision_max_new_tokens: 本地 Qwen 单次图片理解的最大生成 token 数。
+        vision_api_key: 服务级视觉模型 API Key；为空时继承主模型。
+        vision_base_url: 服务级视觉模型 API 基础地址；为空时继承主模型。
+        vision_model_name: 服务级视觉模型名称；为空时继承主模型。
         model_context_window_tokens: 主模型显式上下文能力；0 表示按模型表或 100 万服务默认值解析。
         model_max_output_tokens: 主模型显式最大输出能力；0 表示按模型表或保守值解析。
         small_model_context_window_tokens: 小模型显式上下文能力；0 表示继承主模型或 100 万服务默认值。
@@ -263,6 +259,10 @@ class AgentConfig:
         model_capabilities: 按模型名登记的上下文窗口与最大输出能力表。
         temperature: 模型采样温度。
         timeout_seconds: 模型请求超时时间,单位为秒。
+        vision_timeout_seconds: 远程视觉模型请求超时时间,单位为秒。
+        vision_max_image_bytes: 单张远程视觉输入允许的最大字节数。
+        vision_max_dimension: 远程视觉输入允许的最大图像边长,单位为像素。
+        vision_max_output_tokens: 远程视觉模型单次响应允许的最大输出 token 数。
         streaming_sanitize_min_chars: 流式输出 JSON 检测最低字符数,低于此值跳过 JSON 语法检查。
         embedding_model_name: Embedding 模型名称。
         rerank_model_name: RAG 召回结果重排模型名称。
@@ -278,9 +278,9 @@ class AgentConfig:
         small_model_base_url: str = ""
         small_model_temperature: float = 0.0
         small_model_timeout_seconds: int = 120
-        local_model_name: str = "Qwen/Qwen3.5-2B"
-        local_model_max_new_tokens: int = 256
-        local_model_vision_max_new_tokens: int = 128
+        vision_api_key: str = ""
+        vision_base_url: str = ""
+        vision_model_name: str = ""
         model_context_window_tokens: int = 0
         model_max_output_tokens: int = 0
         small_model_context_window_tokens: int = 0
@@ -288,6 +288,10 @@ class AgentConfig:
         model_capabilities: dict[str, dict[str, int]] = field(default_factory=dict)
         temperature: float = 0.0
         timeout_seconds: int = 240
+        vision_timeout_seconds: int = 60
+        vision_max_image_bytes: int = 32 * 1024 * 1024
+        vision_max_dimension: int = 8192
+        vision_max_output_tokens: int = 1024
         streaming_sanitize_min_chars: int = 20
         embedding_model_name: str = "BAAI/bge-small-zh-v1.5"
         rerank_model_name: str = "BAAI/bge-reranker-v2-m3"
@@ -1672,7 +1676,6 @@ class AgentConfig:
             "AGENT_VECTOR_DB_DIR": ("storage", "vector_db_dir", str),
             "AGENT_EMBEDDING_MODEL_DIR": ("storage", "embedding_model_dir", str),
             "AGENT_RERANK_MODEL_DIR": ("storage", "rerank_model_dir", str),
-            "AGENT_LOCAL_MODEL_DIR": ("storage", "local_model_dir", str),
             "AGENT_PADDLEOCR_MODEL_DIR": ("storage", "paddleocr_model_dir", str),
             "AGENT_KNOWLEDGE_DIR": ("storage", "knowledge_dir", str),
             "AGENT_FRONTMATTER_DIR": ("storage", "frontmatter_dir", str),
@@ -1696,9 +1699,9 @@ class AgentConfig:
             "AGENT_SMALL_MODEL_BASE_URL": ("model", "small_model_base_url", str),
             "AGENT_SMALL_MODEL_TEMPERATURE": ("model", "small_model_temperature", float),
             "AGENT_SMALL_MODEL_TIMEOUT_SECONDS": ("model", "small_model_timeout_seconds", int),
-            "AGENT_LOCAL_MODEL_NAME": ("model", "local_model_name", str),
-            "AGENT_LOCAL_MODEL_MAX_NEW_TOKENS": ("model", "local_model_max_new_tokens", int),
-            "AGENT_LOCAL_MODEL_VISION_MAX_NEW_TOKENS": ("model", "local_model_vision_max_new_tokens", int),
+            "AGENT_VISION_API_KEY": ("model", "vision_api_key", str),
+            "AGENT_VISION_BASE_URL": ("model", "vision_base_url", str),
+            "AGENT_VISION_MODEL_NAME": ("model", "vision_model_name", str),
             "AGENT_MODEL_CONTEXT_WINDOW_TOKENS": ("model", "model_context_window_tokens", int),
             "AGENT_MODEL_MAX_OUTPUT_TOKENS": ("model", "model_max_output_tokens", int),
             "AGENT_SMALL_MODEL_CONTEXT_WINDOW_TOKENS": ("model", "small_model_context_window_tokens", int),
@@ -1706,6 +1709,10 @@ class AgentConfig:
             "AGENT_MODEL_CAPABILITIES_JSON": ("model", "model_capabilities", AgentConfig._parse_json),
             "AGENT_MODEL_TEMPERATURE": ("model", "temperature", float),
             "AGENT_MODEL_TIMEOUT_SECONDS": ("model", "timeout_seconds", int),
+            "AGENT_VISION_TIMEOUT_SECONDS": ("model", "vision_timeout_seconds", int),
+            "AGENT_VISION_MAX_IMAGE_BYTES": ("model", "vision_max_image_bytes", int),
+            "AGENT_VISION_MAX_DIMENSION": ("model", "vision_max_dimension", int),
+            "AGENT_VISION_MAX_OUTPUT_TOKENS": ("model", "vision_max_output_tokens", int),
             "AGENT_STREAMING_SANITIZE_MIN_CHARS": ("model", "streaming_sanitize_min_chars", int),
             "AGENT_SYSTEM_PROMPT": ("prompts", "agent_system_prompt", str),
             "AGENT_RETRIEVAL_CONTEXT_SYSTEM_PROMPT": ("prompts", "retrieval_context_system_prompt", str),

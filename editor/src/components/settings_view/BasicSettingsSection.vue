@@ -97,10 +97,10 @@ async function appendBlockedFileType(suffix: string): Promise<void> {
       <input v-model="autoIngestOnUploadDraft" type="checkbox" @change="$emit('save')" />
       <span class="hint-text">关闭时上传只进入文件树,点击 header 刷新或文件按钮才灌库</span>
     </div>
-    <div class="setting-row toggle-row">
+    <div class="setting-row toggle-row vision-setting-row">
       <label>识图</label>
       <input v-model="visionUnderstandingEnabledDraft" type="checkbox" @change="$emit('save')" />
-      <span class="hint-text">开启后才会调用本地 Qwen 补充图片语义；关闭时仅保留 OCR</span>
+      <span class="vision-privacy-hint">开启后会将图片、OCR 文本和问题发送至已配置的远程视觉模型，可能产生 API 费用；关闭时仅保留 OCR 结果。</span>
     </div>
     <div class="setting-row toggle-row">
       <label>启用 DSH coding agent</label>
@@ -250,6 +250,25 @@ async function appendBlockedFileType(suffix: string): Promise<void> {
   flex-wrap: wrap;
   gap: var(--space-6);
   min-width: 0;
+}
+
+.vision-privacy-hint {
+  flex: 1;
+  min-width: 180px;
+  color: var(--color-text-muted);
+  font-size: calc(11px * var(--font-scale));
+  line-height: 1.45;
+}
+
+@media (max-width: 480px) {
+  .vision-setting-row {
+    flex-wrap: wrap;
+  }
+
+  .vision-privacy-hint {
+    flex-basis: 100%;
+    min-width: 0;
+  }
 }
 
 .file-type-chip {

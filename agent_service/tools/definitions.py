@@ -54,8 +54,7 @@ from agent_service.tools.builtin import (
     list_skills,
     list_knowledge_files,
     list_todos,
-    read_knowledge_file,
-    read_session_attachment,
+    read_file,
     patch_knowledge_file,
     remove_library_item,
     rename_knowledge_file,
@@ -133,7 +132,7 @@ UTILITY_TOOL_DEFINITIONS: list[BuiltinToolDefinition] = [
             "- full_access: 所有内部指令和外部程序放开限制,额外支持 kill/taskkill 杀进程,"
             "rm -rf/mkdir -p/批量 cat/mv 等都允许。\n\n"
             "注意事项:\n"
-            "- 读取或解析知识库中的文档正文时, 不要使用本工具; 统一用 read_knowledge_file 读取源文件的 Markdown 投影。\n"
+            "- 读取或解析知识库文件、会话附件正文时, 不要使用本工具; 统一用 read_file。\n"
             "- 文件搜索优先用 ls/dir *.docx /s /b 或 find . -name '*.docx'。\n"
             "- 需要标志的 wc(如 wc -l)用 external_program 类型;仅统计用 internal_command。\n"
             "- 所有 internal_command 都无需 shell 程序支持,在任何环境下可用。"
@@ -431,25 +430,6 @@ MEMORY_TOOL_NAMES = frozenset(definition.name for definition in MEMORY_TOOL_DEFI
 
 KNOWLEDGE_TOOL_DEFINITIONS: list[BuiltinToolDefinition] = [
     BuiltinToolDefinition(
-        name="read_session_attachment",
-        description=(
-            "按 attachment:// 引用读取当前会话上传附件的完整解析正文。"
-            "支持 start_line/end_line 或 continuation cursor。"
-        ),
-        args_schema={
-            "type": "object",
-            "properties": {
-                "content_ref": {"type": "string", "description": "附件目录返回的 attachment:// 引用。"},
-                "start_line": {"type": "integer"},
-                "end_line": {"type": "integer"},
-                "cursor": {"type": "integer"},
-            },
-            "required": ["content_ref"],
-        },
-        function=read_session_attachment,
-        display_name="继续读取附件",
-    ),
-    BuiltinToolDefinition(
         name="get_knowledge_context",
         description=(
             "按语义召回当前用户知识库中的正文片段,返回可直接用于回答的内容摘录和来源。"
@@ -511,7 +491,7 @@ KNOWLEDGE_TOOL_DEFINITIONS: list[BuiltinToolDefinition] = [
     BuiltinToolDefinition(
         name="understand_image",
         description=(
-            "使用 CPU 本地 Qwen 理解当前会话中用户直接上传的图片。"
+            "使用用户在 LLM 设置中配置的远程视觉模型理解当前会话中直接上传的图片。"
             "系统会同时提供先行 OCR 文本，适合分析对象、布局、空间关系、图表趋势和图片语义；"
             "需要重新观察图片或回答特定视觉问题时调用。"
         ),
@@ -519,7 +499,7 @@ KNOWLEDGE_TOOL_DEFINITIONS: list[BuiltinToolDefinition] = [
             "type": "object",
             "properties": {
                 "attachment": {"type": "string", "description": "可选。attachment_id、完整文件名或文件名关键词。"},
-                "prompt": {"type": "string", "description": "可选。希望本地模型针对图片回答的问题。"},
+                "prompt": {"type": "string", "description": "可选。希望视觉模型针对图片回答的问题。"},
             },
             "required": [],
         },
@@ -544,7 +524,7 @@ KNOWLEDGE_TOOL_DEFINITIONS: list[BuiltinToolDefinition] = [
 FILE_TOOL_DEFINITIONS: list[BuiltinToolDefinition] = [
     BuiltinToolDefinition(
         name="get_current_viewing_document",
-        description="获取当前用户在 editor 前端正在观看的文档基本信息;如需正文请继续调用 read_knowledge_file。",
+        description="获取当前用户在 editor 前端正在观看的文档基本信息;如需正文请继续调用 read_file。",
         args_schema={"type": "object", "properties": {}, "required": []},
         function=get_current_viewing_document,
         display_name="获取当前文档",
@@ -553,7 +533,7 @@ FILE_TOOL_DEFINITIONS: list[BuiltinToolDefinition] = [
         name="list_knowledge_files",
         description=(
             "列出当前用户知识库的完整文件树,返回所有文件和文件夹的路径、类型和修改时间。"
-            "适合需要浏览目录结构、获得可传给 read_knowledge_file 的准确路径、或全面盘点文件数量时使用。"
+            "适合需要浏览目录结构、获得可传给 read_file 的准确路径、或全面盘点文件数量时使用。"
             "它不会按关键词过滤;如果用户要按文件名、路径或正文关键词搜索,请使用 search_knowledge。"
         ),
         args_schema={"type": "object", "properties": {}, "required": []},
@@ -561,18 +541,24 @@ FILE_TOOL_DEFINITIONS: list[BuiltinToolDefinition] = [
         display_name="列出文件",
     ),
     BuiltinToolDefinition(
-        name="read_knowledge_file",
+        name="read_file",
         description=(
-            "读取知识库中任意支持源文件的 Markdown 中间层正文，包括文本、Markdown、代码、PDF、图片、扫描件、Office 和表格。"
-            "传入源文件相对于当前知识库根目录的准确 path；工具会读取 `.mw/md` 投影，尚未灌库或投影过期时自动执行单文件灌库。"
+            "统一读取知识库文件或当前会话附件。传入知识库相对路径时读取 Markdown 投影；"
+            "传入 attachment:// 引用时首次按需解析原文件并缓存，后续直接读取缓存。"
+            "图片文字可由本工具按需 OCR；理解对象、布局、图表和空间关系请使用 understand_image。"
             "不要传 `.mw/md` 内部路径，也不要调用 run_terminal_command、get_knowledge_file_url、download_file 或 Python 库自行解析源文件。"
         ),
         args_schema={
             "type": "object",
-            "properties": {"path": {"type": "string", "description": "源文件相对于当前知识库根目录的路径。"}},
+            "properties": {
+                "path": {"type": "string", "description": "知识库相对路径，或附件目录中的 attachment:// 引用。"},
+                "start_line": {"type": "integer", "description": "附件正文可选起始行，0-based。"},
+                "end_line": {"type": "integer", "description": "附件正文可选结束行，不包含该行。"},
+                "cursor": {"type": "integer", "description": "附件正文可选 continuation cursor。"},
+            },
             "required": ["path"],
         },
-        function=read_knowledge_file,
+        function=read_file,
         display_name="阅读文件",
     ),
     BuiltinToolDefinition(
@@ -611,7 +597,7 @@ FILE_TOOL_DEFINITIONS: list[BuiltinToolDefinition] = [
             "Use this only after you have produced the final complete HTML for the current document visualization. "
             "The tool saves the HTML under runtime/visualizations, returns the local path and URL, "
             "and automatically triggers the front-end iframe mount. For any knowledge document, first read its "
-            "canonical Markdown projection with read_knowledge_file and build the HTML from that content."
+            "canonical Markdown projection with read_file and build the HTML from that content."
         ),
         args_schema={
             "type": "object",

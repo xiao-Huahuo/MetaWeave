@@ -122,7 +122,7 @@ REST 契约记录在 [OpenAPI 文档](api/metaweave.openapi.json)，gRPC 契约�
 | `runtime/db/relation/agent_service.db` | 会话、消息、设置、业务记录、长期记忆、图谱和索引元数据 | 应用状态的主要关系存储 |
 | `runtime/db/vector/chroma` | 长期记忆和知识切片的向量索引 | 检索索引 |
 | `runtime/assets` | 预览、下载、图书馆封面和密码库附件等运行资产 | 同时包含可再生文件与需保留的业务资产 |
-| `runtime/uploads` | 会话附件及其解析结果 | 会话范围内的输入资料 |
+| `runtime/uploads` | 会话附件原文件，以及 `read_file` 首次读取后生成的解析缓存 | 会话范围内的输入资料；上传阶段不自动解析 |
 | `runtime/visualizations` | Markdown 转换生成的可视化文件 | 生成结果，是否保留取决于使用场景 |
 | `runtime/models` | Embedding、ReRank 与 OCR 模型 | 可重新下载的本地模型 |
 | `runtime/logs` | 文本或 JSON 日志及轮转文件 | 诊断数据 |

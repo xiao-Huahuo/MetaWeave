@@ -88,6 +88,33 @@ describe('ToolCallInline summaries', () => {
     expect(text).toContain('列出 2 个文件 / 1 个文件夹')
   })
 
+  it('shows the unified read_file tool as one document-reading toolbar entry', async () => {
+    const wrapper = mount(ToolCallInline, {
+      global: {
+        stubs: {
+          IcIcon: {
+            props: ['name'],
+            template: '<i class="stub-icon" :data-icon="name"></i>',
+          },
+        },
+      },
+      props: {
+        traces: [{
+          event: 'tool_call_end',
+          tool_name: 'read_file',
+          display_name: '阅读文件',
+          tool_args_summary: 'path=attachment://att_1',
+          raw_content: JSON.stringify({ filename: 'report.pdf', content: '正文' }),
+        }],
+      },
+    })
+
+    expect(wrapper.text()).toContain('阅读文件：report.pdf')
+    expect(wrapper.get('.tool-leading-icon .stub-icon').attributes('data-icon')).toBe('document')
+    await wrapper.find('.tool-expand-btn').trigger('click')
+    expect(wrapper.get('.tool-result-code').text()).toContain('report.pdf')
+  })
+
   it('shows current status and content labels', () => {
     const wrapper = mount(ToolCallInline, {
       props: {

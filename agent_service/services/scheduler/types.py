@@ -20,15 +20,18 @@ from typing import Any
 LLMOperation = Callable[[], Any]
 LARGE_MODEL_TIER = "large"
 SMALL_MODEL_TIER = "small"
+VISION_MODEL_TIER = "vision"
 FOREGROUND_AGENT_TASK = "foreground_agent"
 BACKGROUND_SUMMARY_TASK = "background_summary"
 BACKGROUND_FACT_RESOLUTION_TASK = "background_fact_resolution"
+VISION_UNDERSTANDING_TASK = "vision_understanding"
 SUPPORTED_TASK_TYPES = {
     FOREGROUND_AGENT_TASK,
     BACKGROUND_SUMMARY_TASK,
     BACKGROUND_FACT_RESOLUTION_TASK,
+    VISION_UNDERSTANDING_TASK,
 }
-SUPPORTED_MODEL_TIERS = {LARGE_MODEL_TIER, SMALL_MODEL_TIER}
+SUPPORTED_MODEL_TIERS = {LARGE_MODEL_TIER, SMALL_MODEL_TIER, VISION_MODEL_TIER}
 
 
 class LLMTaskSchedulerError(RuntimeError):
@@ -37,6 +40,10 @@ class LLMTaskSchedulerError(RuntimeError):
 
 class LLMTaskOverloadedError(LLMTaskSchedulerError):
     """调度队列或熔断器拒绝新任务时抛出的异常。"""
+
+
+class LLMConfigurationError(LLMTaskSchedulerError):
+    """远程模型名称、凭据或端点组合无效时抛出的配置异常。"""
 
 
 @dataclass(slots=True)

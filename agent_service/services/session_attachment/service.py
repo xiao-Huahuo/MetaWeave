@@ -8,11 +8,9 @@ import logging
 import mimetypes
 import re
 import threading
-import time
 from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Protocol
 from uuid import uuid4
 
 from sqlalchemy.engine import Engine
@@ -23,7 +21,7 @@ from agent_service.core.agent_config import AgentConfig
 from agent_service.core.db.engine import get_database_engine
 from agent_service.models.attachment import SessionAttachmentRecord
 from agent_service.services.memory.rag.frontmatter_bootstrap import FrontmatterBootstrapService
-from agent_service.services.memory.rag.frontmatter_document import StructuredKnowledgeDocument, StructuredKnowledgeSection
+from agent_service.services.memory.rag.frontmatter_document import StructuredKnowledgeDocument
 from agent_service.services.settings.service import SettingsService
 
 logger = logging.getLogger(__name__)
@@ -41,13 +39,12 @@ class AttachmentContext:
     injected_count: int
 
 
-class ImageUnderstandingService(Protocol):
-    """附件服务使用的最小本地图像理解接口。"""
+@dataclass(slots=True)
+class AttachmentParseFlight:
+    """协调同一附件的一次在途解析；事件等待不持有注册表锁。"""
 
-    def understand_image(self, *, image_path: Path, ocr_text: str, prompt: str = "") -> str:
-        """结合原图与 OCR 文本返回视觉语义。"""
-
-        ...
+    completed: threading.Event
+    error: Exception | None = None
 
 
 class SessionAttachmentService:
@@ -64,16 +61,16 @@ class SessionAttachmentService:
         *,
         config: AgentConfig,
         settings_service: SettingsService,
-        vision_service: ImageUnderstandingService | None = None,
         engine: Engine | None = None,
         create_tables: bool = True,
     ) -> None:
+        """保存依赖并建立按附件隔离的解析锁注册表。"""
+
         self.config = config
         self.settings_service = settings_service
-        self.vision_service = vision_service
         self.engine = engine or get_database_engine(config)
-        self._processing_lock = threading.Lock()
-        self._processing_workers: dict[str, threading.Thread] = {}
+        self._parse_flights_guard = threading.Lock()
+        self._parse_flights: dict[str, AttachmentParseFlight] = {}
 
     def upload_file(
         self,
@@ -84,7 +81,7 @@ class SessionAttachmentService:
         content: bytes,
         mime_type: str = "",
     ) -> dict[str, object]:
-        """Save and record an upload immediately, then parse it in an independent worker."""
+        """只保存原文件与附件记录；解析由 Agent 的读取工具按需触发。"""
 
         normalized_user_id = user_id.strip()
         normalized_session_id = session_id.strip()
@@ -105,8 +102,11 @@ class SessionAttachmentService:
             session_id=normalized_session_id,
         )
         upload_dir.mkdir(parents=True, exist_ok=True)
-        target_path = self._unique_child_path(target_dir=upload_dir, preferred_name=safe_filename)
-        target_path.write_bytes(content)
+        target_path = self._write_unique_upload(
+            target_dir=upload_dir,
+            preferred_name=safe_filename,
+            content=content,
+        )
 
         attachment_id = f"att_{uuid4().hex}"
         record = SessionAttachmentRecord(
@@ -127,26 +127,24 @@ class SessionAttachmentService:
             ),
             mime_type=mime_type or mimetypes.guess_type(target_path.name)[0] or "",
             size=len(content),
-            source_type="processing",
+            source_type="attachment",
             summary="",
             metadata_json={
-                "processing_status": "queued",
+                "processing_status": "uploaded",
                 "processing_stage": "uploaded",
-                "processing_progress": 10,
+                "processing_progress": 100,
+                "content_status": "unparsed",
             },
         )
-        with Session(self.engine) as db_session:
-            db_session.add(record)
-            db_session.commit()
-            db_session.refresh(record)
-        result = self._record_to_dict(record)
-        self._start_processing_attachment(
-            attachment_id=attachment_id,
-            source_path=target_path,
-            upload_dir=upload_dir,
-            user_id=normalized_user_id,
-        )
-        return result
+        try:
+            with Session(self.engine) as db_session:
+                db_session.add(record)
+                db_session.commit()
+                db_session.refresh(record)
+        except Exception:
+            target_path.unlink(missing_ok=True)
+            raise
+        return self._record_to_dict(record)
 
     def get_attachment(self, *, user_id: str, session_id: str, attachment_id: str) -> dict[str, object]:
         """返回当前用户会话中一个附件的最新解析状态 DTO。"""
@@ -179,58 +177,119 @@ class SessionAttachmentService:
             raise ValueError("attachment file not found")
         return path, record.mime_type, record.filename
 
-    def _start_processing_attachment(
+    def read_attachment_text(
         self,
         *,
-        attachment_id: str,
-        source_path: Path,
-        upload_dir: Path,
         user_id: str,
-    ) -> None:
-        """为一个已落盘附件启动唯一后台解析线程。"""
+        session_id: str,
+        attachment_id: str,
+    ) -> tuple[SessionAttachmentRecord, str]:
+        """首次读取时解析一个会话附件，后续读取直接复用已持久化文本。"""
 
-        def process() -> None:
-            """执行 OCR/文档解析并把里程碑写回附件记录。"""
+        normalized_attachment_id = attachment_id.strip()
+        record = self._require_session_attachment(
+            user_id=user_id,
+            session_id=session_id,
+            attachment_id=normalized_attachment_id,
+        )
+        cached_text = self._read_cached_attachment_text(record.text_path)
+        if cached_text is not None:
+            return record, cached_text
 
+        with self._parse_flights_guard:
+            flight = self._parse_flights.get(normalized_attachment_id)
+            is_owner = flight is None
+            if flight is None:
+                flight = AttachmentParseFlight(completed=threading.Event())
+                self._parse_flights[normalized_attachment_id] = flight
+        if not is_owner:
+            wait_seconds = max(float(self.config.limits.knowledge_file_wait_timeout_seconds), 0.001)
+            if not flight.completed.wait(timeout=wait_seconds):
+                raise TimeoutError("附件正在由另一个工具调用解析，请稍后重试。")
+            if flight.error is not None:
+                raise RuntimeError("附件解析失败，请重试或检查文件格式。") from flight.error
+            completed = self._require_session_attachment(
+                user_id=user_id,
+                session_id=session_id,
+                attachment_id=normalized_attachment_id,
+            )
+            return completed, self._read_cached_attachment_text(completed.text_path) or ""
+
+        try:
+            record = self._require_session_attachment(
+                user_id=user_id,
+                session_id=session_id,
+                attachment_id=normalized_attachment_id,
+            )
+            cached_text = self._read_cached_attachment_text(record.text_path)
+            if cached_text is not None:
+                return record, cached_text
+
+            source_path = Path(record.path).expanduser().resolve()
+            if not source_path.is_file():
+                raise FileNotFoundError(f"附件原文件不存在: {record.filename}")
+            self._update_processing_status(
+                attachment_id=normalized_attachment_id,
+                status="processing",
+                stage="parsing",
+                progress=10,
+            )
             try:
                 text_path, document = self._parse_to_attachment_text(
-                    attachment_id=attachment_id,
+                    attachment_id=normalized_attachment_id,
                     source_path=source_path,
-                    upload_dir=upload_dir,
+                    upload_dir=source_path.parent,
                     user_id=user_id,
                     progress_callback=lambda stage, progress: self._update_processing_status(
-                        attachment_id=attachment_id,
+                        attachment_id=normalized_attachment_id,
                         status="processing",
                         stage=stage,
                         progress=progress,
                     ),
                 )
                 self._complete_processing(
-                    attachment_id=attachment_id,
+                    attachment_id=normalized_attachment_id,
                     text_path=text_path,
                     document=document,
                 )
             except Exception as exc:  # noqa: BLE001
-                logger.exception("附件后台解析失败 | attachment=%s", attachment_id)
+                flight.error = exc
+                logger.exception("附件按需解析失败 | attachment=%s", normalized_attachment_id)
                 self._update_processing_status(
-                    attachment_id=attachment_id,
+                    attachment_id=normalized_attachment_id,
                     status="failed",
                     stage="failed",
                     progress=100,
                     error=f"{type(exc).__name__}: {exc}",
                 )
-            finally:
-                with self._processing_lock:
-                    self._processing_workers.pop(attachment_id, None)
-
-        with self._processing_lock:
-            worker = threading.Thread(
-                target=process,
-                daemon=True,
-                name=f"attachment-{attachment_id}-parse",
+                raise
+            completed = self._require_session_attachment(
+                user_id=user_id,
+                session_id=session_id,
+                attachment_id=normalized_attachment_id,
             )
-            self._processing_workers[attachment_id] = worker
-            worker.start()
+            return completed, self._read_cached_attachment_text(completed.text_path) or ""
+        finally:
+            flight.completed.set()
+            with self._parse_flights_guard:
+                if self._parse_flights.get(normalized_attachment_id) is flight:
+                    self._parse_flights.pop(normalized_attachment_id, None)
+
+    def _require_session_attachment(
+        self,
+        *,
+        user_id: str,
+        session_id: str,
+        attachment_id: str,
+    ) -> SessionAttachmentRecord:
+        """读取并校验一个附件确实属于当前用户与会话。"""
+
+        with Session(self.engine) as db_session:
+            record = db_session.get(SessionAttachmentRecord, attachment_id)
+            if record is None or record.user_id != user_id.strip() or record.session_id != session_id.strip():
+                raise ValueError("attachment not found")
+            db_session.expunge(record)
+            return record
 
     def _update_processing_status(
         self,
@@ -284,6 +343,7 @@ class SessionAttachmentService:
                 "processing_status": "completed",
                 "processing_stage": "completed",
                 "processing_progress": 100,
+                "content_status": "parsed",
             }
             db_session.add(record)
             db_session.commit()
@@ -337,12 +397,16 @@ class SessionAttachmentService:
         if not attachments:
             return AttachmentContext(content="", citation_map={}, attachment_count=0, injected_count=0)
 
-        selected = self._select_relevant_attachments(attachments=attachments, current_prompt=current_prompt)
+        selected = [
+            item
+            for item in self._select_relevant_attachments(attachments=attachments, current_prompt=current_prompt)
+            if self._read_text_preview(item.text_path, None)
+        ]
         citation_map: dict[str, dict[str, str]] = {}
         lines = [
             "--- Session Uploaded Attachments Start ---",
             "The user uploaded these files directly into this session. They are NOT knowledge-base files and must not be ingested.",
-            "You can read and use the extracted attachment content below. Do not claim that you cannot open or read these uploads.",
+            "Use read_file with an attachment:// reference when the file content is needed. Use understand_image for visual meaning.",
             "Attachment catalog:",
         ]
         selected_ids = {item.attachment_id for item in selected}
@@ -400,12 +464,14 @@ class SessionAttachmentService:
         text_dir.mkdir(parents=True, exist_ok=True)
         is_direct_image = source_path.suffix.lower() in {".jpg", ".jpeg", ".png", ".webp", ".gif"}
         ocr_enabled = is_direct_image or self.settings_service.is_ocr_enabled_for_user(user_id=user_id)
-        frontmatter_path: Path | None = None
+        vlm_config = self.settings_service.get_vlm_config(user_id=user_id)
         report("ocr" if is_direct_image else "parsing", 30)
         try:
             _, frontmatter_path = FrontmatterBootstrapService(
                 config=self.config,
                 ocr_enabled=ocr_enabled,
+                vlm_config=vlm_config,
+                online_enabled=bool(vlm_config.get("enabled")),
             ).build_frontmatter_file(
                 source_path=source_path,
                 knowledge_dir=upload_dir,
@@ -417,58 +483,10 @@ class SessionAttachmentService:
         except ValueError:
             document = self._build_fallback_document(source_path=source_path, upload_dir=upload_dir)
         report("text_ready", 70)
-        if is_direct_image:
-            if self.settings_service.is_vision_understanding_enabled_for_user(user_id=user_id):
-                report("vision", 82)
-                self._append_image_understanding(document=document, source_path=source_path)
-            else:
-                document.metadata["vision_status"] = "disabled"
-            if frontmatter_path is not None:
-                frontmatter_path.write_text(
-                    json.dumps(document.to_dict(), ensure_ascii=False, indent=2),
-                    encoding="utf-8",
-                )
         report("finalizing", 95)
         text_path = text_dir / f"{attachment_id}.txt"
         text_path.write_text(self._document_to_text(document), encoding="utf-8")
         return text_path, document
-
-    def _append_image_understanding(
-        self,
-        *,
-        document: StructuredKnowledgeDocument,
-        source_path: Path,
-    ) -> None:
-        """在 OCR 之后调用本地模型，并把互补视觉描述追加到附件正文。"""
-
-        if self.vision_service is None:
-            document.metadata["vision_status"] = "unavailable"
-            return
-        ocr_text = self._document_to_text(document)
-        try:
-            description = self.vision_service.understand_image(
-                image_path=source_path,
-                ocr_text=ocr_text,
-            ).strip()
-        except Exception as exc:
-            document.metadata["vision_status"] = "error"
-            document.metadata["vision_error"] = type(exc).__name__
-            return
-        if not description:
-            document.metadata["vision_status"] = "empty"
-            return
-        document.sections.append(
-            StructuredKnowledgeSection(
-                section_id="vision-understanding",
-                heading="视觉理解",
-                title_path=[document.title, "视觉理解"],
-                content=description,
-                start_char=0,
-                end_char=len(description),
-            )
-        )
-        document.metadata["vision_status"] = "completed"
-        document.metadata["vision_model"] = self.config.model.local_model_name
 
     def _build_fallback_document(self, *, source_path: Path, upload_dir: Path) -> StructuredKnowledgeDocument:
         """Build a lightweight attachment document for unsupported suffixes."""
@@ -566,19 +584,36 @@ class SessionAttachmentService:
     def _safe_component(value: str) -> str:
         return re.sub(r"[^a-zA-Z0-9_.-]+", "_", value).strip("_") or "default"
 
-    @classmethod
-    def _unique_child_path(cls, *, target_dir: Path, preferred_name: str) -> Path:
+    def _write_unique_upload(self, *, target_dir: Path, preferred_name: str, content: bytes) -> Path:
+        """用独占创建原子分配文件名，保证并行同名上传不会互相覆盖。"""
+
         safe_name = Path(preferred_name).name.strip() or "untitled"
         first_path = (target_dir / safe_name).resolve()
-        if not first_path.exists():
-            return first_path
         stem = first_path.stem
         suffix = first_path.suffix
-        for index in range(1, self.config.limits.attachment_name_collision_attempts):
-            candidate = (target_dir / f"{stem} ({index}){suffix}").resolve()
-            if not candidate.exists():
+        for index in range(self.config.limits.attachment_name_collision_attempts):
+            candidate = first_path if index == 0 else (target_dir / f"{stem} ({index}){suffix}").resolve()
+            try:
+                with candidate.open("xb") as handle:
+                    handle.write(content)
                 return candidate
-        return (target_dir / f"{stem} ({int(time.time())}){suffix}").resolve()
+            except FileExistsError:
+                continue
+        fallback = (target_dir / f"{stem}-{uuid4().hex}{suffix}").resolve()
+        with fallback.open("xb") as handle:
+            handle.write(content)
+        return fallback
+
+    @staticmethod
+    def _read_cached_attachment_text(text_path: str) -> str | None:
+        """区分“尚未解析”和“已解析但正文为空”，避免空结果被重复解析。"""
+
+        if not text_path:
+            return None
+        path = Path(text_path)
+        if not path.is_file():
+            return None
+        return path.read_text(encoding="utf-8", errors="replace").strip()
 
     @staticmethod
     def _read_text_preview(text_path: str, limit: int | None) -> str:

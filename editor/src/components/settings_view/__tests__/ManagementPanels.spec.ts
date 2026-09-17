@@ -157,11 +157,11 @@ describe('management panels', () => {
   it('polls automatically when an active download is discovered on initial load', async () => {
     vi.useFakeTimers()
     const downloadingModel = (percent: number) => ({
-      key: 'local_qwen',
-      label: '本地 Qwen 大语言模型',
-      role: '本地主 Agent、小模型回退与图片理解',
-      name: 'Qwen/Qwen3.5-2B',
-      path: 'D:/models/qwen',
+      key: 'rerank',
+      label: 'ReRank 模型',
+      role: '知识检索结果重排',
+      name: 'BAAI/bge-reranker-v2-m3',
+      path: 'D:/models/rerank',
       base_path: 'D:/models',
       size_bytes: percent,
       file_count: 4,

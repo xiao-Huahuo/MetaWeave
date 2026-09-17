@@ -1,10 +1,10 @@
 [
   {
     "kind": "class",
-    "line": 86,
+    "line": 89,
     "methods": [
       {
-        "line": 89,
+        "line": 92,
         "name": "extract"
       }
     ],
@@ -12,40 +12,48 @@
   },
   {
     "kind": "class",
-    "line": 94,
+    "line": 97,
     "methods": [],
     "name": "GraphExtractionResult"
   },
   {
     "kind": "class",
-    "line": 107,
+    "line": 110,
     "methods": [],
     "name": "EntityCandidate"
   },
   {
     "kind": "class",
-    "line": 118,
+    "line": 121,
     "methods": [],
     "name": "RelationCandidate"
   },
   {
     "kind": "class",
-    "line": 128,
+    "line": 131,
     "methods": [
       {
-        "line": 149,
+        "line": 152,
         "name": "extract"
       },
       {
-        "line": 172,
+        "line": 181,
         "name": "extract_batch"
       },
       {
-        "line": 293,
+        "line": 232,
+        "name": "adjudicate_candidates"
+      },
+      {
+        "line": 349,
+        "name": "context_budget"
+      },
+      {
+        "line": 368,
         "name": "deduplicate_entities"
       },
       {
-        "line": 399,
+        "line": 476,
         "name": "deduplicate_entities_incremental"
       }
     ],
@@ -53,24 +61,24 @@
   },
   {
     "kind": "class",
-    "line": 530,
+    "line": 609,
     "methods": [],
     "name": "KnowledgeGraphService"
   },
   {
     "kind": "class",
-    "line": 593,
+    "line": 672,
     "methods": [],
     "name": "GraphExtractionCancelled"
   },
   {
     "kind": "function",
-    "line": 664,
+    "line": 805,
     "name": "get_graph_extraction_progress"
   },
   {
     "kind": "function",
-    "line": 706,
+    "line": 847,
     "name": "get_dedup_progress"
   }
 ]

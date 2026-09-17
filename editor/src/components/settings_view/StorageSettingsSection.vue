@@ -58,7 +58,7 @@ const ROOT_ORDER = [
   'assets_dir', 'db_dir', 'relation_db_dir', 'vector_db_dir', 'sqlite_path', 'chroma_persist_dir',
   'log_dir', 'models_dir',
   'dsh_sdk_dir',
-  'embedding_model_dir', 'local_model_dir', 'paddleocr_model_dir', 'rerank_model_dir',
+  'embedding_model_dir', 'paddleocr_model_dir', 'rerank_model_dir',
   'latex_runtime_dir', 'latex_distribution_dir', 'latex_repository_dir', 'latex_temp_dir',
   'trash_dir',
 ]

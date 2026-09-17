@@ -25,18 +25,26 @@ import pytest
 from agent_service.core.agent_config import AgentConfig
 from agent_service.services.scheduler import BACKGROUND_SUMMARY_TASK
 from agent_service.services.scheduler import FOREGROUND_AGENT_TASK
+from agent_service.services.scheduler import LLMConfigurationError
 from agent_service.services.scheduler import SMALL_MODEL_TIER
+from agent_service.services.scheduler import VISION_MODEL_TIER
+from agent_service.services.scheduler import VISION_UNDERSTANDING_TASK
 from agent_service.services.scheduler import get_llm_task_scheduler
 from agent_service.services.scheduler import reset_llm_task_schedulers
 from agent_service.services.scheduler.redis_backend import SerializedChatRequest
 from agent_service.services.scheduler.runtime import DeepSeekChatOpenAI
 
 
-def make_scheduler_test_config() -> AgentConfig:
-    """创建调度器测试专用配置。"""
+def make_scheduler_test_config(*, configured: bool = True) -> AgentConfig:
+    """创建调度器测试专用配置，默认提供不会发起真实请求的远程凭据。"""
 
     return AgentConfig.load_config(
         {
+            "model": (
+                {"model_name": "test-remote-model", "api_key": "test-remote-key"}
+                if configured
+                else {}
+            ),
             "task_schedule": {
                 "global_max_concurrency": 2,
                 "foreground_agent_worker_count": 1,
@@ -228,7 +236,7 @@ def test_llm_task_scheduler_resolves_small_model_runtime() -> None:
 def test_observability_snapshot_matches_resolved_request_without_secrets() -> None:
     """Debug 快照必须保留最终消息、工具 schema 和实际模型参数，但不得泄露密钥。"""
 
-    scheduler = get_llm_task_scheduler(make_scheduler_test_config())
+    scheduler = get_llm_task_scheduler(make_scheduler_test_config(configured=False))
     snapshot = scheduler.build_observability_snapshot(
         messages=[HumanMessage(content="inspect")],
         tool_names=["list_available_tools"],
@@ -297,52 +305,128 @@ def test_llm_task_scheduler_small_model_inherits_runtime_large_model() -> None:
     assert base_url == "https://user-large.example.com/v1"
 
 
-def test_llm_task_scheduler_uses_local_qwen_for_both_tiers_without_remote_config() -> None:
-    """大模型完全未配置时，前后台模型池都必须回退到同一个本地 Qwen。"""
+def test_llm_task_scheduler_rejects_primary_key_reuse_for_distinct_small_endpoint() -> None:
+    """独立小模型端点未提供独立密钥时，调度器不得向新域名发送主模型密钥。"""
 
     scheduler = get_llm_task_scheduler(make_scheduler_test_config())
 
-    large = scheduler._resolve_model_runtime(model_tier=None, requested_temperature=None)
-    small = scheduler._resolve_model_runtime(model_tier=SMALL_MODEL_TIER, requested_temperature=None)
+    with pytest.raises(LLMConfigurationError, match="独立 API Key"):
+        scheduler._resolve_model_runtime(
+            model_tier=SMALL_MODEL_TIER,
+            requested_temperature=None,
+            small_model_name="small-model",
+            small_base_url="https://small.example.com/v1",
+        )
 
-    assert large[:3] == (scheduler.config.model.local_model_name, "", "")
-    assert small[:3] == (scheduler.config.model.local_model_name, "", "")
+
+def test_llm_task_scheduler_requires_remote_configuration_for_both_text_tiers() -> None:
+    """大模型完全未配置时，大小模型都必须快速返回专用配置错误。"""
+
+    scheduler = get_llm_task_scheduler(make_scheduler_test_config(configured=False))
+
+    with pytest.raises(LLMConfigurationError, match="API Key"):
+        scheduler._resolve_model_runtime(model_tier="large", requested_temperature=None)
+    with pytest.raises(LLMConfigurationError, match="API Key"):
+        scheduler._resolve_model_runtime(model_tier=SMALL_MODEL_TIER, requested_temperature=None)
 
 
 def test_llm_task_scheduler_ignores_small_only_config_without_large_model() -> None:
-    """大模型缺失时，即使残留小模型字段也必须统一使用本地 Qwen。"""
+    """大模型缺失时，即使残留小模型字段也不得绕过主配置门禁。"""
 
-    scheduler = get_llm_task_scheduler(make_scheduler_test_config())
+    scheduler = get_llm_task_scheduler(make_scheduler_test_config(configured=False))
+
+    with pytest.raises(LLMConfigurationError, match="API Key"):
+        scheduler._resolve_model_runtime(
+            model_tier=SMALL_MODEL_TIER,
+            requested_temperature=None,
+            small_model_name="orphan-small",
+            small_api_key="orphan-key",
+            small_base_url="https://orphan.example.com/v1",
+        )
+
+
+def test_llm_task_scheduler_rejects_incomplete_large_config() -> None:
+    """只有模型名但没有 API Key 不算有效配置，且不得构造任何模型。"""
+
+    scheduler = get_llm_task_scheduler(make_scheduler_test_config(configured=False))
+
+    with pytest.raises(LLMConfigurationError, match="API Key"):
+        scheduler._resolve_model_runtime(
+            model_tier="large",
+            requested_temperature=None,
+            model_name="remote-without-key",
+        )
+    with pytest.raises(LLMConfigurationError, match="API Key"):
+        scheduler._resolve_model_runtime(
+            model_tier=SMALL_MODEL_TIER,
+            requested_temperature=None,
+            model_name="remote-without-key",
+        )
+
+
+def test_vision_runtime_accepts_explicit_remote_credentials_without_primary_config() -> None:
+    """视觉服务显式传入完整凭据时，不依赖服务级主模型配置。"""
+
+    scheduler = get_llm_task_scheduler(make_scheduler_test_config(configured=False))
 
     resolved = scheduler._resolve_model_runtime(
-        model_tier=SMALL_MODEL_TIER,
-        requested_temperature=None,
-        small_model_name="orphan-small",
-        small_api_key="orphan-key",
-        small_base_url="https://orphan.example.com/v1",
+        model_tier=VISION_MODEL_TIER,
+        requested_temperature=0.0,
+        model_name="deepseek-flash",
+        api_key="vision-key",
+        base_url="https://api.deepseek.com/v1",
     )
 
-    assert resolved[:3] == (scheduler.config.model.local_model_name, "", "")
+    assert resolved == (
+        "deepseek-flash",
+        "vision-key",
+        "https://api.deepseek.com/v1",
+        0.0,
+    )
+    assert scheduler._model_semaphores[VISION_MODEL_TIER] is not scheduler._model_semaphores["large"]
 
 
-def test_llm_task_scheduler_uses_local_qwen_for_incomplete_large_config() -> None:
-    """只有模型名但没有 API Key 不算配置完成，必须回退本地 Qwen。"""
+def test_vision_task_and_multimodal_message_round_trip_through_serialization(monkeypatch: object) -> None:
+    """视觉任务必须被调度器接受，且 Redis 序列化不得损坏图片内容块。"""
 
     scheduler = get_llm_task_scheduler(make_scheduler_test_config())
-
-    large = scheduler._resolve_model_runtime(
-        model_tier="large",
-        requested_temperature=None,
-        model_name="remote-without-key",
+    message = HumanMessage(content=[
+        {"type": "text", "text": "分析图片"},
+        {"type": "image_url", "image_url": {"url": "data:image/png;base64,AAAA"}},
+    ])
+    request = SerializedChatRequest.from_messages(
+        task_id="vision-1",
+        task_type=VISION_UNDERSTANDING_TASK,
+        messages=[message],
+        tool_names=[],
+        timeout_seconds=3,
+        max_retries=0,
+        model_tier=VISION_MODEL_TIER,
+        api_key="vision-key",
+        model_name="deepseek-flash",
     )
-    small = scheduler._resolve_model_runtime(
-        model_tier=SMALL_MODEL_TIER,
-        requested_temperature=None,
-        model_name="remote-without-key",
-    )
 
-    assert large[:3] == (scheduler.config.model.local_model_name, "", "")
-    assert small[:3] == (scheduler.config.model.local_model_name, "", "")
+    scheduler._ensure_supported_task_type(request.task_type)
+    scheduler._ensure_supported_model_tier(request.model_tier)
+    restored = request.restore_messages()
+
+    assert restored[0].content == message.content
+
+    captured: list[HumanMessage] = []
+
+    class FakeVisionModel:
+        """记录调度器最终交给 provider 的多模态消息。"""
+
+        @staticmethod
+        def invoke(messages: list[HumanMessage]) -> AIMessage:
+            captured.extend(messages)
+            return AIMessage(content="ok")
+
+    monkeypatch.setattr(scheduler, "_get_chat_model", lambda **_kwargs: FakeVisionModel())
+    response = scheduler._invoke_chat_request(request)
+
+    assert response.content == "ok"
+    assert captured[0].content == message.content
 
 
 def test_llm_task_scheduler_stream_chat_yields_reasoning_delta(monkeypatch: object) -> None:

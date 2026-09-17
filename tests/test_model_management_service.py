@@ -63,11 +63,9 @@ def test_management_reports_real_model_details_and_enabled_state(tmp_path: Path)
 
     embedding_root = tmp_path / "models" / "embedding"
     rerank_root = tmp_path / "models" / "rerank"
-    local_llm_root = tmp_path / "models" / "local-llm"
     ocr_root = tmp_path / "models" / "ocr"
     embedding_name = "BAAI/test-embedding"
     rerank_name = "BAAI/test-rerank"
-    local_model_name = "Qwen/test-local"
     embedding_target = model_target_dir(embedding_name, embedding_root)
     _complete_hf_model(embedding_target, embedding_name)
     ocr_root.mkdir(parents=True)
@@ -91,12 +89,10 @@ def test_management_reports_real_model_details_and_enabled_state(tmp_path: Path)
         model=SimpleNamespace(
             embedding_model_name=embedding_name,
             rerank_model_name=rerank_name,
-            local_model_name=local_model_name,
         ),
         storage=SimpleNamespace(
             embedding_model_dir=embedding_root,
             rerank_model_dir=rerank_root,
-            local_model_dir=local_llm_root,
             paddleocr_model_dir=ocr_root,
         ),
         ocr=SimpleNamespace(
@@ -114,7 +110,6 @@ def test_management_reports_real_model_details_and_enabled_state(tmp_path: Path)
     set_model_state("embedding", ModelState.READY)
     set_model_state("rerank", ModelState.NOT_DOWNLOADED)
     set_model_state("paddleocr", ModelState.READY)
-    set_model_state("local_qwen", ModelState.NOT_DOWNLOADED)
     reset_download_progress("embedding")
 
     result = ModelManagementService(config=config, settings_service=_SettingsStub()).get_management_status(user_id="u1")
@@ -127,9 +122,7 @@ def test_management_reports_real_model_details_and_enabled_state(tmp_path: Path)
     assert models["embedding"]["enabled"] is True
     assert models["embedding"]["active"] is True
     assert models["rerank"]["downloaded"] is False
-    assert models["local_qwen"]["name"] == local_model_name
-    assert models["local_qwen"]["role"] == "本地主 Agent、小模型回退与图片理解"
-    assert models["local_qwen"]["details"]["device"] == "CPU"
+    assert set(models) == {"embedding", "rerank", "paddleocr"}
     assert models["paddleocr"]["enabled"] is True
     assert models["paddleocr"]["downloaded"] is True
     assert models["paddleocr"]["label"] == "PaddleOCR 结构化流水线"
@@ -212,12 +205,12 @@ def test_paddleocr_download_failure_preserves_real_error_for_management_ui(
     assert progress["message"] == "PP-StructureV3 requires paddlex[ocr]"
 
 
-def test_model_completeness_accepts_sharded_qwen_safetensors(tmp_path: Path) -> None:
-    """本地 Qwen 的分片 Safetensors 必须被统一下载器识别为完整权重。"""
+def test_model_completeness_accepts_sharded_safetensors(tmp_path: Path) -> None:
+    """受管 Hugging Face 模型的分片 Safetensors 必须被统一下载器识别。"""
 
-    target = tmp_path / "qwen"
+    target = tmp_path / "embedding"
     target.mkdir()
-    (target / MODEL_MARKER_FILE).write_text("Qwen/Qwen3.5-2B", encoding="utf-8")
+    (target / MODEL_MARKER_FILE).write_text("BAAI/test-embedding", encoding="utf-8")
     (target / "config.json").write_text("{}", encoding="utf-8")
     (target / "tokenizer.json").write_text("{}", encoding="utf-8")
     (target / "model.safetensors-00001-of-00001.safetensors").write_bytes(b"weights")
@@ -225,10 +218,10 @@ def test_model_completeness_accepts_sharded_qwen_safetensors(tmp_path: Path) -> 
     assert is_model_available(target) is True
 
 
-def test_partial_qwen_progress_is_reconstructed_from_incomplete_bytes(tmp_path: Path) -> None:
-    """后端重启后应从断点文件和权重索引恢复真实下载比例。"""
+def test_partial_hf_progress_is_reconstructed_from_incomplete_bytes(tmp_path: Path) -> None:
+    """后端重启后应从通用 Hugging Face 断点文件恢复真实下载比例。"""
 
-    target = tmp_path / "qwen"
+    target = tmp_path / "embedding"
     cache = target / ".cache" / "huggingface" / "download"
     cache.mkdir(parents=True)
     index_payload = '{"metadata":{"total_size":400},"weight_map":{}}'
@@ -238,7 +231,7 @@ def test_partial_qwen_progress_is_reconstructed_from_incomplete_bytes(tmp_path: 
 
     assert has_partial_model_download(target) is True
 
-    progress = restore_partial_download_progress("local_qwen", target)
+    progress = restore_partial_download_progress("embedding", target)
 
     assert progress["status"] == "downloading"
     assert progress["downloaded_bytes"] >= 120
@@ -304,7 +297,6 @@ def test_post_startup_initialization_skips_local_ocr_until_explicit_use(monkeypa
     assert calls == [
         ("embedding", True, False, True),
         ("rerank", True, False, True),
-        ("local_qwen", False, False, False),
     ]
 
 
@@ -319,12 +311,10 @@ def test_user_deleted_model_is_not_auto_downloaded_again_until_restart(tmp_path:
         model=SimpleNamespace(
             embedding_model_name=embedding_name,
             rerank_model_name="BAAI/test-rerank",
-            local_model_name="Qwen/test-local",
         ),
         storage=SimpleNamespace(
             embedding_model_dir=embedding_root,
             rerank_model_dir=tmp_path / "models" / "rerank",
-            local_model_dir=tmp_path / "models" / "qwen",
             paddleocr_model_dir=tmp_path / "models" / "ocr",
         ),
     )

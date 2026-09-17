@@ -41,9 +41,12 @@ describe('BasicSettingsSection blocked file types', () => {
 
     expect(labels).not.toContain('OCR')
     expect(labels).toContain('识图')
-    expect(wrapper.props('visionUnderstandingEnabledDraft')).toBe(false)
+    expect((wrapper.get('.vision-setting-row input').element as HTMLInputElement).checked).toBe(false)
+    expect(wrapper.get('.vision-privacy-hint').text()).toContain('远程视觉模型')
+    expect(wrapper.get('.vision-privacy-hint').text()).toContain('API 费用')
+    expect(wrapper.get('.vision-privacy-hint').text()).toContain('仅保留 OCR 结果')
     expect(labels.indexOf('启用 DSH coding agent')).toBe(labels.indexOf('识图') + 1)
-    expect(wrapper.props('dshCodingAgentEnabledDraft')).toBe(false)
+    expect((wrapper.get('input[aria-label="启用 DSH（deepseek-harness）作为 coding agent"]').element as HTMLInputElement).checked).toBe(false)
   })
 
   it('renders below the ignore area and appends each supported extension only once', async () => {
@@ -58,11 +61,11 @@ describe('BasicSettingsSection blocked file types', () => {
     expect(chips[0]?.attributes('aria-pressed')).toBe('true')
 
     await chips[1]?.trigger('click')
-    expect(wrapper.props('knowledgeIgnorePatternsDraft')).toBe('*.md\n*.pdf')
+    expect((wrapper.get('.ignore-row textarea').element as HTMLTextAreaElement).value).toBe('*.md\n*.pdf')
     expect(wrapper.emitted('save')).toHaveLength(1)
 
     await wrapper.findAll('.file-type-chip')[1]?.trigger('click')
-    expect(wrapper.props('knowledgeIgnorePatternsDraft')).toBe('*.md\n*.pdf')
+    expect((wrapper.get('.ignore-row textarea').element as HTMLTextAreaElement).value).toBe('*.md\n*.pdf')
     expect(wrapper.emitted('save')).toHaveLength(1)
   })
 })

@@ -245,8 +245,9 @@
 `│   ├── ` [7.3 LLM 配置](#7.3%20LLM%20%E9%85%8D%E7%BD%AE)  
 `│   │   ├── ` [7.3.1 当前生效的模型](#7.3.1%20%E5%BD%93%E5%89%8D%E7%94%9F%E6%95%88%E7%9A%84%E6%A8%A1%E5%9E%8B)  
 `│   │   ├── ` [7.3.2 大模型接口与容量](#7.3.2%20%E5%A4%A7%E6%A8%A1%E5%9E%8B%E6%8E%A5%E5%8F%A3%E4%B8%8E%E5%AE%B9%E9%87%8F)  
-`│   │   ├── ` [7.3.3 小模型接口与回退](#7.3.3%20%E5%B0%8F%E6%A8%A1%E5%9E%8B%E6%8E%A5%E5%8F%A3%E4%B8%8E%E5%9B%9E%E9%80%80)  
-`│   │   └── ` [7.3.4 已保存的配置](#7.3.4%20%E5%B7%B2%E4%BF%9D%E5%AD%98%E7%9A%84%E9%85%8D%E7%BD%AE)  
+`│   │   ├── ` [7.3.3 小模型接口与继承](#7.3.3%20%E5%B0%8F%E6%A8%A1%E5%9E%8B%E6%8E%A5%E5%8F%A3%E4%B8%8E%E7%BB%A7%E6%89%BF)<br>
+`│   │   ├── ` [7.3.4 视觉模型接口与继承](#7.3.4%20%E8%A7%86%E8%A7%89%E6%A8%A1%E5%9E%8B%E6%8E%A5%E5%8F%A3%E4%B8%8E%E7%BB%A7%E6%89%BF)<br>
+`│   │   └── ` [7.3.5 已保存的配置](#7.3.5%20%E5%B7%B2%E4%BF%9D%E5%AD%98%E7%9A%84%E9%85%8D%E7%BD%AE)<br>
 `│   ├── ` [7.4 OCR/VLM 设置](#7.4%20OCR%2FVLM%20%E8%AE%BE%E7%BD%AE)  
 `│   │   ├── ` [7.4.1 当前生效配置与 OCR、VLM 开关](#7.4.1%20%E5%BD%93%E5%89%8D%E7%94%9F%E6%95%88%E9%85%8D%E7%BD%AE%E4%B8%8E%20OCR%E3%80%81VLM%20%E5%BC%80%E5%85%B3)  
 `│   │   ├── ` [7.4.2 MinerU 精准 API 与处理限额](#7.4.2%20MinerU%20%E7%B2%BE%E5%87%86%20API%20%E4%B8%8E%E5%A4%84%E7%90%86%E9%99%90%E9%A2%9D)  
@@ -375,7 +376,7 @@
 | **Agent（智能体）**   | 能够结合模型判断与工具调用执行任务的助手。它可以获取资料、观察执行结果，并继续采取后续操作。                                  |
 | **Agent 运行模式**   | Agent 处理请求的不同方式：Simple 用于直接回答，ReAct 在判断与工具操作之间循环，Plan 先制定计划再执行，Auto 自动选择处理路径。   |
 | **会话（Session）**  | 持续保存的一组对话与执行记录，可以包含消息、附件、工具结果和任务状态。                                             |
-| **会话附件**         | 添加到某个会话、供当前任务读取或分析的文件。附件不会因上传到会话就自动成为长期知识库资料，需要时可以另行保存到知识库。                     |
+| **会话附件**         | 添加到某个会话、供当前任务读取或分析的临时文件。上传只保存原件，不自动解析或加入长期知识库；Agent 需要内容时调用工具按需处理。               |
 | **上下文（Context）** | 模型在一次调用中能够参考的内容，包括当前问题、规则、历史消息、资料片段和工具结果等。它不一定包含完整会话历史。                         |
 | **Token**        | 模型处理文本时使用的计量单位，不等同于汉字数或单词数。模型容量、输入输出长度和部分服务费用通常以 Token 计量。                      |
 | **上下文窗口与预算**     | 上下文窗口是模型一次调用可容纳的 Token 总量；上下文预算是在该限制内，为规则、历史、资料、工具结果和输出分配的额度。完整会话记录可以超过单次调用的容量。 |
@@ -860,7 +861,7 @@ MinerU 与本地解析是两种可选路径：
 
 #### 3.2.5 会话图片的识别与视觉描述
 
-把图片作为 Agent 会话附件时，系统会先提取 OCR 内容。在基础设置中开启“识图”后，本地 Qwen 多模态模型会结合原图与识别文字，补充对象、空间关系、布局和图表趋势等视觉说明，并将其作为附件内容交给当前会话使用。
+把图片作为 Agent 会话附件时，上传阶段只保存原图，不自动运行 OCR 或视觉模型。Agent 需要读取图片文字时调用 `read_file` 按需 OCR，需要理解对象、空间关系、布局或图表趋势时调用 `understand_image`。视觉工具会直接读取原图，并在已有 OCR 缓存时把文字作为辅助证据；开启“识图”前请确认允许图片发送到所配置的模型服务。
 
 例如，一张实验流程图可以同时提供步骤中的文字，以及各步骤之间的排列和连接关系。Agent 可以结合这些信息继续解释图示、整理流程或回答相关问题，用户也可以回到原图核对说明。
 
@@ -1280,46 +1281,38 @@ ReRank 指重排序：它在已经找到的候选中进一步判断哪些内容�
 
 #### 4.4.3 知识图谱抽取流程
 
-图谱抽取采用本地处理、增量复用和按需联网裁决相结合的方式。下图沿用项目 `docs/WORKFLOW.md` 中的“知识图谱实体提取”流程，图中的几个术语可以先这样理解：
+图谱抽取采用远程小模型、确定性规则、增量复用和本地分层去重相结合的方式。下图沿用项目 `docs/WORKFLOW.md` 中的“知识图谱实体提取”流程，图中的几个术语可以先这样理解：
 
 | 术语 | 在流程中的含义 |
 | --- | --- |
 | 文档指纹与章节缓存 | 指纹根据内容计算，用来判断资料是否变化；缓存保存已经处理过的章节结果，供再次抽取时复用。 |
-| 候选与置信度 | 候选是初步提出的实体或关系，置信度表示模型对这一判断的把握程度。 |
-| 灰区裁决 | 对仍需确认的候选，结合少量相关原文再次判断其名称、类型或关系。 |
+| 候选与证据 | 候选是远程小模型或确定性规则提出的实体、关系及其原文证据。 |
+| 灰区裁决 | 对去重阶段仍需确认的相似实体候选，再由远程小模型判断是否合并。 |
 | 实体去重与重映射 | 将确认指向同一对象的名称合并，再把相关连线连接到统一的实体节点。 |
 | 原子持久化 | 把本次通过校验的节点、关系、缓存和状态一起提交到数据库，使相关记录同步更新。 |
 
 ```mermaid
 flowchart TB
-    accTitle: 本地优先的增量图谱抽取
-    accDescr: 文档先按文档和章节哈希复用已有结果，变化章节由本地模型抽取，仅将无法确定的最小证据片段交给联网模型裁决，最后本地去重并原子写入数据库。
+    accTitle: 远程小模型与确定性规则组合的增量图谱抽取
+    accDescr: 文档先按文档和章节哈希复用已有结果，变化章节由远程小模型抽取全文并合并确定性关系规则，远程失败时保留规则结果，最后本地去重并原子写入数据库。
 
     start(["多模态文档已结构化"]) --> document_cache{"文档指纹未变化?"}
     document_cache -->|"是"| reuse_document["复用整篇图谱"]
     document_cache -->|"否"| section_cache{"章节缓存仍有效?"}
 
-    subgraph local_extract ["本地抽取与校验"]
+    subgraph extraction ["远程抽取与规则兜底"]
         section_cache -->|"是"| reuse_section["复用章节候选"]
-        section_cache -->|"否"| local_scan["本地模型扫描正文"]
-        local_scan --> local_rules["规则过滤与证据校验"]
-        local_rules --> confidence_route{"候选是否明确?"}
-        confidence_route -->|"高置信"| accepted_local["接受本地结果"]
-        confidence_route -->|"低置信"| discard_candidate["丢弃无证据候选"]
-    end
-
-    subgraph remote_judge ["联网灰区裁决"]
-        confidence_route -->|"灰区"| minimal_context["组装最短证据片段"]
-        minimal_context --> remote_model["联网小模型裁决"]
-        remote_model --> accepted_remote["返回确定候选"]
-        remote_model -.->|"超时或熔断"| pending_retry["保留本地结果并待重试"]
+        section_cache -->|"否"| model_available{"小模型配置有效?"}
+        model_available -->|"是"| remote_extract["远程小模型扫描完整章节"]
+        model_available -->|"否"| rules_only["只运行确定性显式关系规则"]
+        remote_extract --> merge_rules["合并中英文显式关系规则"]
+        remote_extract -.->|"超时、限流或熔断"| rules_only
+        rules_only --> merge_rules
     end
 
     subgraph local_dedup ["本地分层去重"]
         reuse_section --> normalize_entities["规范名称与明确别名"]
-        accepted_local --> normalize_entities
-        accepted_remote --> normalize_entities
-        pending_retry --> normalize_entities
+        merge_rules --> normalize_entities
         normalize_entities --> embedding_match["Embedding 相似候选检索"]
         embedding_match --> dedup_route{"相似度是否明确?"}
         dedup_route -->|"高或低"| remap_edges["本地合并或保持独立"]
@@ -1334,17 +1327,16 @@ flowchart TB
     end
 
     reuse_document --> done(["图谱可查询"])
-    discard_candidate --> normalize_entities
     graph_tables --> done
 
     classDef cache fill:#e8eefc,stroke:#476bf7,stroke-width:2px,color:#172554
-    classDef local fill:#ecfdf3,stroke:#16845b,stroke-width:2px,color:#12372a
+    classDef rules fill:#ecfdf3,stroke:#16845b,stroke-width:2px,color:#12372a
     classDef remote fill:#fff7db,stroke:#b7791f,stroke-width:2px,color:#4a2d08
     classDef result fill:#f4f4f5,stroke:#52525b,stroke-width:2px,color:#18181b
 
     class document_cache,section_cache,reuse_document,reuse_section cache
-    class local_scan,local_rules,accepted_local,discard_candidate,normalize_entities,embedding_match,dedup_route,remap_edges,clean_edges local
-    class confidence_route,minimal_context,remote_model,accepted_remote,pending_retry,dedup_remote remote
+    class rules_only,merge_rules,normalize_entities,embedding_match,dedup_route,remap_edges,clean_edges rules
+    class model_available,remote_extract,dedup_remote remote
     class start,commit_graph,graph_tables,done result
 
 ```
@@ -1352,12 +1344,12 @@ flowchart TB
 阅读这张图时，可以沿着内容处理的顺序理解：
 
 1. **复用已有结果。** 先检查文档指纹，再检查章节缓存。在内容与缓存条件匹配的增量处理中，已完成的文档或章节可以直接复用，新增和变化章节进入后续抽取。
-2. **在本地提出并校验候选。** 本地模型与规则扫描待处理正文，整理实体名称、类型、别名和关系，并结合原文证据筛选结果。
-3. **按需要进行联网裁决。** 证据明确的候选在本地确认，仍需判断的候选连同最短相关证据交给联网模型。暂时等待裁决的候选会保留为待重试记录，本地已确认的结果可以先保存。
+2. **抽取变化章节。** 有效的小模型配置负责扫描待处理正文，整理实体名称、类型、别名和关系；中英文显式关系规则始终补充可确定的结果。
+3. **远程失败时保留规则结果。** 小模型未配置、超时或限流时，不清空已有图谱，只保存确定性规则能够确认的实体与关系。
 4. **统一实体名称与关系。** 先按名称和明确别名合并，再用 Embedding 寻找语义相似的实体候选。明确的情况在本地处理，灰区候选进一步裁决，最后整理连线并清理重复关系。
 5. **保存可查询图谱。** 通过校验后，将节点、关系、章节缓存、去重判定和处理状态写入本地数据库，供图谱浏览和后续查询使用。
 
-[3.2.4 联网解析与 MinerU](#324-联网解析与-mineru) 用于前面的内容提取，把原始文档转换为 Markdown 等内容；图谱中的联网裁决用于后续的知识关系抽取，使用图谱任务的小模型配置确认实体与关系。模型配置见 [7.3 LLM 配置](#73-llm-配置)，本地模型准备见 [7.10 存储管理](#710-存储管理)。
+[3.2.4 联网解析与 MinerU](#324-联网解析与-mineru) 用于前面的内容提取，把原始文档转换为 Markdown 等内容；图谱抽取使用 LLM 设置中的小模型处理变化章节，并在去重灰区确认相似实体。模型配置见 [7.3 LLM 配置](#73-llm-配置)，Embedding 与 ReRank 准备见 [7.10 存储管理](#710-存储管理)。
 
 #### 4.4.4 浏览节点与查找关联资料
 
@@ -1428,13 +1420,13 @@ MetaWeave 的 Agent 在会话中接收任务，结合当前资料、历史上下
 
 主模型负责 ReAct 和 Plan 模式中的主要判断、工具选择与回答，小模型负责模式选择、规划、观察、摘要压缩和 Skill 路由等辅助工作，Simple 模式也使用小模型回答。两者是任务分工，可以配置为不同模型，也可以使用同一个模型接口。
 
-| 配置情况 | 主模型任务 | 小模型任务 |
-| --- | --- | --- |
-| 未配置可用的远程主模型 | 使用本地 Qwen。 | 同样使用本地 Qwen，主模型配置为空时按这一路径分配任务。 |
-| 已配置远程主模型，未配置小模型 | 使用所配置的主模型。 | 复用主模型的名称、地址和授权信息。 |
-| 主模型与小模型均已配置 | 使用主模型接口。 | 使用小模型接口。 |
+| 配置情况 | 主模型任务 | 小模型任务 | 视觉模型任务 |
+| --- | --- | --- | --- |
+| 未配置可用的远程主模型 | 返回明确配置提示。 | 不执行。 | 仅完整配置独立视觉端点时可用于附件识图。 |
+| 已配置远程主模型，未配置小模型或视觉模型 | 使用所配置的主模型。 | 复用主模型的名称、地址和授权信息。 | 复用主模型；该模型必须支持图片输入。 |
+| 三类模型均独立配置 | 使用大模型接口。 | 使用小模型接口。 | 使用视觉模型接口。 |
 
-本地回退使用 `Qwen/Qwen3.5-2B`，在“设置 → 存储管理 → 模型管理”中下载和加载，使用 CPU 完成推理。它也负责会话图片的视觉理解，因此配置远程对话模型后，仍可继续用本地模型识图；生成速度受电脑性能和输入长度影响。
+系统不再下载或回退到本地语言模型。远程模型不可用时保留错误边界和重试，但不会静默切换到能力、速度和上下文不同的备用模型。
 
 Embedding 和 ReRank 独立负责知识向量与候选排序，使用各自的模型配置和加载状态。检索和文档识别模型的管理入口见 [7.10 存储管理](#7.10%20%E5%AD%98%E5%82%A8%E7%AE%A1%E7%90%86)。
 
@@ -1544,7 +1536,7 @@ flowchart LR
 
 #### 5.2.5 Agentic RAG
 
-MetaWeave 把知识检索接入 Agent 的工具决策, 进入 ReAct 或 Plan 后，主模型先阅读用户问题和已有上下文，再决定是否调用 `get_knowledge_context`、`search_knowledge`、`read_knowledge_file` 或 `web_search`。`get_knowledge_context` 对当前查询执行向量与关键词混合检索，经过重排后返回知识片段和来源编号。主模型读取结果后继续回答或发起下一次工具调用。
+MetaWeave 把知识检索接入 Agent 的工具决策, 进入 ReAct 或 Plan 后，主模型先阅读用户问题和已有上下文，再决定是否调用 `get_knowledge_context`、`search_knowledge`、`read_file` 或 `web_search`。`read_file` 统一读取知识库文件与会话附件：知识库文件使用 Markdown 投影，会话附件首次读取时才解析并缓存。`get_knowledge_context` 对当前查询执行向量与关键词混合检索，经过重排后返回知识片段和来源编号。主模型读取结果后继续回答或发起下一次工具调用。
 
 ```mermaid
 flowchart LR
@@ -1820,9 +1812,9 @@ Agent 的内容审核分布在用户输入和最终输出两个位置，输入�
 
 处理“这份文件”一类指代时，Agent 先取得当前打开文档或选中文件的信息，确定资料位置后再读取相应内容。读取知识文件时，系统检查已有解析结果是否有效，符合支持格式与屏蔽规则的文件会在解析缺失或过期时重新处理，随后返回正文及其来源，供后续回答引用。
 
-会话附件支持上传、拖放和图片粘贴，接收后先保存原文件，再处理供当前任务读取的内容，并按用户、知识库和会话建立关联。用户把附件转为长期资料时，可以通过保存附件到知识库的工具写入目标位置，再根据任务安排灌库，建立后续搜索使用的索引。
+会话附件支持上传、拖放和图片粘贴。多个文件分别异步上传，后端只原子落盘并登记 `attachment://` 引用，不在上传请求中执行 OCR、文档解析或视觉调用。Agent 确实需要正文时才调用 `read_file`；首次解析结果会缓存，后续读取不重复执行。用户把附件转为长期资料时，可以通过保存附件到知识库的工具写入目标位置，再根据任务安排灌库，建立后续搜索使用的索引。
 
-图片附件先提取 OCR 文字，开启识图后由本地 Qwen 结合图片补充视觉说明；文档附件沿用本地解析方式，知识库的 MinerU 联网设置独立作用于知识入库流程。解析文字进入回答上下文后，由本次配置的对话模型处理，原件则继续作为图片、公式和版面的查看入口。
+`read_file` 对知识库文件和会话附件使用同一份文档解析合同：按 OCR/VLM 设置优先选择 MinerU 或本地解析器，图片文字在明确读取时才执行 OCR。`understand_image` 独立负责图片视觉语义，不以前置 OCR 为条件。解析正文通过本次工具结果进入模型上下文，原件继续作为图片、公式和版面的查看入口。
 
 较长资料可以按段读取，已经取得的工具结果也支持通过“读取工具结果”继续查看后续部分。检索摘要用于定位相关片段，解析正文用于连续阅读，原件用于核对图表和排版，Agent 可按任务在这些入口之间继续取材。
 
@@ -2308,7 +2300,7 @@ $$
 
 #### 7.1.4 识图与 DSH coding agent
 
-“识图”让本地 Qwen 在 OCR 文字之外补充图片内容说明；“启用 DSH coding agent”决定代码子任务是否使用 DeepSeek Harness，默认关闭，使用前可在 [7.10.4 SDK 管理](#7104-sdk-管理) 检查运行环境。
+“识图”允许把会话图片和 OCR 辅助文本发送到 LLM 设置中的远程视觉模型，补充非文字视觉信息；该开关默认关闭。“启用 DSH coding agent”决定代码子任务是否使用 DeepSeek Harness，默认关闭，使用前可在 [7.10.4 SDK 管理](#7104-sdk-管理) 检查运行环境。
 
 #### 7.1.5 屏蔽区与文件类型
 
@@ -2340,7 +2332,7 @@ $$
 
 #### 7.3.1 当前生效的模型
 
-先查看顶部“当前生效”，确认主模型、小模型的实际名称和来源，避免把尚未保存的输入当作正在使用的配置。
+先查看顶部“当前生效”，确认大模型、小模型和视觉模型的实际名称及来源，避免把尚未保存的输入当作正在使用的配置。
 
 #### 7.3.2 大模型接口与容量
 
@@ -2348,13 +2340,19 @@ $$
 
 容量按服务提供方的实际限制填写，默认显示的 1,000,000 Token 不代表接口一定支持该长度。
 
-#### 7.3.3 小模型接口与回退
+#### 7.3.3 小模型接口与继承
 
-不需要单独配置小模型时留空并保存，系统会复用已配置的大模型；没有可用远程大模型时使用本地 Qwen，具体分工见 [5.1 模型说明](#51-模型说明)。
+不需要单独配置小模型时留空并保存，系统会复用已配置的大模型。没有可用远程大模型时，Agent 会提示先完成配置，不再回退本地语言模型。
 
-#### 7.3.4 已保存的配置
+#### 7.3.4 视觉模型接口与继承
 
-用“保存大模型配置”或“保存小模型配置”保留常用接口，下次从列表导入到相应位置，核对容量后再点击“保存”启用；不再需要的配置可以从列表删除。
+视觉模型名称、Base URL 和 API Key 全部留空时，完整继承大模型；独立配置可填写 `deepseek-flash` 等支持图片输入的 OpenAI-compatible 模型。更换 Base URL 时必须使用该端点对应的 API Key，防止凭据发送到错误服务。
+
+DeepSeek 图片内容块、支持格式和限制见其[图像理解 API 文档](https://api-docs.deepseek.com/zh-cn/guides/vision/)。
+
+#### 7.3.5 已保存的配置
+
+用“保存大模型配置”“保存小模型配置”或“保存视觉模型配置”保留常用接口，下次从列表导入到相应位置，核对后再点击“保存”启用；不再需要的配置可以从列表删除。
 
 ### 7.4 OCR/VLM 设置
 
@@ -2440,7 +2438,7 @@ $$
 
 #### 7.10.2 模型管理
 
-在本地 Qwen、Embedding、ReRank 和 PaddleOCR 条目中查看占用、下载和启用状态，按当前状态下载、重试或删除；支持手动加载的模型会显示“加载”，展开 OCR 条目可查看其组成模型。
+在 Embedding、ReRank 和 PaddleOCR 条目中查看占用、下载和启用状态，按当前状态下载、重试或删除；支持手动加载的模型会显示“加载”，展开 OCR 条目可查看其组成模型。
 
 #### 7.10.3 编译管理
 
@@ -2497,7 +2495,7 @@ MetaWeave 由 Electron 桌面程序、Vue 工作区和 Python 后端组成。开
 | 图谱、统计与动效 | D3 Force、Canvas、ECharts、GSAP | 显示知识关系、用量统计与界面动效。 |
 | 后端与通信 | Python、FastAPI、REST、SSE、gRPC、Electron IPC | 提供业务接口、流式消息和桌面能力桥接。 |
 | Agent 与模型接口 | LangGraph、LangChain、OpenAI SDK | 组织执行图、模型调用、工具操作与流式输出。 |
-| 本地模型与检索 | CPU PyTorch、Transformers、Sentence Transformers、ChromaDB | 运行本地 Qwen、Embedding 和 ReRank，保存及查询向量索引。 |
+| 本地检索模型 | CPU PyTorch、Transformers、Sentence Transformers、ChromaDB | 运行 Embedding 和 ReRank，保存及查询向量索引。 |
 | 文档解析 | PyMuPDF、Mammoth、xlrd、Pillow、PaddleOCR、MinerU API | 读取文档结构，处理图片、OCR、表格和公式，生成统一解析内容。 |
 | 数据与迁移 | SQLite、SQLModel、Alembic | 保存业务记录、会话、设置与记忆，管理数据库结构升级。 |
 | 工具扩展与代码子任务 | MCP、Skill、DeepSeek Harness | 接入外部工具、载入任务说明，并执行 DSH 代码子任务。 |
@@ -2569,7 +2567,7 @@ MetaWeave/
 | Node.js | Node.js 22 系列的 22.18 起版本，或 24.12 及以上版本，以前端 engines 约束为准。 |
 | npm | npm 10+，使用 `npm ci` 按锁文件安装前端依赖。 |
 | Git | 用于取得源码、管理版本和重建 DSH SDK。 |
-| 模型入口 | Agent 需要可用的 OpenAI 兼容远程模型，或用户确认下载的本地 Qwen；检索与 OCR 另按功能需要准备。 |
+| 模型入口 | Agent 需要可用的 OpenAI-compatible 远程大模型；小模型和视觉模型可独立配置或继承大模型，检索与 OCR 另按功能需要准备。 |
 | 可选运行环境 | 编辑并编译 LaTeX 时需要可用的 LaTeX 发行版；MCP 或 Skill 使用的外部程序按对应任务准备。 |
 
 普通开发与 exe 构建直接使用仓库携带的 DSH SDK。只有重新生产 SDK 时，才额外需要 Node 24、pnpm，以及 `cl.exe` 或 `gcc.exe`，对应流程见 [启动、构建与部署文档](docs/DEVELOPMENT.md)。
@@ -2578,7 +2576,7 @@ MetaWeave/
 
 完整的 Windows 桌面、原生组件和安装包验证应在 Windows x86-64 环境中完成。当前正式发行范围不包含 macOS、Linux 和 Windows ARM，不能把单独运行某个前端页面视为这些平台上的完整适配。
 
-使用本地 Qwen、Embedding、ReRank 或 OCR 时，沿用项目建议准备至少 16 GB 内存，CPU 不要求配合独立显卡或 CUDA。开发与构建还会产生依赖目录、临时快照及多份安装包，除了下方的生产运行空间，还应为这些文件另留余量；磁盘实际占用取决于下载模型与保留产物的数量。
+使用 Embedding、ReRank 或 OCR 时，沿用项目建议准备至少 16 GB 内存，CPU 不要求配合独立显卡或 CUDA。开发与构建还会产生依赖目录、临时快照及多份安装包，除了下方的生产运行空间，还应为这些文件另留余量；磁盘实际占用取决于下载模型与保留产物的数量。
 
 #### 8.3.3 开发进程与端口
 

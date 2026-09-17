@@ -56,9 +56,12 @@ from agent_service.services.scheduler.types import (
     FOREGROUND_AGENT_TASK,
     LARGE_MODEL_TIER,
     LLMOperation,
+    LLMConfigurationError,
     LLMTaskHandle,
     LLMTaskOverloadedError,
     SMALL_MODEL_TIER,
+    VISION_MODEL_TIER,
+    VISION_UNDERSTANDING_TASK,
     ScheduledLLMTask,
 )
 
@@ -92,6 +95,7 @@ class LLMTaskScheduler(LLMTaskRuntimeMixin):
         self._model_semaphores = {
             LARGE_MODEL_TIER: threading.Semaphore(max(self.task_config.large_model_max_concurrency, 1)),
             SMALL_MODEL_TIER: threading.Semaphore(max(self.task_config.small_model_max_concurrency, 1)),
+            VISION_MODEL_TIER: threading.Semaphore(max(self.task_config.large_model_max_concurrency, 1)),
         }
         self._dedup_lock = threading.Lock()
         self._dedup_handles: dict[str, LLMTaskHandle] = {}
@@ -140,6 +144,12 @@ class LLMTaskScheduler(LLMTaskRuntimeMixin):
             ),
             BACKGROUND_FACT_RESOLUTION_TASK: CircuitBreaker(
                 name=BACKGROUND_FACT_RESOLUTION_TASK,
+                failure_threshold=self.task_config.circuit_breaker_failure_threshold,
+                recovery_seconds=self.task_config.circuit_breaker_recovery_seconds,
+                store=store,
+            ),
+            VISION_UNDERSTANDING_TASK: CircuitBreaker(
+                name=VISION_UNDERSTANDING_TASK,
                 failure_threshold=self.task_config.circuit_breaker_failure_threshold,
                 recovery_seconds=self.task_config.circuit_breaker_recovery_seconds,
                 store=store,
@@ -610,6 +620,15 @@ class LLMTaskScheduler(LLMTaskRuntimeMixin):
                 kwargs={"task_type": BACKGROUND_FACT_RESOLUTION_TASK, "consumer_name": f"fact-{uuid4().hex[:8]}-{index}"},
                 daemon=True,
                 name=f"llm-redis-fact-worker-{index}",
+            )
+            worker.start()
+            workers.append(worker)
+        for index in range(max(self.task_config.background_fact_worker_count, 1)):
+            worker = threading.Thread(
+                target=self._redis_worker_loop,
+                kwargs={"task_type": VISION_UNDERSTANDING_TASK, "consumer_name": f"vision-{uuid4().hex[:8]}-{index}"},
+                daemon=True,
+                name=f"llm-redis-vision-worker-{index}",
             )
             worker.start()
             workers.append(worker)

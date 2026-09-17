@@ -34,32 +34,13 @@
 
 ## 4. P1 — 阻断级问题
 
-### P1-01：Apple Silicon 上按现有 requirements 无法安装 PyTorch
+### P1-01：Apple Silicon 的 PyTorch `+cpu` 精确约束（已解除源码安装阻断）
 
-**证据**
+当前 `agent_service/requirements.txt` 已改用 `torch==2.11.0`，并移除已废弃本地多模态模型专属的 `torchvision` 直接依赖和 CPU wheel 索引，因此原先 macOS ARM64 找不到 `2.11.0+cpu` 分发物的确定性阻断已解除。
 
-- `agent_service/requirements.txt` 固定 `torch==2.11.0+cpu`、`torchvision==0.26.0+cpu`，并指定 CPU wheel 索引。
-- PyTorch 官方 CPU 索引中，Linux/Windows 的 2.11.0 CPU wheel 使用 `+cpu`，macOS ARM64 wheel 的版本是 `2.11.0`，没有 `+cpu`。
-- torchvision 0.26.0 同样如此：Linux/Windows wheel 带 `+cpu`，macOS ARM64 wheel 不带。
+这不等于已经完成 macOS 支持：仍需在干净的 Apple Silicon + Python 3.12 环境执行完整 requirements 安装、`pip check`、关键模块 import 和本地 Embedding/ReRank 加载。Intel Mac 的二进制依赖问题、桌面打包、签名、公证和真机 UI 验收仍由后续条目覆盖。
 
-**触发方式**
-
-在 Python 3.12 Apple Silicon 环境执行文档要求的：
-
-```bash
-python -m pip install -r agent_service/requirements.txt
-```
-
-**影响**
-
-pip 无法找到满足精确版本 `2.11.0+cpu`/`0.26.0+cpu` 的 macOS 分发物，源码启动在安装阶段即被阻断。
-
-**建议与验收**
-
-- 按平台拆分约束：macOS 使用无 `+cpu` 的同版本 ARM64 wheel，Windows/Linux 保留对应 CPU 变体。
-- 在干净的 macOS ARM64 + Python 3.12 环境执行完整 requirements 安装、`pip check` 和关键模块 import。
-
-来源：[PyTorch CPU wheel index](https://download.pytorch.org/whl/cpu/torch/)、[torchvision CPU wheel index](https://download.pytorch.org/whl/cpu/torchvision/)。
+来源：[PyTorch 安装说明](https://pytorch.org/get-started/locally/)。
 
 ### P1-02：Intel Mac 没有可满足当前模型栈的二进制依赖组合
 
@@ -392,7 +373,7 @@ Agent 无法用内部读取命令检查任何 macOS 绝对路径，且返回结�
 
 ### P3-05：Apple Silicon 可用的 MPS 没有被利用
 
-`agent_service/services/local_qwen/service.py:135, 314-327` 把模型和张量固定到 CPU；Embedding/OCR 配置也以 CPU 为唯一默认。功能仍可运行，因此不是阻断，但本地 Qwen、Embedding 与部分视觉流程无法利用 Apple GPU，能耗与延迟会明显高于具备 MPS 适配的实现。
+内置本地多模态模型已从当前架构移除，Agent 与图片理解改用远程模型；Embedding/OCR 配置仍以 CPU 为唯一默认。功能仍可运行，因此不是阻断，但本地检索与部分文档解析流程无法利用 Apple GPU，能耗与延迟会高于具备 MPS 适配的实现。
 
 若后续支持 MPS，必须先验证算子覆盖、dtype、内存回退和输出一致性，不能只把字符串从 `cpu` 改成 `mps`。
 
@@ -411,7 +392,7 @@ Agent 无法用内部读取命令检查任何 macOS 绝对路径，且返回结�
 - Electron 已包含 `app.icns`，并在 Darwin 选择该图标。
 - 前端多数实际键盘监听同时支持 Ctrl 与 Meta；问题主要是提示和菜单结构。
 - `package-lock.json` 包含 Rolldown、Oxlint、Lightning CSS 等 Darwin arm64/x64 可选原生绑定；前端依赖安装本身没有发现只锁 Windows binding 的问题。
-- PaddlePaddle 3.3.1 已提供 Python 3.12 的 macOS ARM64 wheel；阻断点是 Intel 缺包和 PyTorch `+cpu` 精确约束，而不是“Paddle 完全没有 Mac 版本”。
+- PaddlePaddle 3.3.1 已提供 Python 3.12 的 macOS ARM64 wheel；当前剩余阻断点是 Intel 缺包、桌面发行链和真机验收，而不是“Paddle 完全没有 Mac 版本”。
 
 ## 8. 验证记录与局限
 

@@ -359,6 +359,32 @@ def test_graph_llm_config_uses_explicit_small_model_when_present(tmp_path: Path)
     assert llm_config["small_base_url"] == "https://small.example.com"
 
 
+def test_graph_llm_config_never_sends_primary_key_to_distinct_small_endpoint(tmp_path: Path) -> None:
+    """小模型切换到独立端点却未提供密钥时，不得把主模型密钥发送到该域名。"""
+
+    config = AgentConfig.load_config(
+        {"storage": {"project_root": str(tmp_path), "base_data_dir": str(tmp_path / "runtime")}},
+        load_env=False,
+        load_dotenv=False,
+        ensure_models=False,
+    )
+
+    llm_config = _build_llm_config(
+        config,
+        user_llm_config={
+            "model_name": "large-model",
+            "api_key": "large-key",
+            "base_url": "https://large.example.com",
+            "small_model_name": "small-model",
+            "small_api_key": "",
+            "small_base_url": "https://small.example.com",
+        },
+    )
+
+    assert llm_config["small_api_key"] is None
+    assert llm_config["small_base_url"] == "https://small.example.com"
+
+
 def test_graph_prompts_require_entity_multihop_relationships(tmp_path: Path) -> None:
     """Single and batch extraction prompts must request complete entity relationship chains."""
 

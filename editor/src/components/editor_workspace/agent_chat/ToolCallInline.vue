@@ -125,7 +125,9 @@ const FALLBACK_DISPLAY: Record<string, string> = {
   // 文件管理工具
   get_current_viewing_document: '获取当前文档',
   list_knowledge_files: '列出文件',
-  read_knowledge_file: '阅读文件',
+  read_file: '阅读文件',
+  read_knowledge_file: '阅读文件', // 兼容旧会话轨迹，不代表当前注册表仍暴露旧工具。
+  read_session_attachment: '阅读文件',
   write_knowledge_file: '创作文件',
   patch_knowledge_file: '局部修改文件',
   show_markdown_html: '展示Markdown-HTML',
@@ -244,6 +246,10 @@ function firstPathFromArgs(argsSummary: string) {
 
 function extractFilename(trace: Record<string, unknown>, toolName: string) {
   const rawContent = asString(trace.raw_content)
+  if (['read_file', 'read_knowledge_file', 'read_session_attachment'].includes(toolName)) {
+    const parsed = parseJsonObject(rawContent)
+    return parsed ? asString(parsed.filename) || asString(parsed.path) : null
+  }
   if (toolName === 'write_knowledge_file') {
     const m = rawContent.match(/已保存文件:\s*(.+?)\s*\(/)
     return m ? m[1] : null
@@ -359,7 +365,9 @@ function toolSummary(entry: ToolEntry) {
   }
 
   const fileCountLabels: Record<string, [string, string, string]> = {
+    read_file: ['阅读文件', '阅读 ', ' 个文件'],
     read_knowledge_file: ['阅读文件', '阅读 ', ' 个文件'],
+    read_session_attachment: ['阅读文件', '阅读 ', ' 个文件'],
     write_knowledge_file: ['创作文件', '创作 ', ' 个文件'],
     delete_knowledge_file: ['删除文件', '删除 ', ' 个文件'],
     rename_knowledge_file: ['重命名文件', '重命名 ', ' 个文件'],
@@ -639,7 +647,7 @@ function finalizedPatch(entry: ToolDisplayEntry) {
             </div>
           </div>
           <!-- File read: code block -->
-          <div v-else-if="entry.toolName === 'read_knowledge_file'">
+          <div v-else-if="['read_file', 'read_knowledge_file', 'read_session_attachment'].includes(entry.toolName)">
             <pre class="tool-result-code">{{ rawContent }}</pre>
           </div>
           <!-- Time and status tools: simple result -->

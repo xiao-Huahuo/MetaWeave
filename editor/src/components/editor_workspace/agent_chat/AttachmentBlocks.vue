@@ -69,6 +69,10 @@ function processingProgress(attachment: AgentUploadedAttachment): number {
   return Number.isFinite(value) ? Math.max(0, Math.min(100, value)) : 0
 }
 
+function isProcessing(attachment: AgentUploadedAttachment): boolean {
+  return ['uploading', 'queued', 'processing'].includes(processingStatus(attachment))
+}
+
 function processingLabel(attachment: AgentUploadedAttachment): string {
   const status = processingStatus(attachment)
   const stage = String(attachment.metadata?.processing_stage || '')
@@ -108,7 +112,7 @@ function processingLabel(attachment: AgentUploadedAttachment): string {
         </button>
       </div>
       <div
-        v-if="processingStatus(attachment) !== 'completed'"
+        v-if="isProcessing(attachment) || processingStatus(attachment) === 'failed'"
         class="attachment-processing"
         :title="String(attachment.metadata?.processing_error || processingLabel(attachment))"
       >

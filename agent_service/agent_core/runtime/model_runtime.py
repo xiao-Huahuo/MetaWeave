@@ -685,9 +685,8 @@ class ModelRuntimeMixin:
             return (
                 self.config.model.small_model_name
                 or self.config.model.model_name
-                or self.config.model.local_model_name
             )
-        return self.config.model.model_name or self.config.model.local_model_name
+        return self.config.model.model_name
     def _get_user_llm_config(self, user_id: str) -> dict[str, Any] | None:
         """读取用户的 LLM 配置（api_key, base_url 等），在图启动前一次性获取，避免重入竞态。"""
         if not user_id or self.settings_service is None:

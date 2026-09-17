@@ -10,10 +10,7 @@ langgraph
 chromadb
 sentence-transformers==6.0.0
 transformers==5.2.0
-# Keep Qwen multimodal preprocessing on the same CPU-only PyTorch wheel family.
---extra-index-url https://download.pytorch.org/whl/cpu
-torch==2.11.0+cpu
-torchvision==0.26.0+cpu
+torch==2.11.0
 sqlmodel
 alembic
 pytest

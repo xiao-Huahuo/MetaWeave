@@ -3,9 +3,10 @@
 import { expect, test, type Page } from '@playwright/test'
 
 const VIEWPORTS = [
-  { name: 'desktop', width: 1280, height: 900, stacked: false },
+  { name: 'desktop', width: 1024, height: 900, stacked: false },
   { name: 'tablet', width: 768, height: 900, stacked: false },
   { name: 'mobile', width: 480, height: 900, stacked: true },
+  { name: 'narrow', width: 360, height: 900, stacked: true },
 ] as const
 
 /** Install the minimum backend contract needed to render the real settings page. */
@@ -49,6 +50,9 @@ async function mockSettingsBackend(page: Page) {
         small_model_name: 'small-model',
         small_base_url: 'https://example.invalid/v1',
         small_api_key: '',
+        vision_model_name: '',
+        vision_base_url: '',
+        vision_api_key: '',
         model_context_window_tokens: 1_000_000,
         model_max_output_tokens: 65_536,
         small_model_context_window_tokens: 1_000_000,
@@ -57,11 +61,13 @@ async function mockSettingsBackend(page: Page) {
         effective_model_source: 'remote',
         effective_small_model_name: 'small-model',
         effective_small_model_source: 'remote',
+        effective_vision_model_name: 'main-model',
+        effective_vision_model_source: 'large',
         updated_at: '2026-08-31T00:00:00Z',
       } })
       return
     }
-    if (pathname === '/settings/llm/saved-configs') {
+    if (pathname === '/settings/llm/config/saved') {
       await route.fulfill({ json: { configs: [] } })
       return
     }
@@ -83,6 +89,9 @@ for (const viewport of VIEWPORTS) {
     await expect(contextInputs.first()).toHaveValue('1000000')
     await expect(contextInputs.last()).toHaveValue('1000000')
     await expect(outputInputs.last()).toHaveValue('8192')
+    await expect(page.locator('[data-effective-model="vision"]')).toContainText('main-model')
+    await expect(page.locator('[data-effective-model="vision"]')).toContainText('继承大模型')
+    await expect(page.getByLabel('视觉模型名称')).toHaveValue('')
 
     const contextBox = await contextInputs.first().boundingBox()
     const outputBox = await outputInputs.first().boundingBox()
@@ -102,6 +111,100 @@ for (const viewport of VIEWPORTS) {
     })
   })
 }
+
+test('imports, saves, and clears a dedicated visual model', async ({ page }) => {
+  const savedBodies: Array<Record<string, unknown>> = []
+  const config: Record<string, unknown> = {
+    user_id: 'context-smoke-user',
+    model_name: 'deepseek-chat',
+    base_url: 'https://api.deepseek.com/v1',
+    api_key: 'large-key',
+    small_model_name: '',
+    small_base_url: '',
+    small_api_key: '',
+    vision_model_name: '',
+    vision_base_url: '',
+    vision_api_key: '',
+    model_context_window_tokens: 1_000_000,
+    model_max_output_tokens: 0,
+    small_model_context_window_tokens: 1_000_000,
+    small_model_max_output_tokens: 0,
+    effective_model_name: 'deepseek-chat',
+    effective_model_source: 'remote',
+    effective_small_model_name: 'deepseek-chat',
+    effective_small_model_source: 'remote',
+    effective_vision_model_name: 'deepseek-chat',
+    effective_vision_model_source: 'large',
+    updated_at: '2026-09-17T00:00:00Z',
+  }
+  await page.addInitScript(() => {
+    localStorage.setItem('agent_editor_profile', JSON.stringify({
+      userId: 'context-smoke-user', knowledgeDir: 'D:/Knowledge', knowledgeLibraries: [], knowledgeWatchEnabled: true,
+    }))
+    localStorage.setItem('agent_editor_settings_active_tab', 'llm')
+  })
+  await page.route('**/*', async (route) => {
+    const request = route.request()
+    if (request.resourceType() !== 'fetch' && request.resourceType() !== 'xhr') {
+      await route.continue()
+      return
+    }
+    const pathname = new URL(request.url()).pathname
+    if (pathname === '/health') {
+      await route.fulfill({ json: { ok: true } })
+      return
+    }
+    if (pathname === '/settings/profile') {
+      await route.fulfill({ json: {
+        user_id: 'context-smoke-user', knowledge_dir: 'D:/Knowledge', knowledge_libraries: [],
+        created_at: '2026-09-17T00:00:00Z', updated_at: '2026-09-17T00:00:00Z',
+      } })
+      return
+    }
+    if (pathname === '/settings/llm/config') {
+      if (request.method() === 'PUT') {
+        const body = request.postDataJSON() as Record<string, unknown>
+        savedBodies.push(body)
+        Object.assign(config, body)
+        const explicitVision = Boolean(body.vision_model_name || body.vision_base_url || body.vision_api_key)
+        Object.assign(config, {
+          effective_vision_model_name: explicitVision ? body.vision_model_name : config.model_name,
+          effective_vision_model_source: explicitVision ? 'explicit' : 'large',
+        })
+      }
+      await route.fulfill({ json: config })
+      return
+    }
+    if (pathname === '/settings/llm/config/saved') {
+      await route.fulfill({ json: { configs: [{
+        config_id: 'vision-preset', user_id: 'context-smoke-user', label: 'DeepSeek Vision',
+        api_key: 'vision-key', base_url: 'https://api.deepseek.com/v1', model_name: 'deepseek-flash',
+        created_at: '2026-09-17T00:00:00Z', updated_at: '2026-09-17T00:00:00Z',
+      }] } })
+      return
+    }
+    await route.fulfill({ json: {} })
+  })
+
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Settings' }).click()
+  await expect(page.locator('[data-effective-model="vision"]')).toContainText('继承大模型')
+
+  await page.getByRole('button', { name: '导入 DeepSeek Vision 到视觉模型' }).click()
+  await expect(page.getByLabel('视觉模型名称')).toHaveValue('deepseek-flash')
+  await expect(page.getByLabel('视觉模型 Base URL')).toHaveValue('https://api.deepseek.com/v1')
+  await page.getByRole('button', { name: '保存', exact: true }).click()
+  await expect(page.locator('[data-effective-model="vision"]')).toContainText('独立配置')
+  expect(savedBodies[savedBodies.length - 1]).toMatchObject({
+    vision_model_name: 'deepseek-flash', vision_base_url: 'https://api.deepseek.com/v1', vision_api_key: 'vision-key',
+  })
+
+  await page.getByRole('button', { name: '清空视觉模型配置' }).click()
+  await expect(page.getByLabel('视觉模型名称')).toHaveValue('')
+  await page.getByRole('button', { name: '保存', exact: true }).click()
+  await expect(page.locator('[data-effective-model="vision"]')).toContainText('继承大模型')
+  expect(savedBodies[savedBodies.length - 1]).toMatchObject({ vision_model_name: '', vision_base_url: '', vision_api_key: '' })
+})
 
 test('retires a persisted 128K fallback meter on the Agent page', async ({ page }) => {
   await page.addInitScript(() => {

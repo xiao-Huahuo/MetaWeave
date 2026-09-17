@@ -114,6 +114,7 @@ const safetyDisabled = ref(false)
 const safetyLoading = ref(false)
 const dragDepth = ref(0)
 const attachmentPollTimers = new Map<string, number>()
+const attachmentUploadTasks = new Set<Promise<void>>()
 const modeSwitchRef = ref<HTMLElement | null>(null)
 const loopModeMenuOpen = ref(false)
 const skillMenuOpen = ref(false)
@@ -266,6 +267,9 @@ async function loadSelectedSessionHistory(sessionId: string, force = false) {
 async function sendMessage(text: string, reference = '') {
   if (!userId.value) {
     return
+  }
+  if (attachmentUploadTasks.size > 0) {
+    await Promise.all([...attachmentUploadTasks])
   }
   // ChatStore appends the user bubble before creating a missing session.
   await chatStore.value.send(
@@ -480,7 +484,11 @@ async function handleFileSelect(file: File) {
 }
 
 function uploadFiles(files: File[], sessionId: string) {
-  for (const file of files) void uploadFile(file, sessionId)
+  for (const file of files) {
+    const task = uploadFile(file, sessionId)
+    attachmentUploadTasks.add(task)
+    void task.finally(() => attachmentUploadTasks.delete(task))
+  }
 }
 
 /** Upload one file without blocking the panel and keep progress on its own attachment card. */
@@ -533,7 +541,7 @@ async function uploadFile(file: File, sessionId: string) {
 /** Poll only this attachment until its background parser reaches a terminal state. */
 function scheduleAttachmentPoll(attachment: AgentUploadedAttachment, attempt = 0) {
   const status = String(attachment.metadata?.processing_status || '')
-  if (status === 'completed' || status === 'failed') return
+  if (status === 'uploaded' || status === 'completed' || status === 'failed') return
   if (attempt >= 1200) {
     chatStore.value.updateAttachmentLocal({
       ...attachment,

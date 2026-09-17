@@ -42,7 +42,7 @@ test('restores sparse full-date separators with persisted history', async ({ pag
       return
     }
     const mockBodies: Record<string, unknown> = {
-      '/settings/models/status': { embedding: 'ready', rerank: 'ready', paddleocr: 'ready', local_qwen: 'ready' },
+      '/settings/models/status': { embedding: 'ready', rerank: 'ready', paddleocr: 'ready' },
       '/settings/models/management': { models: [] },
       '/privacy': { privacy: [] },
       '/favorites': { favorites: [] },

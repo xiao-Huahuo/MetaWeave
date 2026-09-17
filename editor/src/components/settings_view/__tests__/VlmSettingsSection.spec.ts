@@ -31,6 +31,8 @@ describe('VlmSettingsSection', () => {
 
     expect(wrapper.text()).toContain('开启 VLM')
     expect(wrapper.text()).toContain('OCR')
+    expect(wrapper.text()).toContain('本地 PaddleOCR 结构化流水线')
+    expect(wrapper.text()).not.toContain('本地回退')
     expect(wrapper.get('#vlm-model').element).toBeInstanceOf(HTMLSelectElement)
     expect(wrapper.findAll('.vlm-limits-grid input')).toHaveLength(5)
     await wrapper.get('button.edit-model-btn').trigger('click')

@@ -55,7 +55,7 @@ class UserSettingsRecord(SQLModel, table=True):
     vlm_max_pages: int = Field(default=0, ge=DEFAULT_BUSINESS_LIMITS.nonnegative_min_value)
     vlm_submit_rate_per_minute: int = Field(default=0, ge=DEFAULT_BUSINESS_LIMITS.nonnegative_min_value)
     vlm_result_rate_per_minute: int = Field(default=0, ge=DEFAULT_BUSINESS_LIMITS.nonnegative_min_value)
-    # 用户显式开启后，Agent 图片附件和 understand_image 工具才允许调用本地 Qwen。
+    # 用户显式开启后，Agent 图片附件和 understand_image 工具才允许调用远程视觉模型。
     vision_understanding_enabled: bool = Field(default=False)
     # 用户显式启用后，启动后验证到的缺失模型才允许自动下载。
     model_auto_download_enabled: bool = Field(default=False)
@@ -101,9 +101,9 @@ class UserKnowledgeLibrary(SQLModel, table=True):
 
 
 class UserLLMConfig(SQLModel, table=True):
-    """用户自定义 LLM 配置，支持一大一小两个模型。
+    """用户自定义 LLM 配置，支持大、小和视觉三类模型。
 
-    每个用户一条记录，存储大模型和小模型的 API Key、Base URL、模型名称。
+    每个用户一条记录，视觉模型三项全空时由设置服务整组继承大模型。
     """
 
     __tablename__ = "user_llm_config"
@@ -123,6 +123,11 @@ class UserLLMConfig(SQLModel, table=True):
     small_model_name: str = Field(default="", max_length=DEFAULT_BUSINESS_LIMITS.title_max_length)
     small_model_context_window_tokens: int = Field(default=0, ge=DEFAULT_BUSINESS_LIMITS.nonnegative_min_value)
     small_model_max_output_tokens: int = Field(default=0, ge=DEFAULT_BUSINESS_LIMITS.nonnegative_min_value)
+
+    # 视觉模型；三项全空表示继承大模型。
+    vision_api_key: str = Field(default="", max_length=DEFAULT_BUSINESS_LIMITS.secret_max_length)
+    vision_base_url: str = Field(default="", max_length=DEFAULT_BUSINESS_LIMITS.secret_max_length)
+    vision_model_name: str = Field(default="", max_length=DEFAULT_BUSINESS_LIMITS.title_max_length)
 
     updated_at: datetime = Field(default_factory=utc_now)
 

@@ -309,7 +309,7 @@ class ContextBuilder:
 
         resolved_capacity = capacity or ModelCapacity.resolve(
             config=config,
-            model_name=config.model.model_name or config.model.local_model_name,
+            model_name=config.model.model_name or "",
             model_tier="large",
         )
         budget = ContextBudget.from_config(config=config, capacity=resolved_capacity)
@@ -778,7 +778,7 @@ class ContextBuilder:
                 converted.append(HumanMessage(content=content))
         capacity = ModelCapacity.resolve(
             config=config,
-            model_name=model_name or config.model.local_model_name,
+            model_name=model_name or config.model.model_name or "",
             model_tier="large",
         )
         budget = ContextBudget.from_config(config=config, capacity=capacity)

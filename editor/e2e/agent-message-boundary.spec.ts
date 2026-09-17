@@ -35,7 +35,7 @@ test('keeps new Agent lines above the composer', async ({ page }) => {
       return
     }
     const mockBodies: Record<string, unknown> = {
-      '/settings/models/status': { embedding: 'ready', rerank: 'ready', paddleocr: 'ready', local_qwen: 'ready' },
+      '/settings/models/status': { embedding: 'ready', rerank: 'ready', paddleocr: 'ready' },
       '/settings/models/management': { models: [] },
       '/privacy': { privacy: [] },
       '/favorites': { favorites: [] },

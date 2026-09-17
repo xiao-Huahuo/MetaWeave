@@ -353,7 +353,7 @@ class GraphRunnerMixin:
         )
         runtime_capacity = ModelCapacity.resolve(
             config=self.config,
-            model_name=str(runtime_llm_config.get("model_name") or self.config.model.local_model_name),
+            model_name=str(runtime_llm_config.get("model_name") or self.config.model.model_name or ""),
             model_tier="large",
             context_window_tokens=int(runtime_llm_config.get("model_context_window_tokens") or 0) or None,
             max_output_tokens=int(runtime_llm_config.get("model_max_output_tokens") or 0) or None,

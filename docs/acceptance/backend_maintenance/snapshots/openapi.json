@@ -1388,6 +1388,360 @@
         "title": "HTTPValidationError",
         "type": "object"
       },
+      "LLMConfigResponse": {
+        "description": "Return persisted/default overrides together with all effective model endpoints.",
+        "properties": {
+          "api_key": {
+            "title": "Api Key",
+            "type": "string"
+          },
+          "base_url": {
+            "title": "Base Url",
+            "type": "string"
+          },
+          "context_compression_target_ratio": {
+            "title": "Context Compression Target Ratio",
+            "type": "number"
+          },
+          "context_compression_trigger_ratio": {
+            "title": "Context Compression Trigger Ratio",
+            "type": "number"
+          },
+          "context_output_reserve_tokens": {
+            "title": "Context Output Reserve Tokens",
+            "type": "integer"
+          },
+          "context_window_tokens": {
+            "title": "Context Window Tokens",
+            "type": "integer"
+          },
+          "effective_api_key": {
+            "title": "Effective Api Key",
+            "type": "string"
+          },
+          "effective_base_url": {
+            "title": "Effective Base Url",
+            "type": "string"
+          },
+          "effective_model_name": {
+            "title": "Effective Model Name",
+            "type": "string"
+          },
+          "effective_model_source": {
+            "enum": [
+              "remote",
+              "unconfigured"
+            ],
+            "title": "Effective Model Source",
+            "type": "string"
+          },
+          "effective_small_api_key": {
+            "title": "Effective Small Api Key",
+            "type": "string"
+          },
+          "effective_small_base_url": {
+            "title": "Effective Small Base Url",
+            "type": "string"
+          },
+          "effective_small_model_name": {
+            "title": "Effective Small Model Name",
+            "type": "string"
+          },
+          "effective_small_model_source": {
+            "enum": [
+              "remote",
+              "unconfigured"
+            ],
+            "title": "Effective Small Model Source",
+            "type": "string"
+          },
+          "effective_vision_api_key": {
+            "title": "Effective Vision Api Key",
+            "type": "string"
+          },
+          "effective_vision_base_url": {
+            "title": "Effective Vision Base Url",
+            "type": "string"
+          },
+          "effective_vision_model_name": {
+            "title": "Effective Vision Model Name",
+            "type": "string"
+          },
+          "effective_vision_model_source": {
+            "enum": [
+              "explicit",
+              "large",
+              "unconfigured"
+            ],
+            "title": "Effective Vision Model Source",
+            "type": "string"
+          },
+          "model_context_window_tokens": {
+            "title": "Model Context Window Tokens",
+            "type": "integer"
+          },
+          "model_max_output_tokens": {
+            "title": "Model Max Output Tokens",
+            "type": "integer"
+          },
+          "model_name": {
+            "title": "Model Name",
+            "type": "string"
+          },
+          "small_api_key": {
+            "title": "Small Api Key",
+            "type": "string"
+          },
+          "small_base_url": {
+            "title": "Small Base Url",
+            "type": "string"
+          },
+          "small_model_context_window_tokens": {
+            "title": "Small Model Context Window Tokens",
+            "type": "integer"
+          },
+          "small_model_max_output_tokens": {
+            "title": "Small Model Max Output Tokens",
+            "type": "integer"
+          },
+          "small_model_name": {
+            "title": "Small Model Name",
+            "type": "string"
+          },
+          "summary_trigger_tokens": {
+            "title": "Summary Trigger Tokens",
+            "type": "integer"
+          },
+          "updated_at": {
+            "title": "Updated At",
+            "type": "string"
+          },
+          "user_id": {
+            "title": "User Id",
+            "type": "string"
+          },
+          "vision_api_key": {
+            "title": "Vision Api Key",
+            "type": "string"
+          },
+          "vision_base_url": {
+            "title": "Vision Base Url",
+            "type": "string"
+          },
+          "vision_model_name": {
+            "title": "Vision Model Name",
+            "type": "string"
+          }
+        },
+        "required": [
+          "user_id",
+          "api_key",
+          "base_url",
+          "model_name",
+          "small_api_key",
+          "small_base_url",
+          "small_model_name",
+          "vision_api_key",
+          "vision_base_url",
+          "vision_model_name",
+          "effective_api_key",
+          "effective_base_url",
+          "effective_model_name",
+          "effective_model_source",
+          "effective_small_api_key",
+          "effective_small_base_url",
+          "effective_small_model_name",
+          "effective_small_model_source",
+          "effective_vision_api_key",
+          "effective_vision_base_url",
+          "effective_vision_model_name",
+          "effective_vision_model_source",
+          "model_context_window_tokens",
+          "model_max_output_tokens",
+          "small_model_context_window_tokens",
+          "small_model_max_output_tokens",
+          "summary_trigger_tokens",
+          "context_window_tokens",
+          "context_output_reserve_tokens",
+          "context_compression_trigger_ratio",
+          "context_compression_target_ratio",
+          "updated_at"
+        ],
+        "title": "LLMConfigResponse",
+        "type": "object"
+      },
+      "LLMConfigSaveRequest": {
+        "description": "Partially update one user's large, small, and vision-model overrides.",
+        "properties": {
+          "api_key": {
+            "anyOf": [
+              {
+                "maxLength": 1024,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Api Key"
+          },
+          "base_url": {
+            "anyOf": [
+              {
+                "maxLength": 1024,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Base Url"
+          },
+          "model_context_window_tokens": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Context Window Tokens"
+          },
+          "model_max_output_tokens": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Max Output Tokens"
+          },
+          "model_name": {
+            "anyOf": [
+              {
+                "maxLength": 256,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Model Name"
+          },
+          "small_api_key": {
+            "anyOf": [
+              {
+                "maxLength": 1024,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Small Api Key"
+          },
+          "small_base_url": {
+            "anyOf": [
+              {
+                "maxLength": 1024,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Small Base Url"
+          },
+          "small_model_context_window_tokens": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Small Model Context Window Tokens"
+          },
+          "small_model_max_output_tokens": {
+            "anyOf": [
+              {
+                "minimum": 0.0,
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Small Model Max Output Tokens"
+          },
+          "small_model_name": {
+            "anyOf": [
+              {
+                "maxLength": 256,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Small Model Name"
+          },
+          "user_id": {
+            "maxLength": 128,
+            "minLength": 1,
+            "title": "User Id",
+            "type": "string"
+          },
+          "vision_api_key": {
+            "anyOf": [
+              {
+                "maxLength": 1024,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vision Api Key"
+          },
+          "vision_base_url": {
+            "anyOf": [
+              {
+                "maxLength": 1024,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vision Base Url"
+          },
+          "vision_model_name": {
+            "anyOf": [
+              {
+                "maxLength": 256,
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Vision Model Name"
+          }
+        },
+        "required": [
+          "user_id"
+        ],
+        "title": "LLMConfigSaveRequest",
+        "type": "object"
+      },
       "PrivacyCreate": {
         "description": "Create one backend-persisted privacy flag.",
         "properties": {
@@ -2995,7 +3349,7 @@
     },
     "/agent/attachments/upload": {
       "post": {
-        "description": "Upload a file into the current Agent session context without knowledge ingestion.",
+        "description": "并行友好地保存会话附件；不在上传请求中执行解析、OCR 或视觉调用。",
         "operationId": "upload_agent_attachment_agent_attachments_upload_post",
         "requestBody": {
           "content": {
@@ -3096,7 +3450,7 @@
         "summary": "Delete Agent Attachment"
       },
       "get": {
-        "description": "返回单个会话附件的最新后台解析状态。",
+        "description": "返回单个会话附件的上传或按需解析状态。",
         "operationId": "get_agent_attachment_agent_attachments__attachment_id__get",
         "parameters": [
           {
@@ -5779,7 +6133,7 @@
     "/knowledge/files/content": {
       "get": {
         "description": "读取当前 active 知识库中的文本文件。",
-        "operationId": "read_knowledge_file_knowledge_files_content_get",
+        "operationId": "get_knowledge_file_content_knowledge_files_content_get",
         "parameters": [
           {
             "description": "用户 ID",
@@ -5812,7 +6166,7 @@
               "application/json": {
                 "schema": {
                   "additionalProperties": true,
-                  "title": "Response Read Knowledge File Knowledge Files Content Get",
+                  "title": "Response Get Knowledge File Content Knowledge Files Content Get",
                   "type": "object"
                 }
               }
@@ -5830,7 +6184,7 @@
             "description": "Validation Error"
           }
         },
-        "summary": "Read Knowledge File"
+        "summary": "Get Knowledge File Content"
       },
       "post": {
         "description": "保存当前 active 知识库中的文本文件。\n\n保存只写入磁盘并触发文件树刷新;不会执行灌库。",
@@ -10552,9 +10906,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Get Llm Config Settings Llm Config Get",
-                  "type": "object"
+                  "$ref": "#/components/schemas/LLMConfigResponse"
                 }
               }
             },
@@ -10574,15 +10926,13 @@
         "summary": "Get Llm Config"
       },
       "put": {
-        "description": "保存用户的 LLM 配置。body: user_id 必填，其余字段可选。",
+        "description": "保存用户的大、小和视觉模型覆盖配置。",
         "operationId": "save_llm_config_settings_llm_config_put",
         "requestBody": {
           "content": {
             "application/json": {
               "schema": {
-                "additionalProperties": true,
-                "title": "Body",
-                "type": "object"
+                "$ref": "#/components/schemas/LLMConfigSaveRequest"
               }
             }
           },
@@ -10593,9 +10943,7 @@
             "content": {
               "application/json": {
                 "schema": {
-                  "additionalProperties": true,
-                  "title": "Response Save Llm Config Settings Llm Config Put",
-                  "type": "object"
+                  "$ref": "#/components/schemas/LLMConfigResponse"
                 }
               }
             },
@@ -11154,7 +11502,7 @@
     },
     "/settings/models/download": {
       "post": {
-        "description": "异步触发指定模型的后台下载。\n\nbody: { \"model\": \"embedding\" | \"rerank\" | \"paddleocr\" | \"local_qwen\" }\n返回后前端轮询 GET /settings/models/status 获取进度。",
+        "description": "异步触发指定模型的后台下载。\n\nbody: { \"model\": \"embedding\" | \"rerank\" | \"paddleocr\" }\n返回后前端轮询 GET /settings/models/status 获取进度。",
         "operationId": "download_model_settings_models_download_post",
         "requestBody": {
           "content": {
@@ -11264,7 +11612,7 @@
     },
     "/settings/models/initialize": {
       "post": {
-        "description": "在前端完整启动后触发四类模型的独立后台验证任务。",
+        "description": "在前端完整启动后触发受管模型的独立后台验证任务。",
         "operationId": "initialize_models_settings_models_initialize_post",
         "requestBody": {
           "content": {
@@ -11307,7 +11655,7 @@
     },
     "/settings/models/load": {
       "post": {
-        "description": "触发指定模型的后台加载（不下载，只加载到内存）。\n\nbody: { \"model\": \"embedding\" | \"rerank\" | \"local_qwen\" }",
+        "description": "触发指定模型的后台加载（不下载，只加载到内存）。\n\nbody: { \"model\": \"embedding\" | \"rerank\" }",
         "operationId": "load_model_settings_models_load_post",
         "requestBody": {
           "content": {
@@ -11631,7 +11979,7 @@
         "summary": "Get Knowledge Ingestion Config"
       },
       "put": {
-        "description": "保存知识库灌库、OCR 与本地识图配置。",
+        "description": "保存知识库灌库、OCR 与远程视觉理解配置。",
         "operationId": "save_knowledge_ingestion_config_settings_profile_ingestion_put",
         "requestBody": {
           "content": {
@@ -12508,6 +12856,144 @@
           }
         },
         "summary": "Save Vlm Config"
+      }
+    },
+    "/settings/vlm/config/saved": {
+      "get": {
+        "description": "列出当前用户保存的 MinerU 配置。",
+        "operationId": "list_vlm_config_presets_settings_vlm_config_saved_get",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "title": "User Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response List Vlm Config Presets Settings Vlm Config Saved Get",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "List Vlm Config Presets"
+      },
+      "post": {
+        "description": "保存一条可加载的 MinerU 模型与限制参数。",
+        "operationId": "save_vlm_config_preset_settings_vlm_config_saved_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "additionalProperties": true,
+                "title": "Body",
+                "type": "object"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "title": "Response Save Vlm Config Preset Settings Vlm Config Saved Post",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Save Vlm Config Preset"
+      }
+    },
+    "/settings/vlm/config/saved/{config_id}": {
+      "delete": {
+        "description": "删除当前用户拥有的一条 MinerU 配置。",
+        "operationId": "delete_vlm_config_preset_settings_vlm_config_saved__config_id__delete",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "config_id",
+            "required": true,
+            "schema": {
+              "title": "Config Id",
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "user_id",
+            "required": true,
+            "schema": {
+              "minLength": 1,
+              "title": "User Id",
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {
+                    "type": "boolean"
+                  },
+                  "title": "Response Delete Vlm Config Preset Settings Vlm Config Saved  Config Id  Delete",
+                  "type": "object"
+                }
+              }
+            },
+            "description": "Successful Response"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            },
+            "description": "Validation Error"
+          }
+        },
+        "summary": "Delete Vlm Config Preset"
       }
     },
     "/settings/vlm/local-ocr/ensure": {

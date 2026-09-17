@@ -32,7 +32,8 @@ const TOOL_ICON_GROUPS: ReadonlyArray<readonly [string, readonly string[]]> = [
     'get_knowledge_file_url',
   ]],
   ['document', [
-    'get_current_viewing_document', 'list_knowledge_files', 'read_knowledge_file',
+    'get_current_viewing_document', 'list_knowledge_files', 'read_file',
+    'read_knowledge_file', 'read_session_attachment',
     'write_knowledge_file', 'patch_knowledge_file',
     'show_markdown_html', 'delete_knowledge_file', 'rename_knowledge_file',
     'create_knowledge_folder', 'get_selected_knowledge_files',

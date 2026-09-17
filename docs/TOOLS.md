@@ -13,6 +13,8 @@
 
 下表列出当前默认注册的全部内置工具；MCP 等外部工具由运行时配置动态追加，不在此固定清单中。
 
+文件处理只保留三种用户可理解的动作：`read_file` 读取文字和文档结构，必要时才触发 MinerU、本地解析或 OCR；`understand_image` 直接理解图片视觉语义；`save_uploaded_attachment_to_knowledge` 把临时附件长期保存。扫描器是面向用户的批量工作流，不是另一套 Agent 解析工具。
+
 | 工具名 | 简要说明 |
 |---|---|
 | `add_automation` | 创建定时或循环执行的自动化任务。 |
@@ -89,7 +91,7 @@
 | `patch_smart_form_rows` | 增量增删改表格行和单元格。 |
 | `permanently_delete_knowledge_trash` | 经确认后永久删除最近删除条目。 |
 | `preview_smart_form_fill` | 预览智能填充目标而不写入数据。 |
-| `read_knowledge_file` | 读取文件的 Markdown 投影并按需自动灌库。 |
+| `read_file` | 统一读取知识库文件或会话附件；附件首次读取时按需解析并缓存。 |
 | `remove_favorite` | 取消知识库、图书馆或会话收藏。 |
 | `remove_library_item` | 将条目移出图书馆而不删除源文件。 |
 | `rename_knowledge_file` | 重命名或移动知识库文件。 |
@@ -98,7 +100,7 @@
 | `retry_failed_knowledge_files` | 重试灌库任务中的失败文件。 |
 | `run_terminal_command` | 在权限约束下执行结构化终端指令。 |
 | `save_uploaded_attachment_to_knowledge` | 将会话附件保存并可选灌入知识库。 |
-| `understand_image` | 使用 CPU 本地 Qwen 结合先行 OCR 文本重新理解当前会话中的指定图片。 |
+| `understand_image` | 使用 LLM 设置中的远程视觉模型直接理解当前会话图片；已有 OCR 缓存时作为辅助。 |
 | `search_knowledge` | 复用统一搜索框的四库服务；最终回答引用 `[K#]` 时挂载对应原生结果块。 |
 | `search_knowledge_graph_nodes` | 搜索图谱节点并返回邻接节点和边。 |
 | `set_skill_enabled` | 启用或停用内置或用户 Skill。 |

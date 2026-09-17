@@ -129,7 +129,7 @@ class RelationCandidate:
 
 
 class LLMKnowledgeGraphExtractor:
-    """联网小模型适配器，生产主流程仅用它裁决灰区候选与去重。"""
+    """联网小模型适配器，负责全文实体关系抽取及语义去重。"""
 
     def __init__(
         self,
@@ -349,7 +349,13 @@ class LLMKnowledgeGraphExtractor:
     def context_budget(self) -> ContextBudget:
         """返回当前图谱小模型用于章节切块的动态预算。"""
 
-        model_name = self._value("small_model_name") or self._value("model_name") or self.config.model.local_model_name
+        model_name = (
+            self._value("small_model_name")
+            or self._value("model_name")
+            or self.config.model.small_model_name
+            or self.config.model.model_name
+            or ""
+        )
         capacity = ModelCapacity.resolve(
             config=self.config,
             model_name=model_name,
@@ -918,8 +924,12 @@ def _build_llm_config(
         small_key = base.get("api_key")
         small_url = base.get("base_url")
     else:
-        small_key = base.get("small_api_key") or base.get("api_key")
-        small_url = base.get("small_base_url") or base.get("base_url")
+        configured_small_url = base.get("small_base_url")
+        primary_url = base.get("base_url")
+        small_url = configured_small_url or primary_url
+        small_key = base.get("small_api_key")
+        if not small_key and small_url == primary_url:
+            small_key = base.get("api_key")
     return {
         "model_name": base.get("model_name"),
         "api_key": base.get("api_key"),
@@ -1029,9 +1039,9 @@ def _run_graph_extraction(
             library_id=library_id,
             frontmatter_dir=frontmatter_dir,
         )
-        print(f"  [同步] 文档节点同步完成, 开始本地优先抽取\n")
+        print(f"  [同步] 文档节点同步完成, 开始远程小模型抽取\n")
 
-        remote_adjudicator = (
+        remote_extractor = (
             LLMKnowledgeGraphExtractor(
                 config=config,
                 llm_config=llm_config,
@@ -1041,11 +1051,11 @@ def _run_graph_extraction(
             if llm_config.get("small_model_name") and llm_config.get("small_api_key")
             else None
         )
-        from agent_service.services.knowledge_graph.local_extractor import LocalFirstKnowledgeGraphExtractor
+        from agent_service.services.knowledge_graph.local_extractor import RemoteKnowledgeGraphExtractor
 
-        extractor = LocalFirstKnowledgeGraphExtractor(
+        extractor = RemoteKnowledgeGraphExtractor(
             config=config,
-            remote_adjudicator=remote_adjudicator,
+            remote_extractor=remote_extractor,
         )
         circuit_breaker_hit = False
         completed_count = 0
@@ -1096,7 +1106,7 @@ def _run_graph_extraction(
                         status="processing",
                         progress=5,
                         stage="extract_sections",
-                        stage_label="本地并发候选抽取",
+                        stage_label="远程候选抽取",
                         stage_current=0,
                         stage_total=section_total,
                     )
@@ -1121,7 +1131,7 @@ def _run_graph_extraction(
                         status="processing",
                         progress=5 + int(completed_sections / total_sections * 70),
                         stage="extract_sections",
-                        stage_label="本地并发候选抽取",
+                        stage_label="远程候选抽取",
                         stage_current=completed_sections,
                         stage_total=total_sections,
                         message=f"已完成 {completed_batches}/{total_batches} 批请求",

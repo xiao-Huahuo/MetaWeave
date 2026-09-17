@@ -1,6 +1,6 @@
-"""低成本知识图谱抽取流水线回归测试。
+"""知识图谱远程抽取与确定性规则兜底回归测试。
 
-本文件验证文档与章节增量、本地全文边界、灰区最小化联网、失败保留和正式缓存模型。
+本文件验证文档与章节增量、远程全文抽取、规则兜底、失败保留和正式缓存模型。
 """
 
 from __future__ import annotations
@@ -10,7 +10,6 @@ from pathlib import Path
 from types import SimpleNamespace
 from typing import Any
 
-from langchain_core.messages import AIMessage
 from sqlalchemy.pool import StaticPool
 from sqlmodel import Session
 
@@ -19,7 +18,7 @@ from tests.db_test_utils import create_test_engine
 from agent_service.core.agent_config import AgentConfig
 from agent_service.models.knowledge_graph import KnowledgeGraphNode, KnowledgeGraphSectionCache
 from agent_service.services.knowledge_graph import EntityCandidate, KnowledgeGraphService, _run_graph_extraction
-from agent_service.services.knowledge_graph.local_extractor import LocalFirstKnowledgeGraphExtractor
+from agent_service.services.knowledge_graph.local_extractor import RemoteKnowledgeGraphExtractor
 from agent_service.services.memory.rag.frontmatter_document import (
     StructuredKnowledgeDocument,
     StructuredKnowledgeSection,
@@ -95,26 +94,30 @@ class CountingExtractor:
 
 
 class FailingExtractor:
-    """模拟本地抽取失败。"""
+    """模拟抽取失败。"""
 
     def extract(self, *, document: StructuredKnowledgeDocument, section: StructuredKnowledgeSection) -> dict[str, Any]:
         """始终抛出异常以验证旧图保护。"""
 
         del document, section
-        raise RuntimeError("local extraction failed")
+        raise RuntimeError("extraction failed")
 
 
-class FakeLocalService:
-    """返回带一个灰区关系的本地模型响应并记录完整输入。"""
+class RecordingRemoteExtractor:
+    """记录远程模型收到的完整章节，并返回稳定的结构化候选。"""
 
-    def __init__(self) -> None:
+    def __init__(self, *, fail: bool = False) -> None:
+        self.fail = fail
         self.prompts: list[str] = []
 
-    def chat(self, *, messages: list[Any], **_: Any) -> AIMessage:
-        """模拟本地 Qwen 的结构化输出。"""
+    def extract(self, *, document: Any, section: Any) -> dict[str, Any]:
+        """模拟一次远程全文抽取。"""
 
-        self.prompts.append(str(messages[-1].content))
-        return AIMessage(content=json.dumps({
+        del document
+        self.prompts.append(str(section.content))
+        if self.fail:
+            raise RuntimeError("remote unavailable")
+        return {
             "entities": [
                 {"name": "Alpha", "type": "concept", "confidence": 0.95},
                 {"name": "Beta", "type": "concept", "confidence": 0.95},
@@ -126,37 +129,10 @@ class FakeLocalService:
                 "evidence": "Alpha resembles Beta",
                 "confidence": 0.65,
             }],
-        }))
-
-
-class UnavailableLocalService:
-    """模拟本地模型尚未下载或加载失败。"""
-
-    def chat(self, **_: Any) -> AIMessage:
-        """抛出本地模型不可用错误。"""
-
-        raise RuntimeError("local model unavailable")
-
-
-class RecordingAdjudicator:
-    """记录联网裁决上下文并接受灰区候选。"""
-
-    def __init__(self, *, fail: bool = False) -> None:
-        self.fail = fail
-        self.contexts: list[str] = []
-        self.candidates: list[dict[str, Any]] = []
-
-    def adjudicate_candidates(self, **kwargs: Any) -> dict[str, Any]:
-        """确认调用方只发送最短证据而非完整章节。"""
-
-        self.contexts.append(str(kwargs["evidence_context"]))
-        self.candidates.append(dict(kwargs["candidates"]))
-        if self.fail:
-            raise RuntimeError("remote unavailable")
-        return dict(kwargs["candidates"])
+        }
 
     def deduplicate_entities(self, entities: list[Any], **_: Any) -> dict[str, Any]:
-        """模拟文档内灰区实体保持独立。"""
+        """模拟文档内实体保持独立。"""
 
         if self.fail:
             raise RuntimeError("remote unavailable")
@@ -287,33 +263,30 @@ def test_atomic_replace_rolls_back_old_graph_when_write_fails(tmp_path: Path, mo
     assert any(node["label"] == "Entity-section-a" for node in graph["nodes"])
 
 
-def test_local_first_extractor_sends_only_gray_evidence_online(tmp_path: Path) -> None:
-    """完整章节只进入本地服务，联网裁决只能看到灰区候选的最短证据。"""
+def test_remote_extractor_receives_full_section_and_merges_results(tmp_path: Path) -> None:
+    """远程小模型必须收到完整章节，返回候选应直接进入清洗流水线。"""
 
-    local = FakeLocalService()
-    remote = RecordingAdjudicator()
-    extractor = LocalFirstKnowledgeGraphExtractor(
-        config=_config(tmp_path), local_service=local, remote_adjudicator=remote,
+    remote = RecordingRemoteExtractor()
+    extractor = RemoteKnowledgeGraphExtractor(
+        config=_config(tmp_path),
+        remote_extractor=remote,
     )
     section = _section("section-a", "SECRET_PREFIX. Alpha resembles Beta. SECRET_SUFFIX.")
 
     payload = extractor.extract(document=_document(projection_hash="v1", sections=[section]), section=section)
 
-    assert "SECRET_PREFIX" in local.prompts[0]
-    assert remote.contexts == ["Alpha resembles Beta."]
-    assert "SECRET_PREFIX" not in json.dumps(remote.candidates, ensure_ascii=False)
+    assert remote.prompts == [section.content]
     assert len(payload["entities"]) == 2
     assert len(payload["relations"]) == 1
     assert payload["_pending_candidates"] == {"entities": [], "relations": []}
 
 
-def test_explicit_relation_rules_work_when_local_model_is_unavailable(tmp_path: Path) -> None:
-    """本地模型不可用时，明确谓词关系仍应在本机零联网抽取。"""
+def test_explicit_relation_rules_work_without_remote_model(tmp_path: Path) -> None:
+    """远程模型未配置时，明确谓词关系仍应由确定性规则抽取。"""
 
-    extractor = LocalFirstKnowledgeGraphExtractor(
+    extractor = RemoteKnowledgeGraphExtractor(
         config=_config(tmp_path),
-        local_service=UnavailableLocalService(),
-        remote_adjudicator=None,
+        remote_extractor=None,
     )
     section = _section("section-a", "Alpha uses Beta.")
 
@@ -329,52 +302,27 @@ def test_explicit_relation_rules_work_when_local_model_is_unavailable(tmp_path: 
     }]
 
 
-def test_remote_failure_preserves_local_results_and_pending_gray_candidates(tmp_path: Path) -> None:
-    """联网失败必须返回本地高置信结果并记录可单独重试的灰区候选。"""
+def test_remote_failure_falls_back_to_explicit_rules(tmp_path: Path) -> None:
+    """远程全文抽取失败时必须保留确定性规则结果，且不产生旧灰区缓存。"""
 
-    extractor = LocalFirstKnowledgeGraphExtractor(
+    extractor = RemoteKnowledgeGraphExtractor(
         config=_config(tmp_path),
-        local_service=FakeLocalService(),
-        remote_adjudicator=RecordingAdjudicator(fail=True),
+        remote_extractor=RecordingRemoteExtractor(fail=True),
     )
-    section = _section("section-a", "Alpha resembles Beta.")
+    section = _section("section-a", "Alpha uses Beta.")
 
     payload = extractor.extract(document=_document(projection_hash="v1", sections=[section]), section=section)
 
     assert len(payload["entities"]) == 2
-    assert payload["relations"] == []
-    assert len(payload["_pending_candidates"]["relations"]) == 1
+    assert payload["relations"][0]["type"] == "uses"
+    assert payload["_pending_candidates"] == {"entities": [], "relations": []}
 
 
-def test_pending_gray_cache_retries_without_rescanning_full_section(tmp_path: Path, monkeypatch: Any) -> None:
-    """灰区联网失败后必须复用本地缓存，只重试最短证据。"""
+def test_remote_extractor_versions_invalidate_legacy_section_cache() -> None:
+    """远程全文抽取切换必须使用新的抽取与结果版本，使旧章节缓存失效。"""
 
-    engine = create_test_engine("sqlite://", connect_args={"check_same_thread": False}, poolclass=StaticPool)
-    monkeypatch.setattr(
-        "agent_service.services.knowledge_graph.deduplication.EmbeddingService",
-        lambda **_: SimpleNamespace(embed_texts=lambda texts: [
-            [1.0, 0.0] if index == 0 else [0.0, 1.0]
-            for index, _text in enumerate(texts)
-        ]),
-    )
-    local = FakeLocalService()
-    remote = RecordingAdjudicator(fail=True)
-    extractor = LocalFirstKnowledgeGraphExtractor(
-        config=_config(tmp_path), local_service=local, remote_adjudicator=remote,
-    )
-    service = KnowledgeGraphService(config=_config(tmp_path), engine=engine, extractor=extractor)
-    document = _document(
-        projection_hash="projection-v1",
-        sections=[_section("section-a", "SECRET_PREFIX. Alpha resembles Beta. SECRET_SUFFIX.")],
-    )
-
-    service.extract_document(user_id="user", library_id="library", document=document)
-    remote.fail = False
-    service.extract_document(user_id="user", library_id="library", document=document)
-
-    assert len(local.prompts) == 1
-    assert remote.contexts == ["Alpha resembles Beta.", "Alpha resembles Beta."]
-    assert service.list_document_statuses(user_id="user", library_id="library")[document.document_id].status == "completed"
+    assert RemoteKnowledgeGraphExtractor.extractor_version == "remote-small-model-v1"
+    assert RemoteKnowledgeGraphExtractor.result_version == "graph-payload-v2"
 
 
 def test_incremental_dedup_uses_local_thresholds_and_caches_gray_decisions(tmp_path: Path, monkeypatch: Any) -> None:

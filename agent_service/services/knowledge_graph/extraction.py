@@ -43,7 +43,7 @@ from agent_service.services.knowledge_graph.service import (
     LLMKnowledgeGraphExtractor,
     RelationCandidate, StructuredKnowledgeDocument, StructuredKnowledgeSection,
 )
-from agent_service.services.knowledge_graph.local_extractor import LocalFirstKnowledgeGraphExtractor
+from agent_service.services.knowledge_graph.local_extractor import RemoteKnowledgeGraphExtractor
 from agent_service.services.knowledge_graph.cache import extract_cached_graph_section_payloads
 
 logger = logging.getLogger(__name__)
@@ -74,7 +74,7 @@ class KnowledgeGraphExtractionMixin:
             from agent_service.services.knowledge_graph.service import _build_llm_config
 
             resolved_llm_config = _build_llm_config(self.config, user_llm_config=llm_config)
-            remote_adjudicator = (
+            remote_extractor = (
                 LLMKnowledgeGraphExtractor(
                     config=self.config,
                     llm_config=resolved_llm_config,
@@ -84,9 +84,9 @@ class KnowledgeGraphExtractionMixin:
                 if resolved_llm_config.get("small_model_name") and resolved_llm_config.get("small_api_key")
                 else None
             )
-            extractor = LocalFirstKnowledgeGraphExtractor(
+            extractor = RemoteKnowledgeGraphExtractor(
                 config=self.config,
-                remote_adjudicator=remote_adjudicator,
+                remote_extractor=remote_extractor,
             )
         try:
             section_payloads, section_caches, has_pending = extract_cached_graph_section_payloads(

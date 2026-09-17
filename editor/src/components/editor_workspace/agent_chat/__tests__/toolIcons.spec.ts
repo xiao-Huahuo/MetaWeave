@@ -15,7 +15,7 @@ describe('toolIconName', () => {
     ['use_skill', 'auto-awesome'],
     ['get_long_term_memory', 'psychology'],
     ['get_knowledge_context', 'manage-search'],
-    ['read_knowledge_file', 'document'],
+    ['read_file', 'document'],
     ['list_library_items', 'book'],
     ['create_task_list', 'checklist'],
     ['spawn_child_agent', 'group'],

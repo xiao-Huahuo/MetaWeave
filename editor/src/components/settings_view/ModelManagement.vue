@@ -120,7 +120,7 @@ async function removeModel(model: ManagedModelStatus) {
   }
 }
 
-/** Load an existing local Qwen, embedding, or rerank model into the active process. */
+/** Load an existing embedding or rerank model into the active process. */
 async function startLoad(model: ManagedModelStatus) {
   if (model.key === 'paddleocr') return
   actionKey.value = model.key

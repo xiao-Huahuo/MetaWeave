@@ -486,6 +486,12 @@ export function saveMemoryConfig(userId: string, enabled: boolean): Promise<Memo
 
 export const DEFAULT_MODEL_CONTEXT_WINDOW_TOKENS = 1_000_000
 
+/** Backend-resolved source for the main and small text-model roles. */
+export type EffectiveLLMModelSource = 'remote' | 'unconfigured'
+
+/** Backend-resolved source for the dedicated visual-model role. */
+export type EffectiveVisionModelSource = 'explicit' | 'large' | 'unconfigured'
+
 export interface LLMConfigResponse {
   user_id: string
   api_key: string
@@ -494,6 +500,9 @@ export interface LLMConfigResponse {
   small_api_key: string
   small_base_url: string
   small_model_name: string
+  vision_api_key: string
+  vision_base_url: string
+  vision_model_name: string
   model_context_window_tokens: number
   model_max_output_tokens: number
   small_model_context_window_tokens: number
@@ -501,11 +510,15 @@ export interface LLMConfigResponse {
   effective_api_key?: string
   effective_base_url?: string
   effective_model_name?: string
-  effective_model_source?: 'remote' | 'local'
+  effective_model_source?: EffectiveLLMModelSource
   effective_small_api_key?: string
   effective_small_base_url?: string
   effective_small_model_name?: string
-  effective_small_model_source?: 'remote' | 'local'
+  effective_small_model_source?: EffectiveLLMModelSource
+  effective_vision_api_key?: string
+  effective_vision_base_url?: string
+  effective_vision_model_name?: string
+  effective_vision_model_source?: EffectiveVisionModelSource
   context_window_tokens?: number
   updated_at: string
 }
@@ -523,6 +536,9 @@ export function saveLLMConfig(
     smallApiKey?: string
     smallBaseUrl?: string
     smallModelName?: string
+    visionApiKey?: string
+    visionBaseUrl?: string
+    visionModelName?: string
     modelContextWindowTokens?: number
     modelMaxOutputTokens?: number
     smallModelContextWindowTokens?: number
@@ -536,6 +552,9 @@ export function saveLLMConfig(
   if (params.smallApiKey !== undefined) body.small_api_key = params.smallApiKey
   if (params.smallBaseUrl !== undefined) body.small_base_url = params.smallBaseUrl
   if (params.smallModelName !== undefined) body.small_model_name = params.smallModelName
+  if (params.visionApiKey !== undefined) body.vision_api_key = params.visionApiKey
+  if (params.visionBaseUrl !== undefined) body.vision_base_url = params.visionBaseUrl
+  if (params.visionModelName !== undefined) body.vision_model_name = params.visionModelName
   if (params.modelContextWindowTokens !== undefined) body.model_context_window_tokens = params.modelContextWindowTokens
   if (params.modelMaxOutputTokens !== undefined) body.model_max_output_tokens = params.modelMaxOutputTokens
   if (params.smallModelContextWindowTokens !== undefined) body.small_model_context_window_tokens = params.smallModelContextWindowTokens
@@ -641,7 +660,6 @@ export interface ModelStatusResponse {
   embedding: string
   rerank: string
   paddleocr: string
-  local_qwen: string
 }
 
 export function fetchModelStatus(): Promise<ModelStatusResponse> {
@@ -666,7 +684,7 @@ export interface ModelDownloadProgress {
 
 /** One model row with backend-owned runtime, disk and configuration details. */
 export interface ManagedModelStatus {
-  key: 'embedding' | 'rerank' | 'paddleocr' | 'local_qwen'
+  key: 'embedding' | 'rerank' | 'paddleocr'
   label: string
   role: string
   name: string
@@ -696,7 +714,7 @@ export function downloadManagedModel(
 }
 
 /** Load an already-downloaded Embedding or ReRank model into memory. */
-export function loadManagedModel(model: 'embedding' | 'rerank' | 'local_qwen'): Promise<{ status: string; model: string }> {
+export function loadManagedModel(model: 'embedding' | 'rerank'): Promise<{ status: string; model: string }> {
   return apiPost(API_ROUTES.SETTINGS_MODEL_LOAD, { model })
 }
 

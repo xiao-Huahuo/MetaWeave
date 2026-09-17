@@ -78,7 +78,7 @@ describe('Agent page workspace appearance', () => {
     expect(changeDetailDrawerSource).toMatch(/transform:\s*translateX\(28px\)/)
   })
 
-  it('shows the effective local fallback model in the input control', () => {
+  it('shows the backend-resolved remote model in the input control', () => {
     expect(agentPanelSource).toContain("config.effective_model_name?.trim() || config.model_name?.trim() || ''")
     expect(settingsViewSource).toContain("modelName: saved.effective_model_name || saved.model_name")
   })

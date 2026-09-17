@@ -166,7 +166,7 @@ async def list_knowledge_files(user_id: str = Query(..., min_length=DEFAULT_BUSI
 
 
 @router.get("/knowledge/files/content")
-async def read_knowledge_file(
+async def get_knowledge_file_content(
     user_id: str = Query(..., min_length=DEFAULT_BUSINESS_LIMITS.nonempty_min_length, description="用户 ID"),
     path: str = Query(..., min_length=DEFAULT_BUSINESS_LIMITS.nonempty_min_length, description="知识库内相对路径"),
 ) -> dict[str, Any]:

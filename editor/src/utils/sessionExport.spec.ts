@@ -57,7 +57,7 @@ describe('sessionExport child agent events', () => {
         mode: 'background',
         status: 'completed',
         access_mode: 'readonly',
-        allowed_tools: ['read_knowledge_file'],
+        allowed_tools: ['read_file'],
         summary: '完成',
       },
     }

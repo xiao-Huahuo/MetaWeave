@@ -24,7 +24,7 @@ const presetNameOpen = ref(false)
 const presetLabel = ref('')
 const message = ref('')
 const error = ref('')
-const effectiveParser = computed(() => effective.value?.enabled ? `MinerU ${effective.value.model}` : '本地流水线')
+const effectiveParser = computed(() => effective.value?.enabled ? `MinerU ${effective.value.model}` : '本地 PaddleOCR 结构化流水线')
 
 async function load(): Promise<void> {
   loading.value = true
@@ -140,14 +140,14 @@ onMounted(load)
     <section class="effective-model-summary" aria-labelledby="effective-vlm-title">
       <h3 id="effective-vlm-title">当前生效</h3>
       <dl>
-        <div><dt>解析器</dt><dd>{{ effectiveParser }}</dd><span>{{ effective?.configured ? '远程配置' : '本地回退' }}</span></div>
+        <div><dt>解析器</dt><dd>{{ effectiveParser }}</dd><span>{{ effective?.configured ? '远程 MinerU' : '本地 PaddleOCR' }}</span></div>
         <div><dt>模型</dt><dd>{{ effective?.model || '未配置' }}</dd><span>{{ effective?.configured ? '已配置' : '未配置 API' }}</span></div>
       </dl>
     </section>
     <p v-if="loading" class="setting-hint">正在读取配置…</p>
     <template v-else-if="draft">
-      <div class="setting-row toggle-row"><label>开启 VLM</label><input v-model="draft.enabled" type="checkbox" :disabled="!editing" /><span class="hint-text">灌库优先使用 MinerU；断网时回退本地</span></div>
-      <div class="setting-row toggle-row"><label>OCR</label><input v-model="draft.ocr_enabled" type="checkbox" :disabled="!editing" /><span class="hint-text">本地模式开启时会立即准备完整 OCR 模型</span></div>
+      <div class="setting-row toggle-row"><label>开启 VLM</label><input v-model="draft.enabled" type="checkbox" :disabled="!editing" /><span class="hint-text">灌库优先使用 MinerU；远程不可用时回退本地 PaddleOCR</span></div>
+      <div class="setting-row toggle-row"><label>OCR</label><input v-model="draft.ocr_enabled" type="checkbox" :disabled="!editing" /><span class="hint-text">本地模式开启时会立即准备 PaddleOCR 结构化流水线</span></div>
       <div class="model-heading"><h3>MinerU 精准 API</h3></div>
       <div class="model-block vlm-model-block">
         <label for="vlm-key">API Key</label>
@@ -196,7 +196,7 @@ onMounted(load)
 .vlm-model-block > label { color:var(--color-text); font-size:calc(13px * var(--font-scale)); }
 .vlm-model-block > select { min-width:0; height:28px; padding:0 var(--space-12); color:var(--color-text); font:calc(12px * var(--font-scale)) var(--font-mono); }
 .vlm-model-block > select.readonly { pointer-events:none; opacity:.72; }
-.vlm-limits-grid { grid-template-columns:repeat(2,minmax(0,1fr)); margin-top:var(--space-12); }
+.vlm-limits-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:var(--space-8) var(--space-16); margin:var(--space-12) 0 var(--space-10); }
 .vlm-limits-grid label { display:grid; grid-template-columns:112px minmax(0,1fr); align-items:center; gap:var(--space-10); color:var(--color-text); font-size:calc(13px * var(--font-scale)); }
 .vlm-limits-grid input { width:100%; height:28px; padding:0 var(--space-12); color:var(--color-text); font:calc(12px * var(--font-scale)) var(--font-mono); }
 .vlm-limits-grid input.readonly { color:var(--color-text-muted); cursor:default; }

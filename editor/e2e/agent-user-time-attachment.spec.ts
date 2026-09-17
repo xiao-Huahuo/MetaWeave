@@ -27,7 +27,7 @@ test('restores user time and attachments responsively', async ({ page }) => {
     }
     if (url.pathname === '/settings/llm/config') {
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
-        model_name: '', effective_model_name: 'Test Model', effective_model_source: 'local', context_window_tokens: 32768,
+        model_name: 'Test Model', effective_model_name: 'Test Model', effective_model_source: 'remote', context_window_tokens: 32768,
       }) })
       return
     }

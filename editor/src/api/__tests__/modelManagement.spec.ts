@@ -32,8 +32,8 @@ describe('model management API client', () => {
     }))
     vi.stubGlobal('fetch', fetchMock)
 
-    await downloadManagedModel('local_qwen', 'u1')
-    await loadManagedModel('local_qwen')
+    await downloadManagedModel('embedding', 'u1')
+    await loadManagedModel('rerank')
     await initializeManagedModels('u1')
     await saveModelPreferences('u1', true)
 
@@ -43,8 +43,8 @@ describe('model management API client', () => {
       '/settings/models/initialize',
       '/settings/models/preferences',
     ])
-    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({ model: 'local_qwen', user_id: 'u1' })
-    expect(JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body))).toEqual({ model: 'local_qwen' })
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({ model: 'embedding', user_id: 'u1' })
+    expect(JSON.parse(String(fetchMock.mock.calls[1]?.[1]?.body))).toEqual({ model: 'rerank' })
     expect(JSON.parse(String(fetchMock.mock.calls[2]?.[1]?.body))).toEqual({ user_id: 'u1' })
     expect(JSON.parse(String(fetchMock.mock.calls[3]?.[1]?.body))).toEqual({ user_id: 'u1', auto_download_enabled: true })
   })

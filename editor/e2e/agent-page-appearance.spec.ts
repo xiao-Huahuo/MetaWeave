@@ -16,9 +16,9 @@ test('Agent workspace has the shared frame and a draggable scrollbar', async ({ 
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
-          model_name: '',
-          effective_model_name: 'Qwen/Qwen3.5-2B',
-          effective_model_source: 'local',
+          model_name: 'deepseek-chat',
+          effective_model_name: 'deepseek-chat',
+          effective_model_source: 'remote',
           context_window_tokens: 32768,
           updated_at: new Date().toISOString(),
         }),
@@ -90,7 +90,7 @@ test('Agent workspace has the shared frame and a draggable scrollbar', async ({ 
 
   const modelLabel = page.locator('.model-config-trigger span')
   await expect(modelLabel).toBeVisible()
-  await expect(modelLabel).toHaveText('Qwen/Qwen3.5-2B')
+  await expect(modelLabel).toHaveText('deepseek-chat')
   await page.evaluate(() => {
     window.dispatchEvent(new CustomEvent('agent-model-config-updated', {
       detail: { modelName: 'remote-model-after-save' },

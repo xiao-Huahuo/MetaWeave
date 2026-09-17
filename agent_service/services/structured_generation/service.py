@@ -195,7 +195,9 @@ class StructuredGenerationService:
             llm_config.get("effective_small_model_name")
             or llm_config.get("small_model_name")
             or llm_config.get("model_name")
-            or self.config.model.local_model_name
+            or self.config.model.small_model_name
+            or self.config.model.model_name
+            or ""
         )
         capacity = ModelCapacity.resolve(
             config=self.config,

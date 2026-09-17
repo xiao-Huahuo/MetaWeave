@@ -313,16 +313,8 @@ def _prepare_case(
     if prepare in {"text_attachment", "image_attachment"}:
         attachment = _upload_attachment(session_id, image=prepare == "image_attachment")
         attachment_id = str(attachment["attachment_id"])
-        if tool_name == "read_session_attachment":
-            for _ in range(60):
-                status = _request_json(
-                    "GET",
-                    f"/agent/attachments/{attachment_id}?user_id={USER_ID}&session_id={session_id}",
-                )["attachment"]
-                if status.get("status") in {"ready", "failed"}:
-                    break
-                time.sleep(0.25)
-            arguments = {**arguments, "content_ref": f"attachment://{attachment_id}"}
+        if tool_name == "read_file":
+            arguments = {**arguments, "path": f"attachment://{attachment_id}"}
         else:
             arguments = {**arguments, "attachment": attachment_id}
     return session_id, arguments

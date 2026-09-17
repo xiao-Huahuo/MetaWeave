@@ -13,6 +13,7 @@ from agent_service.tools.runtime_context import (
     AGENT_ACCESS_READONLY,
     get_markdown_html_visualization_callback,
     get_task_list_callback,
+    get_tool_service,
     get_tool_runtime,
     register_network_citation,
     register_tool_citation,
@@ -160,59 +161,46 @@ def list_knowledge_files() -> str:
     dir_count = sum(1 for line in flat if line.strip().startswith("[DIR]"))
     summary = f"共 {file_count} 个文件, {dir_count} 个文件夹:\n"
     return summary + "\n".join(flat)
-def read_knowledge_file(path: str) -> str:
-    """
-    读取知识库中指定源文件的 Markdown 中间层内容，未灌库时自动灌库。
-
-    path: 源文件相对于知识库根目录的路径,例如 `docs/report.pdf`。
-    """
-
-    runtime = get_tool_runtime()
-    service = _build_knowledge_service()
-    try:
-        result = service.read_markdown_projection(user_id=runtime.user_id, path=path)
-    except Exception as exc:
-        return f"读取文件失败: {exc}"
-    content = str(result.get("content", ""))
-    source_uri = str(result.get("path") or path)
-    citation_id = register_tool_citation(
-        source_uri=source_uri,
-        content=content,
-        adopted_by_default=True,
-    )
-    prefix = f"Citation ID: [{citation_id}]\nSource: {source_uri}\n\n"
-    return prefix + content
-
-
-def read_session_attachment(
-    content_ref: str,
+def read_file(
+    path: str,
     start_line: int | None = None,
     end_line: int | None = None,
     cursor: int | None = None,
 ) -> str:
-    """按 attachment:// 引用读取当前会话上传附件的解析正文。"""
-
-    from pathlib import Path
-
-    from sqlmodel import Session
-
-    from agent_service.models.attachment import SessionAttachmentRecord
+    """按需读取知识库文件或会话附件；会话附件首次读取时才解析并缓存。"""
 
     runtime = get_tool_runtime()
     prefix = "attachment://"
-    if not content_ref.startswith(prefix):
-        return "读取失败: content_ref 必须使用 attachment:// 引用。"
-    attachment_id = content_ref.removeprefix(prefix).strip()
-    if not attachment_id or runtime.database_engine is None:
-        return "读取失败: 附件引用无效或数据库不可用。"
-    with Session(runtime.database_engine) as db_session:
-        record = db_session.get(SessionAttachmentRecord, attachment_id)
-    if record is None or record.user_id != runtime.user_id or record.session_id != runtime.session_id:
-        return "读取失败: 当前会话不存在对应附件。"
-    text_path = Path(record.text_path or "")
-    if not text_path.is_file():
-        return "读取失败: 附件尚无可读取的解析正文。"
-    lines = text_path.read_text(encoding="utf-8", errors="replace").splitlines()
+    normalized_path = path.strip()
+    if not normalized_path:
+        return "读取文件失败: path 不能为空。"
+    if not normalized_path.startswith(prefix):
+        service = _build_knowledge_service()
+        try:
+            result = service.read_markdown_projection(user_id=runtime.user_id, path=normalized_path)
+        except Exception as exc:
+            return f"读取文件失败: {exc}"
+        content = str(result.get("content", ""))
+        source_uri = str(result.get("path") or normalized_path)
+        citation_id = register_tool_citation(
+            source_uri=source_uri,
+            content=content,
+            adopted_by_default=True,
+        )
+        return f"Citation ID: [{citation_id}]\nSource: {source_uri}\n\n{content}"
+
+    attachment_id = normalized_path.removeprefix(prefix).strip()
+    if not attachment_id:
+        return "读取文件失败: attachment:// 引用缺少附件 ID。"
+    try:
+        record, content = get_tool_service("session_attachment").read_attachment_text(
+            user_id=runtime.user_id,
+            session_id=runtime.session_id,
+            attachment_id=attachment_id,
+        )
+    except Exception as exc:
+        return f"读取文件失败: {exc}"
+    lines = content.splitlines()
     start = max(int(cursor if cursor is not None else start_line or 0), 0)
     default_lines = runtime.config.limits.terminal_read_default_lines
     max_lines = runtime.config.limits.terminal_read_max_lines
@@ -220,7 +208,7 @@ def read_session_attachment(
     end = min(max(requested_end, start), start + max_lines, len(lines))
     next_cursor = end if end < len(lines) else None
     return json.dumps({
-        "content_ref": content_ref,
+        "path": normalized_path,
         "filename": record.filename,
         "start_line": start,
         "end_line": end,
@@ -499,8 +487,23 @@ def save_uploaded_attachment_to_knowledge(
         f"Files ingested: {result.files_ingested}; chunks created: {result.chunks_created}; "
         f"files skipped: {result.files_skipped}; skip reason: {result.skip_reason or 'none'}."
     )
+def _read_attachment_ocr_text(text_path: Path) -> str:
+    """读取附件正文并移除先前生成的视觉理解章节。"""
+
+    if not text_path.is_file():
+        return ""
+    kept: list[str] = []
+    skipping_vision = False
+    for line in text_path.read_text(encoding="utf-8", errors="replace").splitlines():
+        if line.startswith("## "):
+            skipping_vision = "视觉理解" in line
+        if not skipping_vision:
+            kept.append(line)
+    return "\n".join(kept).strip()
+
+
 def understand_image(attachment: str = "", prompt: str = "") -> str:
-    """使用本地 Qwen 重新理解当前会话中的一张已上传图片。
+    """使用已配置的远程视觉模型重新理解当前会话中的上传图片。
 
     attachment: 可选 attachment_id、完整文件名或文件名关键词；为空使用最新图片。
     prompt: 可选识图问题；为空返回对象、布局、关系和图表语义的综合描述。
@@ -512,14 +515,18 @@ def understand_image(attachment: str = "", prompt: str = "") -> str:
     from sqlmodel import Session, select
 
     from agent_service.models.attachment import SessionAttachmentRecord
-    from agent_service.services.local_qwen.service import get_local_qwen_service
+    from agent_service.services.vision.service import (
+        VisionConfigurationError,
+        VisionInputError,
+        VisionRequestError,
+    )
 
     runtime = get_tool_runtime()
     if (
         runtime.settings_service is None
         or not runtime.settings_service.is_vision_understanding_enabled_for_user(user_id=runtime.user_id)
     ):
-        return "识图功能未开启；当前图片仅使用已提取的 OCR 文字，不会加载本地 Qwen。"
+        return "识图功能未开启；当前图片仅使用已提取的 OCR 文字，不会发送到远程视觉模型。"
     engine = runtime.database_engine
     if engine is None:
         return "当前工具运行时没有可用的应用数据库。"
@@ -557,26 +564,27 @@ def understand_image(attachment: str = "", prompt: str = "") -> str:
     image_path = Path(record.path).expanduser().resolve()
     if not image_path.is_file():
         return f"图片文件已不存在: {record.filename}"
-    ocr_text = ""
     text_path = Path(record.text_path).expanduser().resolve() if record.text_path else None
-    if text_path is not None and text_path.is_file():
-        ocr_text = text_path.read_text(encoding="utf-8", errors="replace")
+    ocr_text = _read_attachment_ocr_text(text_path) if text_path is not None else ""
     try:
-        description = get_local_qwen_service(runtime.config).understand_image(
+        vision_service = get_tool_service("vision")
+        result = vision_service.understand_image(
+            user_id=runtime.user_id,
             image_path=image_path,
             ocr_text=ocr_text,
             prompt=prompt,
-            content_ref=f"attachment://{record.attachment_id}",
         )
-    except Exception as exc:
-        return f"本地识图失败: {type(exc).__name__}: {exc}"
-    return f"图片: {record.filename}\n视觉理解:\n{description}"
+    except (VisionConfigurationError, VisionInputError, VisionRequestError) as exc:
+        return f"识图失败: {exc}"
+    except Exception as exc:  # noqa: BLE001 - unexpected provider errors must remain redacted.
+        return f"识图失败: {type(exc).__name__}"
+    return f"图片: {record.filename}\n视觉模型: {result.model_name}\n视觉理解:\n{result.text}"
 def get_current_viewing_document() -> str:
     """
     获取当前用户在 editor 前端正在观看的文档基本信息。
 
     返回值只包含路径、文件名、知识库、大小、修改时间和 dirty 状态等基本信息;
-    不返回文件正文。若需要正文,应继续调用 read_knowledge_file(path)。
+    不返回文件正文。若需要正文,应继续调用 read_file(path)。
     """
 
     runtime = get_tool_runtime()
@@ -599,7 +607,7 @@ def get_current_viewing_document() -> str:
             "dirty": info.dirty,
             "open_tab_count": info.open_tab_count,
             "updated_at": info.updated_at,
-            "next_step_hint": "如需读取正文,请调用 read_knowledge_file 并传入 path。",
+            "next_step_hint": "如需读取正文,请调用 read_file 并传入 path。",
         },
         ensure_ascii=False,
     )

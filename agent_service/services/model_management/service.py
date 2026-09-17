@@ -25,11 +25,11 @@ from agent_service.scripts.download_model import (
 
 logger = logging.getLogger(__name__)
 
-MODEL_KEYS = ("embedding", "rerank", "paddleocr", "local_qwen")
+MODEL_KEYS = ("embedding", "rerank", "paddleocr")
 
 
 class ModelManagementService:
-    """把四类本地模型的配置、磁盘和运行状态合并为稳定管理 DTO。"""
+    """把 Embedding、ReRank 与 PaddleOCR 的配置和状态合并为稳定管理 DTO。"""
 
     def __init__(self, *, config: Any, settings_service: Any) -> None:
         """保存只读服务配置和用户设置依赖。"""
@@ -41,7 +41,7 @@ class ModelManagementService:
         self._auto_download_suppressed: set[tuple[str, str]] = set()
 
     def initialize_after_startup(self, *, user_id: str) -> dict[str, str]:
-        """在前端已显示应用后，为四类模型分别启动独立的验证任务。"""
+        """在前端已显示应用后，为常驻文本模型启动独立验证任务。"""
 
         preferences = self.settings_service.get_model_preferences(user_id=user_id)
         auto_download = bool(preferences.get("auto_download_enabled"))
@@ -52,10 +52,6 @@ class ModelManagementService:
         self.prepare_model_async(
             "rerank", user_id=user_id, load_after=True,
             download_if_missing=auto_download, prompt_if_missing=True,
-        )
-        self.prepare_model_async(
-            "local_qwen", user_id=user_id, load_after=False,
-            download_if_missing=auto_download, prompt_if_missing=False,
         )
         return {"status": "started"}
 
@@ -91,12 +87,9 @@ class ModelManagementService:
                 ModelState.AWAITING_DOWNLOAD if prompt_if_missing else ModelState.NOT_DOWNLOADED,
             )
 
-        silent_qwen_disk_check = model == "local_qwen" and not (
-            load_after or download_if_missing or prompt_if_missing
-        )
         return self._start_worker(
             model=model,
-            state=ModelState.NOT_DOWNLOADED if silent_qwen_disk_check else ModelState.VERIFYING,
+            state=ModelState.VERIFYING,
             target=prepare,
         )
 
@@ -231,13 +224,6 @@ class ModelManagementService:
             service.warmup()
             if service.loaded:
                 set_model_state(model, ModelState.READY)
-        else:
-            from agent_service.services.local_qwen.service import get_local_qwen_service
-
-            service = get_local_qwen_service(self.config)
-            service.ensure_loaded()
-            if service.loaded:
-                set_model_state(model, ModelState.READY)
 
     def _model_is_available(self, model: str) -> bool:
         """按模型类型执行只读磁盘完整性验证。"""
@@ -263,20 +249,19 @@ class ModelManagementService:
         values = {
             "embedding": (self.config.model.embedding_model_name, self.config.storage.embedding_model_dir),
             "rerank": (self.config.model.rerank_model_name, self.config.storage.rerank_model_dir),
-            "local_qwen": (self.config.model.local_model_name, self.config.storage.local_model_dir),
         }
         name, base_path = values[model]
         return str(name), Path(base_path)
 
     @staticmethod
     def _validate_model_key(model: str) -> None:
-        """拒绝任何不属于四类受管模型的键。"""
+        """拒绝任何不属于三类受管模型的键。"""
 
         if model not in MODEL_KEYS:
-            raise ValueError("model 必须是 embedding / rerank / paddleocr / local_qwen")
+            raise ValueError("model 必须是 embedding / rerank / paddleocr")
 
     def get_management_status(self, *, user_id: str) -> dict[str, list[dict[str, Any]]]:
-        """返回本地 Qwen、Embedding、ReRank 与 PaddleOCR 的完整管理状态。"""
+        """返回 Embedding、ReRank 与 PaddleOCR 的完整管理状态。"""
 
         self._reconcile_loaded_runtime_states()
         states = get_model_status().to_dict()
@@ -295,19 +280,6 @@ class ModelManagementService:
             name=self.config.model.rerank_model_name,
             base_path=Path(self.config.storage.rerank_model_dir),
             state=states["rerank"],
-        )
-        local_qwen = self._hf_model(
-            key="local_qwen",
-            label="本地 Qwen 大语言模型",
-            role="本地主 Agent、小模型回退与图片理解",
-            name=self.config.model.local_model_name,
-            base_path=Path(self.config.storage.local_model_dir),
-            state=states["local_qwen"],
-            extra_details={
-                "device": "CPU",
-                "capabilities": "文本生成 / 工具调用 / 图片理解",
-                "fallback": "未配置大模型时同时承担主模型与小模型",
-            },
         )
         ocr_path = Path(self.config.storage.paddleocr_model_dir).expanduser().resolve()
         ocr_size, ocr_files = self._directory_stats(ocr_path)
@@ -359,7 +331,7 @@ class ModelManagementService:
                 ),
             },
         }
-        return {"models": [local_qwen, embedding, rerank, paddleocr]}
+        return {"models": [embedding, rerank, paddleocr]}
 
     @staticmethod
     def _reconcile_loaded_runtime_states() -> None:

@@ -665,7 +665,7 @@ class UserKnowledgeDirUpdateRequest(_message.Message):
     def __init__(self, user_id: _Optional[str] = ..., knowledge_dir: _Optional[str] = ..., name: _Optional[str] = ...) -> None: ...
 
 class UserProfileResponse(_message.Message):
-    __slots__ = ("user_id", "knowledge_dir", "created_at", "updated_at", "active_library_id", "active_knowledge_library", "knowledge_libraries")
+    __slots__ = ("user_id", "knowledge_dir", "created_at", "updated_at", "active_library_id", "active_knowledge_library", "knowledge_libraries", "ocr_enabled", "vision_understanding_enabled", "auto_ingest_on_upload", "vlm_enabled")
     USER_ID_FIELD_NUMBER: _ClassVar[int]
     KNOWLEDGE_DIR_FIELD_NUMBER: _ClassVar[int]
     CREATED_AT_FIELD_NUMBER: _ClassVar[int]
@@ -673,6 +673,10 @@ class UserProfileResponse(_message.Message):
     ACTIVE_LIBRARY_ID_FIELD_NUMBER: _ClassVar[int]
     ACTIVE_KNOWLEDGE_LIBRARY_FIELD_NUMBER: _ClassVar[int]
     KNOWLEDGE_LIBRARIES_FIELD_NUMBER: _ClassVar[int]
+    OCR_ENABLED_FIELD_NUMBER: _ClassVar[int]
+    VISION_UNDERSTANDING_ENABLED_FIELD_NUMBER: _ClassVar[int]
+    AUTO_INGEST_ON_UPLOAD_FIELD_NUMBER: _ClassVar[int]
+    VLM_ENABLED_FIELD_NUMBER: _ClassVar[int]
     user_id: str
     knowledge_dir: str
     created_at: str
@@ -680,7 +684,27 @@ class UserProfileResponse(_message.Message):
     active_library_id: str
     active_knowledge_library: KnowledgeLibraryEntry
     knowledge_libraries: _containers.RepeatedCompositeFieldContainer[KnowledgeLibraryEntry]
-    def __init__(self, user_id: _Optional[str] = ..., knowledge_dir: _Optional[str] = ..., created_at: _Optional[str] = ..., updated_at: _Optional[str] = ..., active_library_id: _Optional[str] = ..., active_knowledge_library: _Optional[_Union[KnowledgeLibraryEntry, _Mapping]] = ..., knowledge_libraries: _Optional[_Iterable[_Union[KnowledgeLibraryEntry, _Mapping]]] = ...) -> None: ...
+    ocr_enabled: bool
+    vision_understanding_enabled: bool
+    auto_ingest_on_upload: bool
+    vlm_enabled: bool
+    def __init__(self, user_id: _Optional[str] = ..., knowledge_dir: _Optional[str] = ..., created_at: _Optional[str] = ..., updated_at: _Optional[str] = ..., active_library_id: _Optional[str] = ..., active_knowledge_library: _Optional[_Union[KnowledgeLibraryEntry, _Mapping]] = ..., knowledge_libraries: _Optional[_Iterable[_Union[KnowledgeLibraryEntry, _Mapping]]] = ..., ocr_enabled: bool = ..., vision_understanding_enabled: bool = ..., auto_ingest_on_upload: bool = ..., vlm_enabled: bool = ...) -> None: ...
+
+class AttachmentRawRequest(_message.Message):
+    __slots__ = ("uri",)
+    URI_FIELD_NUMBER: _ClassVar[int]
+    uri: str
+    def __init__(self, uri: _Optional[str] = ...) -> None: ...
+
+class AttachmentRawResponse(_message.Message):
+    __slots__ = ("content", "mime_type", "filename")
+    CONTENT_FIELD_NUMBER: _ClassVar[int]
+    MIME_TYPE_FIELD_NUMBER: _ClassVar[int]
+    FILENAME_FIELD_NUMBER: _ClassVar[int]
+    content: bytes
+    mime_type: str
+    filename: str
+    def __init__(self, content: _Optional[bytes] = ..., mime_type: _Optional[str] = ..., filename: _Optional[str] = ...) -> None: ...
 
 class LLMConfigRequest(_message.Message):
     __slots__ = ("user_id",)
@@ -689,7 +713,7 @@ class LLMConfigRequest(_message.Message):
     def __init__(self, user_id: _Optional[str] = ...) -> None: ...
 
 class LLMConfigSaveRequest(_message.Message):
-    __slots__ = ("user_id", "api_key", "base_url", "model_name", "small_api_key", "small_base_url", "small_model_name")
+    __slots__ = ("user_id", "api_key", "base_url", "model_name", "small_api_key", "small_base_url", "small_model_name", "model_context_window_tokens", "model_max_output_tokens", "small_model_context_window_tokens", "small_model_max_output_tokens", "vision_api_key", "vision_base_url", "vision_model_name")
     USER_ID_FIELD_NUMBER: _ClassVar[int]
     API_KEY_FIELD_NUMBER: _ClassVar[int]
     BASE_URL_FIELD_NUMBER: _ClassVar[int]
@@ -697,6 +721,13 @@ class LLMConfigSaveRequest(_message.Message):
     SMALL_API_KEY_FIELD_NUMBER: _ClassVar[int]
     SMALL_BASE_URL_FIELD_NUMBER: _ClassVar[int]
     SMALL_MODEL_NAME_FIELD_NUMBER: _ClassVar[int]
+    MODEL_CONTEXT_WINDOW_TOKENS_FIELD_NUMBER: _ClassVar[int]
+    MODEL_MAX_OUTPUT_TOKENS_FIELD_NUMBER: _ClassVar[int]
+    SMALL_MODEL_CONTEXT_WINDOW_TOKENS_FIELD_NUMBER: _ClassVar[int]
+    SMALL_MODEL_MAX_OUTPUT_TOKENS_FIELD_NUMBER: _ClassVar[int]
+    VISION_API_KEY_FIELD_NUMBER: _ClassVar[int]
+    VISION_BASE_URL_FIELD_NUMBER: _ClassVar[int]
+    VISION_MODEL_NAME_FIELD_NUMBER: _ClassVar[int]
     user_id: str
     api_key: str
     base_url: str
@@ -704,10 +735,17 @@ class LLMConfigSaveRequest(_message.Message):
     small_api_key: str
     small_base_url: str
     small_model_name: str
-    def __init__(self, user_id: _Optional[str] = ..., api_key: _Optional[str] = ..., base_url: _Optional[str] = ..., model_name: _Optional[str] = ..., small_api_key: _Optional[str] = ..., small_base_url: _Optional[str] = ..., small_model_name: _Optional[str] = ...) -> None: ...
+    model_context_window_tokens: int
+    model_max_output_tokens: int
+    small_model_context_window_tokens: int
+    small_model_max_output_tokens: int
+    vision_api_key: str
+    vision_base_url: str
+    vision_model_name: str
+    def __init__(self, user_id: _Optional[str] = ..., api_key: _Optional[str] = ..., base_url: _Optional[str] = ..., model_name: _Optional[str] = ..., small_api_key: _Optional[str] = ..., small_base_url: _Optional[str] = ..., small_model_name: _Optional[str] = ..., model_context_window_tokens: _Optional[int] = ..., model_max_output_tokens: _Optional[int] = ..., small_model_context_window_tokens: _Optional[int] = ..., small_model_max_output_tokens: _Optional[int] = ..., vision_api_key: _Optional[str] = ..., vision_base_url: _Optional[str] = ..., vision_model_name: _Optional[str] = ...) -> None: ...
 
 class LLMConfigResponse(_message.Message):
-    __slots__ = ("user_id", "api_key", "base_url", "model_name", "small_api_key", "small_base_url", "small_model_name", "effective_small_api_key", "effective_small_base_url", "effective_small_model_name", "updated_at", "effective_api_key", "effective_base_url", "effective_model_name", "effective_model_source", "effective_small_model_source")
+    __slots__ = ("user_id", "api_key", "base_url", "model_name", "small_api_key", "small_base_url", "small_model_name", "effective_small_api_key", "effective_small_base_url", "effective_small_model_name", "updated_at", "effective_api_key", "effective_base_url", "effective_model_name", "effective_model_source", "effective_small_model_source", "model_context_window_tokens", "model_max_output_tokens", "small_model_context_window_tokens", "small_model_max_output_tokens", "vision_api_key", "vision_base_url", "vision_model_name", "effective_vision_api_key", "effective_vision_base_url", "effective_vision_model_name", "effective_vision_model_source")
     USER_ID_FIELD_NUMBER: _ClassVar[int]
     API_KEY_FIELD_NUMBER: _ClassVar[int]
     BASE_URL_FIELD_NUMBER: _ClassVar[int]
@@ -724,6 +762,17 @@ class LLMConfigResponse(_message.Message):
     EFFECTIVE_MODEL_NAME_FIELD_NUMBER: _ClassVar[int]
     EFFECTIVE_MODEL_SOURCE_FIELD_NUMBER: _ClassVar[int]
     EFFECTIVE_SMALL_MODEL_SOURCE_FIELD_NUMBER: _ClassVar[int]
+    MODEL_CONTEXT_WINDOW_TOKENS_FIELD_NUMBER: _ClassVar[int]
+    MODEL_MAX_OUTPUT_TOKENS_FIELD_NUMBER: _ClassVar[int]
+    SMALL_MODEL_CONTEXT_WINDOW_TOKENS_FIELD_NUMBER: _ClassVar[int]
+    SMALL_MODEL_MAX_OUTPUT_TOKENS_FIELD_NUMBER: _ClassVar[int]
+    VISION_API_KEY_FIELD_NUMBER: _ClassVar[int]
+    VISION_BASE_URL_FIELD_NUMBER: _ClassVar[int]
+    VISION_MODEL_NAME_FIELD_NUMBER: _ClassVar[int]
+    EFFECTIVE_VISION_API_KEY_FIELD_NUMBER: _ClassVar[int]
+    EFFECTIVE_VISION_BASE_URL_FIELD_NUMBER: _ClassVar[int]
+    EFFECTIVE_VISION_MODEL_NAME_FIELD_NUMBER: _ClassVar[int]
+    EFFECTIVE_VISION_MODEL_SOURCE_FIELD_NUMBER: _ClassVar[int]
     user_id: str
     api_key: str
     base_url: str
@@ -740,7 +789,18 @@ class LLMConfigResponse(_message.Message):
     effective_model_name: str
     effective_model_source: str
     effective_small_model_source: str
-    def __init__(self, user_id: _Optional[str] = ..., api_key: _Optional[str] = ..., base_url: _Optional[str] = ..., model_name: _Optional[str] = ..., small_api_key: _Optional[str] = ..., small_base_url: _Optional[str] = ..., small_model_name: _Optional[str] = ..., effective_small_api_key: _Optional[str] = ..., effective_small_base_url: _Optional[str] = ..., effective_small_model_name: _Optional[str] = ..., updated_at: _Optional[str] = ..., effective_api_key: _Optional[str] = ..., effective_base_url: _Optional[str] = ..., effective_model_name: _Optional[str] = ..., effective_model_source: _Optional[str] = ..., effective_small_model_source: _Optional[str] = ...) -> None: ...
+    model_context_window_tokens: int
+    model_max_output_tokens: int
+    small_model_context_window_tokens: int
+    small_model_max_output_tokens: int
+    vision_api_key: str
+    vision_base_url: str
+    vision_model_name: str
+    effective_vision_api_key: str
+    effective_vision_base_url: str
+    effective_vision_model_name: str
+    effective_vision_model_source: str
+    def __init__(self, user_id: _Optional[str] = ..., api_key: _Optional[str] = ..., base_url: _Optional[str] = ..., model_name: _Optional[str] = ..., small_api_key: _Optional[str] = ..., small_base_url: _Optional[str] = ..., small_model_name: _Optional[str] = ..., effective_small_api_key: _Optional[str] = ..., effective_small_base_url: _Optional[str] = ..., effective_small_model_name: _Optional[str] = ..., updated_at: _Optional[str] = ..., effective_api_key: _Optional[str] = ..., effective_base_url: _Optional[str] = ..., effective_model_name: _Optional[str] = ..., effective_model_source: _Optional[str] = ..., effective_small_model_source: _Optional[str] = ..., model_context_window_tokens: _Optional[int] = ..., model_max_output_tokens: _Optional[int] = ..., small_model_context_window_tokens: _Optional[int] = ..., small_model_max_output_tokens: _Optional[int] = ..., vision_api_key: _Optional[str] = ..., vision_base_url: _Optional[str] = ..., vision_model_name: _Optional[str] = ..., effective_vision_api_key: _Optional[str] = ..., effective_vision_base_url: _Optional[str] = ..., effective_vision_model_name: _Optional[str] = ..., effective_vision_model_source: _Optional[str] = ...) -> None: ...
 
 class LLMConfigPresetSaveRequest(_message.Message):
     __slots__ = ("user_id", "label", "api_key", "base_url", "model_name")
