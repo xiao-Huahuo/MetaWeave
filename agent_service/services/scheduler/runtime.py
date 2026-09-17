@@ -50,37 +50,29 @@ from agent_service.core.context_budget import ContextBudget, ModelCapacity
 
 
 _DSML_TOOL_BLOCK_RE = re.compile(
-    r"<[|｜]{1,2}DSML[|｜]{1,2}(?:tool_calls|function_calls|calls)>"
+    r"<[|｜]{1,2}DSML[|｜]{1,2}\s*(?:tool_calls|function_calls|calls)\s*>"
     r"(?P<body>.*?)"
-    r"</[|｜]{1,2}DSML[|｜]{1,2}(?:tool_calls|function_calls|calls)>",
+    r"</[|｜]{1,2}DSML[|｜]{1,2}\s*(?:tool_calls|function_calls|calls)\s*>",
     re.DOTALL,
 )
 _DSML_INVOKE_RE = re.compile(
-    r'<[|｜]{1,2}DSML[|｜]{1,2}invoke\s+name="(?P<name>[^"]+)"\s*>'
+    r'<[|｜]{1,2}DSML[|｜]{1,2}\s*invoke\s+name="(?P<name>[^"]+)"\s*>'
     r"(?P<body>.*?)"
-    r"</[|｜]{1,2}DSML[|｜]{1,2}invoke>",
+    r"</[|｜]{1,2}DSML[|｜]{1,2}\s*invoke\s*>",
     re.DOTALL,
 )
 _DSML_PARAMETER_RE = re.compile(
-    r'<[|｜]{1,2}DSML[|｜]{1,2}parameter\s+name="(?P<name>[^"]+)"'
+    r'<[|｜]{1,2}DSML[|｜]{1,2}\s*parameter\s+name="(?P<name>[^"]+)"'
     r'\s+string="(?P<string>true|false)"\s*>'
     r"(?P<value>.*?)"
-    r"</[|｜]{1,2}DSML[|｜]{1,2}parameter>",
+    r"</[|｜]{1,2}DSML[|｜]{1,2}\s*parameter\s*>",
     re.DOTALL,
 )
-_DSML_TOOL_OPEN_MARKERS = (
-    "<｜DSML｜tool_calls>",
-    "<｜｜DSML｜｜tool_calls>",
-    "<|DSML|tool_calls>",
-    "<||DSML||tool_calls>",
-    "<｜DSML｜function_calls>",
-    "<｜｜DSML｜｜function_calls>",
-    "<|DSML|function_calls>",
-    "<||DSML||function_calls>",
-    "<｜DSML｜calls>",
-    "<｜｜DSML｜｜calls>",
-    "<|DSML|calls>",
-    "<||DSML||calls>",
+_DSML_OPEN_PREFIXES = (
+    "<｜DSML｜",
+    "<｜｜DSML｜｜",
+    "<|DSML|",
+    "<||DSML||",
 )
 
 
@@ -160,7 +152,7 @@ def filter_deepseek_dsml_stream_delta(
     pending = buffered_text + content_delta
     marker_indexes = [
         index
-        for marker in _DSML_TOOL_OPEN_MARKERS
+        for marker in _DSML_OPEN_PREFIXES
         if (index := pending.find(marker)) >= 0
     ]
     if marker_indexes:
@@ -169,7 +161,7 @@ def filter_deepseek_dsml_stream_delta(
     retained_length = max(
         (
             length
-            for marker in _DSML_TOOL_OPEN_MARKERS
+            for marker in _DSML_OPEN_PREFIXES
             for length in range(1, min(len(marker), len(pending)) + 1)
             if pending.endswith(marker[:length])
         ),

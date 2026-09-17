@@ -702,6 +702,106 @@ def test_deepseek_dsml_is_hidden_while_streaming_and_recovered(monkeypatch: obje
     assert final_message.tool_calls[0]["args"] == {}
 
 
+def test_deepseek_dsml_with_tag_whitespace_is_hidden_and_recovered(monkeypatch: object) -> None:
+    """模型在 DSML 分隔符后插入空格时仍须执行工具，且协议文本不得流向对话框。"""
+
+    from agent_service.agent_core.graph import AgentGraphBuilder
+
+    scheduler = get_llm_task_scheduler(make_scheduler_test_config())
+    dsml = (
+        '<｜｜DSML｜｜ calls>\n'
+        '<｜｜DSML｜｜ invoke name="search_knowledge">\n'
+        '<｜｜DSML｜｜ parameter name="query" string="true">数码管</｜｜DSML｜｜ parameter>\n'
+        '<｜｜DSML｜｜ parameter name="semantic" string="false">false</｜｜DSML｜｜ parameter>\n'
+        '</｜｜DSML｜｜ invoke>\n'
+        '<｜｜DSML｜｜ invoke name="get_knowledge_file_status">\n'
+        '<｜｜DSML｜｜ parameter name="path" string="true">.mw/forms/项目文献库/assets/超大复杂word.docx'
+        '</｜｜DSML｜｜ parameter>\n'
+        '</｜｜DSML｜｜ invoke>\n'
+        '</｜｜DSML｜｜ calls>'
+    )
+    request = SerializedChatRequest.from_messages(
+        task_id="dsml-whitespace",
+        task_type=FOREGROUND_AGENT_TASK,
+        messages=[HumanMessage(content="查询数码管资料")],
+        tool_names=["search_knowledge", "get_knowledge_file_status"],
+        timeout_seconds=3,
+        max_retries=0,
+        model_name="deepseek-v4-flash",
+    )
+
+    class FakeStreamingModel:
+        """按最严格的单字符 token 边界拆开带空格的 DSML。"""
+
+        @staticmethod
+        def stream(_messages: object) -> object:
+            """逐段返回用户复现中的原始 DSML。"""
+
+            for character in dsml:
+                yield AIMessageChunk(content=character)
+
+    monkeypatch.setattr(scheduler, "prepare_messages_for_model", lambda **_kwargs: ([], {}))
+    monkeypatch.setattr(scheduler, "_get_chat_model", lambda **_kwargs: FakeStreamingModel())
+
+    chunks = list(scheduler._stream_chat_request(request))
+    visible = "".join(chunk.get("content_delta", "") for chunk in chunks if chunk.get("status") != "complete")
+    final_message = chunks[-1]["message"]
+
+    assert visible == ""
+    assert final_message.content == ""
+    assert [call["name"] for call in final_message.tool_calls] == [
+        "search_knowledge",
+        "get_knowledge_file_status",
+    ]
+    assert [call["args"] for call in final_message.tool_calls] == [
+        {"query": "数码管", "semantic": False},
+        {"path": ".mw/forms/项目文献库/assets/超大复杂word.docx"},
+    ]
+    graph = AgentGraphBuilder(config=AgentConfig(), tools=[], safety_service=None)
+    assert graph._route_after_model({"messages": [final_message]}) == "action"
+
+
+def test_deepseek_dsml_job_status_with_tag_whitespace_is_recovered(monkeypatch: object) -> None:
+    """异步知识任务状态查询的带空格 DSML 也必须恢复为工具调用。"""
+
+    scheduler = get_llm_task_scheduler(make_scheduler_test_config())
+    dsml = (
+        '<｜｜DSML｜｜ calls>\n'
+        '<｜｜DSML｜｜ invoke name="get_knowledge_job_status">\n'
+        '<｜｜DSML｜｜ parameter name="job_id" string="true">job_78af38da12714dedbaebb266158c05c8'
+        '</｜｜DSML｜｜ parameter>\n'
+        '</｜｜DSML｜｜ invoke>\n'
+        '</｜｜DSML｜｜ calls>'
+    )
+    request = SerializedChatRequest.from_messages(
+        task_id="dsml-job-status",
+        task_type=FOREGROUND_AGENT_TASK,
+        messages=[HumanMessage(content="查询知识任务状态")],
+        tool_names=["get_knowledge_job_status"],
+        timeout_seconds=3,
+        max_retries=0,
+        model_name="deepseek-v4-flash",
+    )
+
+    class FakeModel:
+        """返回用户复现中的异步状态查询 DSML。"""
+
+        @staticmethod
+        def invoke(_messages: object) -> AIMessage:
+            """模拟一次非流式模型调用。"""
+
+            return AIMessage(content=dsml)
+
+    monkeypatch.setattr(scheduler, "prepare_messages_for_model", lambda **_kwargs: ([], {}))
+    monkeypatch.setattr(scheduler, "_get_chat_model", lambda **_kwargs: FakeModel())
+
+    response = scheduler._invoke_chat_request(request)
+
+    assert response.content == ""
+    assert response.tool_calls[0]["name"] == "get_knowledge_job_status"
+    assert response.tool_calls[0]["args"] == {"job_id": "job_78af38da12714dedbaebb266158c05c8"}
+
+
 def test_namespaced_deepseek_model_uses_reasoning_adapter() -> None:
     """模型市场常见的命名空间标识也必须启用 DeepSeek thinking 协议。"""
 
