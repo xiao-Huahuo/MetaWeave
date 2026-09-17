@@ -45,7 +45,7 @@ test('shows every runtime tool and the read-only AgentConfig snapshot', async ({
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({
-          tool_count: 2,
+          tool_count: 3,
           tools: [
             {
               name: 'known_tool',
@@ -60,6 +60,13 @@ test('shows every runtime tool and the read-only AgentConfig snapshot', async ({
               description: '只存在于最终运行时注册表的工具。',
               args_schema: { properties: {}, required: [] },
               argument_count: 0,
+            },
+            {
+              name: 'write_long_term_memory',
+              display_name: '写入记忆',
+              description: '写入长期记忆。',
+              args_schema: { properties: {}, required: ['content'] },
+              argument_count: 1,
             },
           ],
         }),
@@ -83,6 +90,16 @@ test('shows every runtime tool and the read-only AgentConfig snapshot', async ({
                   enabled: true,
                 },
               ],
+            },
+            {
+              category: 'MEMORY',
+              display_name: '记忆工具',
+              tools: [{
+                name: 'write_long_term_memory',
+                display_name: '写入记忆',
+                description: '写入长期记忆。',
+                enabled: true,
+              }],
             },
           ],
         }),
@@ -151,6 +168,9 @@ test('shows every runtime tool and the read-only AgentConfig snapshot', async ({
   await page.getByRole('button', { name: '工具注册表' }).click()
   await expect(page.getByText('新增运行时工具', { exact: true })).toBeVisible()
   await expect(page.getByText('运行时工具', { exact: true })).toBeVisible()
+  const memoryToolRow = page.locator('.tool-list-item').filter({ hasText: '写入记忆' })
+  await expect(memoryToolRow.locator('input')).toBeDisabled()
+  await expect(memoryToolRow.locator('.tool-toggle-label')).toHaveAttribute('title', '由长期记忆总开关控制')
   const toolRegistryStyles = await page.locator('.tool-registry-panel').evaluate((panel) => {
     /** 采集工具注册表关键组件规格,用于和全局常量页做像素级同源断言。 */
     const read = (selector: string, properties: string[]) => {

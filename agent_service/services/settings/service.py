@@ -1494,21 +1494,39 @@ class SettingsService:
 
     # ---- 可开关工具 ----
 
+    @staticmethod
+    def _normalize_disabled_tool_names(tool_names: list[str]) -> list[str]:
+        """记忆工具由总开关统一管理，其余工具保留稳定顺序并去重。"""
+
+        from agent_service.tools.definitions import MEMORY_TOOL_NAMES
+
+        normalized: list[str] = []
+        seen: set[str] = set()
+        for raw_name in tool_names:
+            name = str(raw_name).strip()
+            if not name or name in seen or name in MEMORY_TOOL_NAMES:
+                continue
+            normalized.append(name)
+            seen.add(name)
+        return normalized
+
     def get_disabled_tools(self, *, user_id: str) -> list[str]:
-        """获取用户关闭的工具列表。"""
+        """获取用户逐项关闭的非记忆工具列表，兼容清理旧记忆工具脏值。"""
         normalized_user_id = user_id.strip()
         with Session(self.engine) as db:
             record = db.get(UserSettingsRecord, normalized_user_id)
             if record is None or not record.disabled_tools:
                 return []
             try:
-                return json.loads(record.disabled_tools)
+                decoded = json.loads(record.disabled_tools)
             except (json.JSONDecodeError, TypeError):
                 return []
+            return self._normalize_disabled_tool_names(decoded if isinstance(decoded, list) else [])
 
     def save_disabled_tools(self, *, user_id: str, tool_names: list[str]) -> list[str]:
-        """保存用户关闭的工具列表。"""
+        """保存用户关闭的非记忆工具；记忆工具统一服从长期记忆总开关。"""
         normalized_user_id = user_id.strip()
+        normalized_tool_names = self._normalize_disabled_tool_names(tool_names)
         now = self._utc_now()
         with Session(self.engine) as db:
             record = db.get(UserSettingsRecord, normalized_user_id)
@@ -1516,12 +1534,12 @@ class SettingsService:
                 record = UserSettingsRecord(
                     user_id=normalized_user_id,
                     knowledge_dir=str(self.config.storage.knowledge_dir),
-                    disabled_tools=json.dumps(tool_names, ensure_ascii=False),
+                    disabled_tools=json.dumps(normalized_tool_names, ensure_ascii=False),
                     created_at=now,
                     updated_at=now,
                 )
             else:
-                record.disabled_tools = json.dumps(tool_names, ensure_ascii=False)
+                record.disabled_tools = json.dumps(normalized_tool_names, ensure_ascii=False)
                 record.updated_at = now
             db.add(record)
             db.commit()

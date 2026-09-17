@@ -222,8 +222,18 @@ onMounted(() => {
                     <span class="tool-name">{{ tool.display_name || tool.name }}</span>
                     <span class="tool-meta">{{ tool.argument_count }} args</span>
                   </button>
-                  <label class="tool-toggle-label" :title="tool.enabled ? '点击关闭' : '点击启用'" @click.stop>
-                    <input :checked="tool.enabled" type="checkbox" @change="handleToggleTool(tool.name)" />
+                  <label
+                    class="tool-toggle-label"
+                    :class="{ managed: group.category === 'MEMORY' }"
+                    :title="group.category === 'MEMORY' ? '由长期记忆总开关控制' : (tool.enabled ? '点击关闭' : '点击启用')"
+                    @click.stop
+                  >
+                    <input
+                      :checked="tool.enabled"
+                      :disabled="group.category === 'MEMORY'"
+                      type="checkbox"
+                      @change="handleToggleTool(tool.name)"
+                    />
                     <span class="toggle-bg"></span>
                     <span class="toggle-thumb"><span class="toggle-dot"></span></span>
                     <span v-if="!tool.enabled" class="disabled-badge">未启用</span>

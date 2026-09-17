@@ -25,11 +25,10 @@ from agent_service.tools.builtin.builtin import (
 
 def list_available_tools() -> str:
     """
-    列出当前可用的全部工具名称与用途。
+    列出当前用户实际启用的全部工具名称与用途。
 
     返回格式为每行一个工具:`- 中文名(工具名): 一句话用途`。
-    当本轮只预绑定了部分工具时,可调用本工具查看完整清单,
-    再在回复中说出所需工具名,下一轮即可放开绑定。
+    用户逐项关闭或被长期记忆总开关关闭的工具不会返回。
     """
 
     from agent_service.tools.tool_registry import ToolRegistry
@@ -39,12 +38,17 @@ def list_available_tools() -> str:
     if not registry.definitions:
         return "当前没有可用工具。"
     lines = []
+    disabled_names = set()
+    if runtime.settings_service is not None:
+        disabled_names = set(runtime.settings_service.get_disabled_tools(user_id=runtime.user_id))
     for definition in sorted(
         registry.definitions.values(),
         key=lambda d: (d.display_name or d.name),
     ):
         from agent_service.tools.definitions import MEMORY_TOOL_NAMES
         if definition.name in MEMORY_TOOL_NAMES and not runtime.long_term_memory_enabled:
+            continue
+        if definition.name in disabled_names:
             continue
         name = definition.name
         display = definition.display_name or name

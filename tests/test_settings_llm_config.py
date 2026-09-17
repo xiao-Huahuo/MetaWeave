@@ -455,6 +455,25 @@ def test_memory_tools_are_disabled_in_available_tool_catalog_when_memory_is_off(
     assert all(tool["enabled"] is False for tool in memory_group["tools"])
 
 
+def test_memory_master_switch_is_the_only_memory_tool_permission_source() -> None:
+    """旧的逐项禁用值不得覆盖已开启的长期记忆总开关。"""
+
+    service = make_settings_service()
+    saved_disabled = service.save_disabled_tools(
+        user_id="u1",
+        tool_names=["write_long_term_memory", "get_long_term_memory", "web_search"],
+    )
+
+    assert saved_disabled == ["web_search"]
+    assert service.get_disabled_tools(user_id="u1") == ["web_search"]
+    memory_group = next(
+        group
+        for group in service.list_available_tools(user_id="u1")["groups"]
+        if group["category"] == "MEMORY"
+    )
+    assert all(tool["enabled"] is True for tool in memory_group["tools"])
+
+
 def test_floating_launch_setting_persists_in_user_profile() -> None:
     service = make_settings_service()
 

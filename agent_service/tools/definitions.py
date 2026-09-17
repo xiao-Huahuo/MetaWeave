@@ -79,9 +79,8 @@ UTILITY_TOOL_DEFINITIONS: list[BuiltinToolDefinition] = [
     BuiltinToolDefinition(
         name="list_available_tools",
         description=(
-            "列出当前可用的全部工具(中文名、工具名、一句话用途),每行一个。"
-            "当本轮仅预绑定了部分工具时,可调用本工具查看完整清单,"
-            "再在回复中说出所需工具名,下一轮即可放开绑定使用。"
+            "列出当前用户实际启用的全部工具(中文名、工具名、一句话用途),每行一个。"
+            "已被长期记忆总开关或工具设置关闭的工具不会出现在结果中。"
         ),
         args_schema={
             "type": "object",

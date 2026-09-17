@@ -14,7 +14,7 @@ LangGraph 的 `add_messages` 自动追加,`trace` 会通过列表累加保存节
 from __future__ import annotations
 
 from operator import add
-from typing import Annotated, Any, TypedDict
+from typing import Annotated, Any, NotRequired, TypedDict
 
 from langchain_core.messages import BaseMessage
 from langgraph.graph.message import add_messages
@@ -32,6 +32,7 @@ class AgentState(TypedDict):
     observation_decision: 反思节点决策结果,"continue" 继续调工具 / "answer" 直接回答。
     skill_index: 本轮用户输入命中的少量 Skill 候选摘要,不是全量 Skill 注册表。
     active_skills: 本轮路由命中的 Skill 正文,只在当前图运行中生效。
+    bound_tool_names: 最近一次模型请求实际绑定的工具名,供 Action 节点做最终授权校验。
 
     llm_config: 可选,预读取的用户 LLM 配置,避免图重入时重复读取 SettingsService。
     """
@@ -51,3 +52,4 @@ class AgentState(TypedDict):
     cancel_event: Any
     context_overhead_tokens: int
     context_tool_tokens: int
+    bound_tool_names: NotRequired[list[str]]

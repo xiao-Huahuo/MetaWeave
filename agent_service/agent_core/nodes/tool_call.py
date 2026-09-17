@@ -99,6 +99,12 @@ class ToolCallNode:
 
         last_message = state["messages"][-1]
         tool_calls = getattr(last_message, "tool_calls", []) or []
+        raw_bound_tool_names = state.get("bound_tool_names")
+        bound_tool_names = (
+            {str(name) for name in raw_bound_tool_names}
+            if isinstance(raw_bound_tool_names, list)
+            else None
+        )
         max_tool_calls = self.config.limits.agent_max_tool_calls_per_turn
         deferred_tool_calls = tool_calls[max_tool_calls:]
         tool_calls = tool_calls[:max_tool_calls]
@@ -155,8 +161,20 @@ class ToolCallNode:
                     runtime = None
                 if runtime is not None and tool_name == "patch_knowledge_file":
                     runtime.latest_file_patch = None
-                if runtime is not None and tool_name in MEMORY_TOOL_NAMES and not runtime.long_term_memory_enabled:
+                disabled_names = set()
+                if runtime is not None and runtime.settings_service is not None:
+                    disabled_names = set(
+                        runtime.settings_service.get_disabled_tools(user_id=runtime.user_id)
+                    )
+                if bound_tool_names is not None and tool_name not in bound_tool_names:
+                    content = f"工具 {tool_name} 未绑定到本轮模型请求，已拒绝执行。"
+                    failed = True
+                elif tool_name in disabled_names:
+                    content = f"工具 {tool_name} 已在用户设置中禁用，已拒绝执行。"
+                    failed = True
+                elif runtime is not None and tool_name in MEMORY_TOOL_NAMES and not runtime.long_term_memory_enabled:
                     content = "长期记忆功能已关闭,当前工具不可用。"
+                    failed = True
                 else:
                     content = self.tool_executor.execute(tool_name, arguments)
             except Exception as exc:
@@ -185,9 +203,13 @@ class ToolCallNode:
             ))
             result_count = self._count_results(content)
             completion_text = (
-                f"工具「{display_name}」已完成，共 {result_count} 条结果。"
-                if result_count is not None
-                else f"工具「{display_name}」已完成。"
+                f"工具「{display_name}」未执行：{content}"
+                if failed
+                else (
+                    f"工具「{display_name}」已完成，共 {result_count} 条结果。"
+                    if result_count is not None
+                    else f"工具「{display_name}」已完成。"
+                )
             )
             end_trace = {
                 "node": "action",

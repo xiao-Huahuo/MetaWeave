@@ -320,6 +320,7 @@ class ModelDecisionNode:
         token_usage = extract_token_usage(response)
         return {
             "messages": [response],
+            "bound_tool_names": active_tool_names,
             "trace": [
                 {
                     "node": "agent",
@@ -533,6 +534,7 @@ class ModelDecisionNode:
         token_usage = extract_token_usage(final_message)
         return {
             "messages": [final_message],
+            "bound_tool_names": active_tool_names,
             "trace": [
                 {
                     "node": "agent",

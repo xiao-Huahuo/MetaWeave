@@ -142,14 +142,15 @@ def test_each_model_stream_resets_the_cumulative_token_boundary() -> None:
         "llm_config": {},
     }
 
-    node._streaming_call(
+    result = node._streaming_call(
         system_message=SystemMessage(content="system"),
         state=state,
         token_callback=callbacks.append,
-        active_tool_names=[],
+        active_tool_names=["read_file"],
     )
 
     assert callbacks == ["", "新", "新回复"]
+    assert result["bound_tool_names"] == ["read_file"]
 
 
 def test_model_decision_disables_tools_after_cumulative_turn_budget() -> None:
@@ -173,7 +174,7 @@ def test_model_decision_disables_tools_after_cumulative_turn_budget() -> None:
             ToolMessage(content='{"result": null, "children": []}', tool_call_id=call_id),
         ])
 
-    node({
+    result = node({
         "messages": messages,
         "user_id": "u1",
         "session_id": "s1",
@@ -182,6 +183,7 @@ def test_model_decision_disables_tools_after_cumulative_turn_budget() -> None:
     })
 
     assert scheduler.calls[0]["tool_names"] == []
+    assert result["bound_tool_names"] == []
 
 
 def test_observation_respects_continue_after_long_exploration() -> None:
@@ -446,4 +448,52 @@ def test_list_available_tools_returns_full_tool_catalog() -> None:
     assert "show_markdown_html" in result
     assert "download_file" in result
     assert "create_task_list" in result
+
+
+def test_list_available_tools_excludes_user_disabled_tools_and_stale_binding_advice() -> None:
+    """模型可见目录必须等于用户实际启用工具，且不得宣称下一轮自动解锁。"""
+
+    settings = type("Settings", (), {
+        "get_disabled_tools": staticmethod(lambda *, user_id: ["web_search"]),
+    })()
+    set_tool_runtime(
+        config=AgentConfig(),
+        user_id="u1",
+        session_id="s1",
+        settings_service=settings,
+    )
+    try:
+        result = list_available_tools()
+    finally:
+        clear_tool_runtime()
+
+    assert "web_search" not in result
+    assert "write_long_term_memory" in result
+    assert "下一轮即可放开绑定" not in result
+
+
+def test_tool_call_node_rejects_a_registered_tool_missing_from_bound_names() -> None:
+    """模型强行生成未声明函数名时，Action 边界必须拒绝且不得产生副作用。"""
+
+    executor = _FakeToolExecutor()
+    node = ToolCallNode(config=AgentConfig(), tool_executor=executor)
+    set_tool_runtime(config=AgentConfig(), user_id="u1", session_id="s1")
+    try:
+        result = node({
+            "messages": [AIMessage(content="", tool_calls=[{
+                "id": "call_unbound",
+                "name": "write_long_term_memory",
+                "args": {"content": "不得写入"},
+            }])],
+            "user_id": "u1",
+            "session_id": "s1",
+            "trace": [],
+            "bound_tool_names": ["list_available_tools"],
+        })
+    finally:
+        clear_tool_runtime()
+
+    assert executor.calls == []
+    assert "未绑定" in result["messages"][0].content
+    assert result["messages"][0].additional_kwargs["tool_result"]["status"] == "error"
 

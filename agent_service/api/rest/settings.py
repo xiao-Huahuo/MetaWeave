@@ -826,14 +826,14 @@ async def save_web_search_config(body: dict[str, Any]) -> dict[str, Any]:
 
 @router.get("/settings/tools/disabled")
 async def get_disabled_tools(user_id: str = Query(..., min_length=DEFAULT_BUSINESS_LIMITS.nonempty_min_length, description="用户 ID")) -> dict[str, Any]:
-    """获取用户关闭的工具名称列表。"""
+    """获取用户逐项关闭的非记忆工具；记忆工具由长期记忆总开关管理。"""
     svc = _require_settings_service()
     return {"disabled_tools": svc.get_disabled_tools(user_id=user_id)}
 
 
 @router.put("/settings/tools/disabled")
 async def save_disabled_tools(body: dict[str, Any]) -> dict[str, Any]:
-    """保存用户关闭的工具列表。body: user_id 必填, tool_names 为关闭的工具名称数组。"""
+    """保存用户关闭的非记忆工具。body: user_id 必填, tool_names 为名称数组。"""
     user_id = str(body.get("user_id") or "").strip()
     if not user_id:
         raise HTTPException(status_code=422, detail="user_id is required")

@@ -46,7 +46,14 @@ import { useWorkspaceStore } from '@/stores/workspace'
 import type { AgentAccessMode, AgentLoopMode, ChildAgentRecord } from '@/api/agent'
 import { fetchSessionState, type SessionRecord } from '@/api/session'
 import { fetchAgentAttachment, uploadAgentAttachment } from '@/api/agent'
-import { DEFAULT_MODEL_CONTEXT_WINDOW_TOKENS, fetchLLMConfig, fetchSensitiveWords, saveSensitiveWords } from '@/api/settings'
+import {
+  DEFAULT_MODEL_CONTEXT_WINDOW_TOKENS,
+  fetchLLMConfig,
+  fetchMemoryConfig,
+  fetchSensitiveWords,
+  saveMemoryConfig,
+  saveSensitiveWords,
+} from '@/api/settings'
 import type { AgentChangeSnapshot } from '@/api/agentChanges'
 
 type MessageListApi = {
@@ -112,6 +119,8 @@ const displayedMaxContextTokens = computed(() => (
 ))
 const safetyDisabled = ref(false)
 const safetyLoading = ref(false)
+const memoryEnabled = ref(true)
+const memoryLoading = ref(false)
 const dragDepth = ref(0)
 const attachmentPollTimers = new Map<string, number>()
 const attachmentUploadTasks = new Set<Promise<void>>()
@@ -388,6 +397,29 @@ async function toggleSafety() {
   finally { safetyLoading.value = false }
 }
 
+/** Load the backend-owned long-term memory master switch for this user. */
+async function loadMemoryState() {
+  if (!userId.value) return
+  try {
+    memoryEnabled.value = (await fetchMemoryConfig(userId.value)).long_term_memory_enabled
+  } catch { /* 保留默认开启状态 */ }
+}
+
+/** Toggle the formal long-term memory setting used by retrieval and memory tools. */
+async function toggleMemory() {
+  if (!userId.value || memoryLoading.value) return
+  memoryLoading.value = true
+  const previous = memoryEnabled.value
+  try {
+    const result = await saveMemoryConfig(userId.value, !previous)
+    memoryEnabled.value = result.long_term_memory_enabled
+  } catch {
+    memoryEnabled.value = previous
+  } finally {
+    memoryLoading.value = false
+  }
+}
+
 function closeSessionDrawer() {
   sessionDrawerOpen.value = false
 }
@@ -581,6 +613,7 @@ watch(userId, () => {
     void favoritesStore.load(userId.value, 'session', '')
   }
   void loadCurrentModelConfig()
+  void loadMemoryState()
 })
 
 watch(
@@ -745,6 +778,7 @@ onMounted(() => {
   void loadCurrentModelConfig()
   void refreshSkills()
   void loadSafetyState()
+  void loadMemoryState()
   void settingsStore.fetchWebSearchSettings()
   syncChildAgentWatcher()
   syncTaskHistoryPolling(props.liveSync)
@@ -847,16 +881,32 @@ function handleChangeUpdated(event: CustomEvent<AgentChangeSnapshot>) {
         </div>
       </div>
       <button
-        class="capsule-safety-btn"
+        class="capsule-status-btn capsule-safety-btn"
         :class="{ disabled: safetyDisabled }"
         type="button"
         :title="safetyDisabled ? '安全审核已关闭' : '安全审核已开启'"
+        aria-label="切换安全审核"
+        :aria-pressed="!safetyDisabled"
         :disabled="safetyLoading"
         @click="toggleSafety"
       >
-        <span v-if="safetyLoading" class="capsule-safety-dot loading"></span>
-        <span v-else class="capsule-safety-dot" :class="safetyDisabled ? '' : 'on'"></span>
-        <span class="capsule-safety-label">审核</span>
+        <span v-if="safetyLoading" class="capsule-status-dot loading"></span>
+        <span v-else class="capsule-status-dot" :class="safetyDisabled ? '' : 'on'"></span>
+        <span class="capsule-status-label">审核</span>
+      </button>
+      <button
+        class="capsule-status-btn capsule-memory-btn"
+        :class="{ disabled: !memoryEnabled }"
+        type="button"
+        :title="memoryEnabled ? '长期记忆已开启' : '长期记忆已关闭'"
+        aria-label="切换长期记忆"
+        :aria-pressed="memoryEnabled"
+        :disabled="memoryLoading || !userId"
+        @click="toggleMemory"
+      >
+        <span v-if="memoryLoading" class="capsule-status-dot loading"></span>
+        <span v-else class="capsule-status-dot" :class="memoryEnabled ? 'on' : ''"></span>
+        <span class="capsule-status-label">记忆</span>
       </button>
       <span class="topbar-title">{{ sessionTitle }}</span>
       <div class="topbar-right">
@@ -1350,8 +1400,8 @@ function handleChangeUpdated(event: CustomEvent<AgentChangeSnapshot>) {
   pointer-events: none;
 }
 
-/* ---- 安全审核开关 ---- */
-.capsule-safety-btn {
+/* ---- 审核与记忆状态开关 ---- */
+.capsule-status-btn {
   display: inline-flex;
   align-items: center;
   gap: 4px;
@@ -1360,7 +1410,7 @@ function handleChangeUpdated(event: CustomEvent<AgentChangeSnapshot>) {
   border: 0;
   border-radius: 999px;
   background: transparent;
-  color: var(--color-text-muted);
+  color: var(--color-text-primary);
   font-family: var(--font-ui);
   font-size: calc(12px * var(--font-scale));
   cursor: pointer;
@@ -1369,20 +1419,20 @@ function handleChangeUpdated(event: CustomEvent<AgentChangeSnapshot>) {
   transition: color 150ms;
 }
 
-.capsule-safety-btn:hover:not(:disabled) {
-  color: var(--color-text-secondary);
+.capsule-status-btn:hover:not(:disabled) {
+  color: var(--color-text-primary);
 }
 
-.capsule-safety-btn:disabled {
+.capsule-status-btn:disabled {
   opacity: 0.5;
   cursor: default;
 }
 
-.capsule-safety-btn.disabled {
-  color: var(--color-danger);
+.capsule-status-btn.disabled {
+  color: var(--color-text-primary);
 }
 
-.capsule-safety-dot {
+.capsule-status-dot {
   width: 7px;
   height: 7px;
   border-radius: 999px;
@@ -1391,28 +1441,37 @@ function handleChangeUpdated(event: CustomEvent<AgentChangeSnapshot>) {
   transition: background 200ms;
 }
 
-.capsule-safety-dot.on {
+.capsule-safety-btn .capsule-status-dot.on {
   background: #22c55e;
   box-shadow: 0 0 4px rgba(34, 197, 94, 0.5);
 }
 
-.capsule-safety-dot.loading {
+.capsule-memory-btn {
+  color: var(--color-text-primary);
+}
+
+.capsule-memory-btn .capsule-status-dot.on {
+  background: var(--color-primary);
+  box-shadow: 0 0 4px color-mix(in srgb, var(--color-primary) 52%, transparent);
+}
+
+.capsule-status-dot.loading {
   background: transparent;
   border: 1.5px solid var(--color-text-muted);
   border-top-color: transparent;
-  animation: safety-spin 0.6s linear infinite;
+  animation: status-spin 0.6s linear infinite;
 }
 
-.capsule-safety-btn.disabled .capsule-safety-dot {
+.capsule-status-btn.disabled .capsule-status-dot:not(.loading) {
   background: var(--color-danger);
   box-shadow: 0 0 4px rgba(255, 95, 95, 0.4);
 }
 
-.capsule-safety-label {
+.capsule-status-label {
   line-height: 1;
 }
 
-@keyframes safety-spin {
+@keyframes status-spin {
   to { transform: rotate(360deg); }
 }
 
@@ -1868,6 +1927,28 @@ function handleChangeUpdated(event: CustomEvent<AgentChangeSnapshot>) {
     --agent-input-max-width: min(92vw, 560px);
   }
 
+  .agent-topbar {
+    gap: var(--space-4);
+    padding-right: var(--space-8);
+    padding-left: var(--space-8);
+  }
+
+  .capsule-status-btn {
+    height: 28px;
+    padding: 0 7px;
+  }
+
+}
+
+@media (max-width: 480px) {
+  .capsule-status-btn {
+    gap: 0;
+    padding: 0 6px;
+  }
+
+  .capsule-status-label {
+    display: none;
+  }
 }
 
 .history-loading {
