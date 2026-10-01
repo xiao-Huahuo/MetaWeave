@@ -304,29 +304,27 @@ a {
 /* Shared status shimmer extracted from the pixel LoadingState's Thinking
    label, and reused by Agent thinking labels and pending tool announcements. */
 .thinking-shimmer-text {
-  position: relative;
   display: inline-block;
-  overflow: hidden;
-  color: var(--color-text-tertiary) !important;
-  isolation: isolate;
-}
-
-.thinking-shimmer-text::after {
-  content: '';
-  position: absolute;
-  inset-block: 0;
-  left: 0;
-  width: 45%;
-  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--color-text-primary) 22%, transparent), transparent);
-  transform: translate3d(-120%, 0, 0);
+  /* Clip the moving gradient to glyphs; an overlay paints the label's box. */
+  background-image: linear-gradient(
+    90deg,
+    var(--color-text-tertiary) 40%,
+    var(--color-text-primary) 50%,
+    var(--color-text-tertiary) 60%
+  );
+  background-size: 250% 100%;
+  background-position: 100% 0;
+  background-repeat: no-repeat;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent !important;
+  -webkit-text-fill-color: transparent;
   animation: thinking-text-shimmer 1.4s linear infinite;
-  pointer-events: none;
-  will-change: transform;
 }
 
 @keyframes thinking-text-shimmer {
   to {
-    transform: translate3d(320%, 0, 0);
+    background-position: 0% 0;
   }
 }
 
@@ -517,8 +515,11 @@ a {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .thinking-shimmer-text::after {
+  .thinking-shimmer-text {
     animation: none !important;
+    background: none;
+    color: var(--color-text-tertiary) !important;
+    -webkit-text-fill-color: currentColor;
   }
 
   *,

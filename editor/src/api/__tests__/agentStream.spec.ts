@@ -21,6 +21,20 @@ vi.mock('@/api/client', async (importOriginal) => ({
 }))
 
 describe('Agent stream API client', () => {
+  it('posts the complete investigation request to the backend tool loop', () => {
+    streamPrompt('user-1', 'session-1', '调查知识库相关内容', {
+      agentMode: 'plan', agentAccessMode: 'readonly',
+    })
+
+    const [url, request] = mocks.streamLines.mock.calls.at(-1)!
+    expect(url).toBe('/agent/stream')
+    expect(request.method).toBe('POST')
+    expect(JSON.parse(String(request.body))).toEqual({
+      user_id: 'user-1', session_id: 'session-1', prompt: '调查知识库相关内容',
+      agent_mode: 'plan', agent_access_mode: 'readonly',
+    })
+  })
+
   it('posts child completion metadata for durable wakeup rendering', () => {
     const childAgentEvent = {
       event_name: 'child_agent.completed',
@@ -31,7 +45,7 @@ describe('Agent stream API client', () => {
       messageMetadata: { wakeup: true, child_agent_event: childAgentEvent },
     })
 
-    const request = mocks.streamLines.mock.calls[0]?.[1] as RequestInit
+    const request = mocks.streamLines.mock.calls.at(-1)?.[1] as RequestInit
     expect(JSON.parse(String(request.body))).toMatchObject({
       message_metadata: { wakeup: true, child_agent_event: childAgentEvent },
     })

@@ -819,3 +819,42 @@ def test_namespaced_deepseek_model_uses_reasoning_adapter() -> None:
     )
 
     assert isinstance(model, DeepSeekChatOpenAI)
+
+
+def test_dsml_is_not_public_content_when_no_tools_are_bound(monkeypatch: object) -> None:
+    """复现四次调用后工具被解绑时，流式及终态仍不得泄漏 DSML。"""
+
+    scheduler = get_llm_task_scheduler(make_scheduler_test_config())
+    request = SerializedChatRequest.from_messages(
+        task_id="dsml-unbound", task_type=FOREGROUND_AGENT_TASK,
+        messages=[HumanMessage(content="调查知识库相关内容")], tool_names=[],
+        timeout_seconds=3, max_retries=0, model_name="deepseek-flash",
+    )
+    dsml = (
+        '<｜｜DSML｜｜ calls>\n<｜｜DSML｜｜ invoke name="read_file">\n'
+        '<｜｜DSML｜｜ parameter name="path" string="true">notes.md</｜｜DSML｜｜ parameter>\n'
+        '</｜｜DSML｜｜ invoke>\n</｜｜DSML｜｜ calls>'
+    )
+
+    class UnboundModel:
+        """输出用户真实故障中的协议格式，不声明结构化工具调用。"""
+
+        @staticmethod
+        def invoke(_messages: object) -> AIMessage:
+            """返回整段未绑定工具协议。"""
+            return AIMessage(content=dsml)
+
+        @staticmethod
+        def stream(_messages: object) -> object:
+            """逐字符覆盖最严格的协议前缀分片边界。"""
+            for character in dsml:
+                yield AIMessageChunk(content=character)
+
+    monkeypatch.setattr(scheduler, "prepare_messages_for_model", lambda **_kwargs: ([], {}))
+    monkeypatch.setattr(scheduler, "_get_chat_model", lambda **_kwargs: UnboundModel())
+    response = scheduler._invoke_chat_request(request)
+    assert response.content == ""
+    assert response.tool_calls == []
+    chunks = list(scheduler._stream_chat_request(request))
+    assert "".join(chunk.get("content_delta", "") for chunk in chunks) == ""
+    assert chunks[-1]["message"].tool_calls == []

@@ -20,6 +20,9 @@ for (const chatMode of ['tool', 'chat'] as const) {
 test(`paints a locked tool preview in ${chatMode} mode before completing in place`, async ({ page }, testInfo) => {
   let sessionCreated = false
   let streamServed = false
+  // Hold the response so both reported thinking labels can be inspected.
+  let releaseStream!: () => void
+  const streamReady = new Promise<void>((resolve) => { releaseStream = resolve })
   const pageErrors: string[] = []
   const apiRequests: string[] = []
   page.on('pageerror', (error) => pageErrors.push(error.message))
@@ -31,6 +34,7 @@ test(`paints a locked tool preview in ${chatMode} mode before completing in plac
     }
     if (url.pathname === '/agent/stream') {
       streamServed = true
+      await streamReady
       const events = [
         {
           node: 'agent',
@@ -74,6 +78,11 @@ test(`paints a locked tool preview in ${chatMode} mode before completing in plac
       ]
       const body = `${events.map((event) => `data: ${JSON.stringify(event)}\n\n`).join('')}data: [DONE]\n\n`
       await route.fulfill({ status: 200, contentType: 'text/event-stream', body })
+      return
+    }
+    if (url.pathname === '/settings/models/management' || url.pathname === '/privacy') {
+      const body = url.pathname === '/privacy' ? { privacy: [] } : { models: [] }
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) })
       return
     }
     if (url.pathname === '/health') {
@@ -223,6 +232,36 @@ test(`paints a locked tool preview in ${chatMode} mode before completing in plac
 
   await page.getByRole('button', { name: '发送' }).click()
   await expect.poll(() => streamServed).toBe(true)
+  await expect(page.locator('.loading-state__label')).toHaveText('Thinking')
+  await expect(page.locator('.thinking-flow span')).toHaveText('正在思考')
+  const thinkingClips = await page.locator('.thinking-shimmer-text').evaluateAll((elements) => (
+    elements.map((element) => getComputedStyle(element).backgroundClip)
+  ))
+  expect(thinkingClips).toEqual(['text', 'text'])
+  // Sample the sweep in both themes and ensure reduced motion stays readable.
+  for (const theme of ['light', 'dark']) {
+    await page.evaluate((value) => { document.documentElement.dataset.theme = value }, theme)
+    const positions = await page.locator('.thinking-flow span').evaluate((element) => {
+      const animation = element.getAnimations()[0]!
+      animation.pause()
+      animation.currentTime = 0
+      const start = getComputedStyle(element).backgroundPosition
+      animation.currentTime = 700
+      return [start, getComputedStyle(element).backgroundPosition]
+    })
+    expect(positions[0]).not.toBe(positions[1])
+    await page.screenshot({ path: testInfo.outputPath(`${chatMode}-thinking-${theme}.png`), fullPage: true })
+  }
+  await page.emulateMedia({ reducedMotion: 'reduce' })
+  const staticStyle = await page.locator('.thinking-flow span').evaluate((element) => {
+    const style = getComputedStyle(element)
+    return { animation: style.animationName, fill: style.webkitTextFillColor, color: style.color }
+  })
+  expect(staticStyle.animation).toBe('none')
+  expect(staticStyle.fill).toBe(staticStyle.color)
+  expect(staticStyle.fill).not.toBe('rgba(0, 0, 0, 0)')
+  await page.emulateMedia({ reducedMotion: 'no-preference' })
+  releaseStream()
   await expect(page.getByText('我先保留这段中间输出。')).toBeVisible()
   await expect(page.getByText('这是工具返回后的流式回答。')).toBeVisible()
   await expect(page.locator('.tool-text.pending')).toHaveText('正在阅读文件')
@@ -239,9 +278,12 @@ test(`paints a locked tool preview in ${chatMode} mode before completing in plac
   await expect(page.locator('.thinking-flow span')).toHaveClass(/thinking-shimmer-text/)
   const shimmerStyles = await page.locator('.thinking-shimmer-text').evaluateAll((elements) => (
     elements.map((element) => {
-      const style = getComputedStyle(element, '::after')
+      const style = getComputedStyle(element)
       return {
         backgroundImage: style.backgroundImage,
+        backgroundClip: style.backgroundClip,
+        textFillColor: style.webkitTextFillColor,
+        overlayContent: getComputedStyle(element, '::after').content,
         animationDuration: style.animationDuration,
         animationTimingFunction: style.animationTimingFunction,
       }
@@ -250,16 +292,18 @@ test(`paints a locked tool preview in ${chatMode} mode before completing in plac
   expect(shimmerStyles).toHaveLength(2)
   for (const shimmerStyle of shimmerStyles) {
     expect(shimmerStyle.backgroundImage).toContain('linear-gradient')
+    expect(shimmerStyle.backgroundClip).toBe('text')
+    expect(shimmerStyle.textFillColor).toBe('rgba(0, 0, 0, 0)')
+    expect(shimmerStyle.overlayContent).toBe('none')
     expect(shimmerStyle.animationDuration).toBe('1.4s')
     expect(shimmerStyle.animationTimingFunction).toBe('linear')
   }
   expect(shimmerStyles[1]).toEqual(shimmerStyles[0])
   const pendingStyle = await page.locator('.tool-text.pending').evaluate((element) => {
     const style = getComputedStyle(element)
-    const shimmer = getComputedStyle(element, '::after')
     const header = element.closest('.tool-call-header')
     return {
-      backgroundImage: shimmer.backgroundImage,
+      backgroundImage: style.backgroundImage,
       flexGrow: style.flexGrow,
       textWidth: element.getBoundingClientRect().width,
       headerWidth: header?.getBoundingClientRect().width ?? 0,

@@ -27,6 +27,7 @@ from agent_service.agent_core.nodes.model_decision import (
 )
 from agent_service.core.agent_config import AgentConfig, DEFAULT_BUSINESS_LIMITS
 from agent_service.core.context_budget import ContextBudget, ModelCapacity
+from agent_service.services.memory.context_builder import ContextBuilder
 from agent_service.services.scheduler import (
     FOREGROUND_AGENT_TASK,
     SMALL_MODEL_TIER,
@@ -77,7 +78,7 @@ class PlannerNode:
         original_prompt = self._extract_latest_user_message(state)
         if not original_prompt:
             return {
-                "messages": [AIMessage(content="未找到用户消息，跳过策略分析。")],
+                "messages": [],
                 "trace": [{
                 "node": "planner",
                 "event": "no_user_message",
@@ -122,10 +123,11 @@ class PlannerNode:
                 "human_readable": readable,
                 "chat_visible": False,
             }
-            return {"messages": [AIMessage(content=readable)], "plan": plan, "trace": [trace]}
+            # 策略属于图状态，不是模型真实答复；合成 assistant 缺少 thinking 协议的推理字段。
+            return {"messages": [], "plan": plan, "trace": [trace]}
 
         return {
-            "messages": [AIMessage(content="策略分析未产出有效结果，直接进入决策。")],
+            "messages": [],
             "plan": {"covered": [], "suggested": [], "sufficient": False, "hint": ""},
             "trace": [{
                 "node": "planner",

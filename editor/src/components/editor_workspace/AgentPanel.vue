@@ -923,10 +923,12 @@ function handleChangeUpdated(event: CustomEvent<AgentChangeSnapshot>) {
         </button>
         <DropdownMenu v-model:open="skillMenuOpen">
           <DropdownMenuTrigger as-child>
-            <button class="topbar-skill-trigger" type="button" title="Skill" aria-label="Skill" :disabled="!userId">
+            <button class="topbar-skill-trigger topbar-menu-trigger v1-icon-button" type="button" title="Skill" aria-label="Skill" :disabled="!userId">
               <IcIcon name="auto-awesome" :size="16" />
-              <span>Skill</span>
-              <IcIcon class="topbar-filter-chevron" name="chevron-down" :size="14" />
+              <span class="topbar-menu-copy" aria-hidden="true">
+                <span>Skill</span>
+                <IcIcon class="topbar-filter-chevron" name="chevron-down" :size="14" />
+              </span>
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuPortal>
@@ -960,10 +962,12 @@ function handleChangeUpdated(event: CustomEvent<AgentChangeSnapshot>) {
         </DropdownMenu>
         <DropdownMenu v-model:open="loopModeMenuOpen">
           <DropdownMenuTrigger as-child>
-            <button class="topbar-loop-mode-trigger" type="button" title="Agent Loop 模式" aria-label="Agent Loop 模式" :disabled="!userId">
+            <button class="topbar-loop-mode-trigger topbar-menu-trigger v1-icon-button" type="button" title="Agent Loop 模式" aria-label="Agent Loop 模式" :disabled="!userId">
               <IcIcon name="psychology" :size="16" />
-              <span>{{ selectedLoopModeLabel }}</span>
-              <IcIcon class="topbar-filter-chevron" name="chevron-down" :size="14" />
+              <span class="topbar-menu-copy" aria-hidden="true">
+                <span>{{ selectedLoopModeLabel }}</span>
+                <IcIcon class="topbar-filter-chevron" name="chevron-down" :size="14" />
+              </span>
             </button>
           </DropdownMenuTrigger>
           <DropdownMenuPortal>
@@ -1475,34 +1479,38 @@ function handleChangeUpdated(event: CustomEvent<AgentChangeSnapshot>) {
   to { transform: rotate(360deg); }
 }
 
-.topbar-loop-mode-trigger,
-.topbar-skill-trigger {
+.topbar-menu-trigger {
+  /* Reuse the environment button's interaction styles; reveal copy only while open. */
+  flex: 0 0 auto !important;
+  width: auto !important;
+  padding: 0 6px !important;
+  border-radius: 999px !important;
+  font-family: var(--font-ui);
+  font-size: calc(13px * var(--font-scale));
+  white-space: nowrap;
+}
+
+.topbar-menu-copy {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
   gap: 5px;
-  height: 28px;
-  padding: 0 12px;
-  border: 1px solid var(--color-border);
-  border-radius: 999px;
-  background: var(--color-canvas);
-  color: var(--color-text-secondary);
-  font: inherit;
-  white-space: nowrap;
-  cursor: pointer;
+  max-width: 0;
+  margin-left: 0;
+  overflow: hidden;
+  opacity: 0;
+  transform: translateX(-4px);
+  transition:
+    max-width var(--transition-fast),
+    margin-left var(--transition-fast),
+    opacity var(--transition-fast),
+    transform var(--transition-fast);
 }
 
-.topbar-loop-mode-trigger:hover,
-.topbar-skill-trigger:hover {
-  border-color: color-mix(in srgb, var(--color-primary) 40%, transparent);
-  color: var(--color-primary);
-}
-
-.topbar-loop-mode-trigger[data-state='open'],
-.topbar-skill-trigger[data-state='open'] {
-  border-color: color-mix(in srgb, var(--color-primary) 45%, transparent);
-  background: var(--color-primary-soft);
-  color: var(--color-primary);
+.topbar-menu-trigger[data-state='open'] .topbar-menu-copy {
+  max-width: 12em;
+  margin-left: 5px;
+  opacity: 1;
+  transform: translateX(0);
 }
 
 .topbar-filter-chevron {

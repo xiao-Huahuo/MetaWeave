@@ -1,3 +1,5 @@
+"""验证 Agent 工具循环、规划消息边界和真实调查触发条件的回归行为。"""
+
 from __future__ import annotations
 
 from langchain_core.messages import AIMessage, HumanMessage, SystemMessage, ToolMessage
@@ -70,6 +72,7 @@ def test_planner_uses_small_model_tier() -> None:
         }
     )
 
+    assert result["messages"] == []
     assert result["plan"]["hint"] == "先检索相关资料"
     assert scheduler.calls[0]["model_tier"] == SMALL_MODEL_TIER
 
@@ -153,8 +156,8 @@ def test_each_model_stream_resets_the_cumulative_token_boundary() -> None:
     assert result["bound_tool_names"] == ["read_file"]
 
 
-def test_model_decision_disables_tools_after_cumulative_turn_budget() -> None:
-    """单轮累计工具调用达到上限后，下一次模型请求必须解绑工具并生成最终回答。"""
+def test_model_decision_disables_tools_after_repeated_identical_results() -> None:
+    """相同参数反复得到相同结果后才解绑工具，防止无进展的轮询循环。"""
 
     scheduler = _FakeScheduler("达到工具预算后的回答")
     config = AgentConfig()
@@ -497,3 +500,48 @@ def test_tool_call_node_rejects_a_registered_tool_missing_from_bound_names() -> 
     assert "未绑定" in result["messages"][0].content
     assert result["messages"][0].additional_kwargs["tool_result"]["status"] == "error"
 
+
+
+def test_model_decision_keeps_tools_after_four_distinct_results() -> None:
+    """真实调研在首批四项工具结果后仍须能继续阅读和完成任务清单。"""
+
+    scheduler = _FakeScheduler("继续调研")
+    node = ModelDecisionNode(
+        config=AgentConfig(),
+        tools=[type("Tool", (), {"name": "read_file"})()],
+        task_scheduler=scheduler,
+    )
+    messages = [HumanMessage(content="调查知识库相关内容")]
+    for index in range(4):
+        call_id = f"read-{index}"
+        messages.extend([
+            AIMessage(content="", tool_calls=[{
+                "id": call_id, "name": "read_file", "args": {"path": f"doc-{index}.md"},
+            }]),
+            ToolMessage(content=f"文档 {index} 的正文", tool_call_id=call_id),
+        ])
+    result = node({"messages": messages, "user_id": "u1", "session_id": "s1", "trace": [], "llm_config": {}})
+    assert scheduler.calls[0]["tool_names"] == ["read_file"]
+    assert result["bound_tool_names"] == ["read_file"]
+
+
+def test_planner_reentry_keeps_tool_and_observation_history_in_plan() -> None:
+    """真实工具执行后重入规划必须保留结果并继续生成策略，不能报 NameError。"""
+
+    scheduler = _FakeScheduler('{"hint":"继续阅读", "sufficient":false}')
+    node = PlannerNode(config=AgentConfig(), task_scheduler=scheduler)
+    result = node({
+        "messages": [
+            HumanMessage(content="调查知识库"),
+            AIMessage(content="", tool_calls=[{"id":"call_1", "name":"read_file", "args":{}}]),
+            ToolMessage(content="真实文档结果", tool_call_id="call_1", name="read_file"),
+        ],
+        "plan": {"covered": ["文件清单"]}, "user_id":"u1", "session_id":"s1", "llm_config":{},
+        "trace": [{"node":"observation", "decision":"continue", "reason":"需继续阅读"}],
+    })
+    planning_text = scheduler.calls[0]["messages"][1].content
+    assert "tool-result://call_1" in planning_text
+    assert "read_file" in planning_text
+    assert "需继续阅读" in planning_text
+    assert result["messages"] == []
+    assert result["plan"]["hint"] == "继续阅读"

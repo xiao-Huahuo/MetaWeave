@@ -12,10 +12,11 @@
 
 from __future__ import annotations
 
+import json
 import logging
 from typing import Any, Sequence
 
-from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage
+from langchain_core.messages import AIMessage, BaseMessage, HumanMessage, SystemMessage, ToolMessage
 from langchain_openai import ChatOpenAI
 
 from agent_service.agent_core.nodes.base import AgentState
@@ -205,13 +206,22 @@ class ModelDecisionNode:
 
             active_tool_names = [name for name in active_tool_names if name not in MEMORY_TOOL_NAMES]
 
-        if self._current_turn_tool_call_count(state.get("messages", [])) >= self.config.limits.agent_max_tool_calls_per_turn:
-            # 单轮累计预算耗尽后解绑工具，让模型基于已有结果生成最终回答，避免
-            # 同一个空结果被无限重试并持续写入历史。
+        tools_stalled = (
+            self._unchanged_tool_result_count(state.get("messages", []))
+            >= self.config.limits.agent_max_tool_calls_per_turn
+        )
+        if tools_stalled:
+            # 只终止相同参数和相同结果的连续无进展调用；正常多步骤调查继续绑定工具。
             active_tool_names = []
 
         # 每轮全量绑定所有可用工具(已剔除禁用工具),保证任意工具随时可直接调用。
         system_content = self.config.prompts.agent_system_prompt
+        if tools_stalled:
+            system_content += (
+                "\n\n【本次请求的工具状态】连续重复调用未取得新结果，本次请求不提供工具。"
+                "请根据已有结果回答并明确尚未完成的事项；不要再发起调用，"
+                "不要输出 DSML、XML 或其他工具协议，也不要宣称未执行的操作已经完成。"
+            )
 
         # 追加用户自定义系统提示词(数据库持久化,每次对话自动加载)
         if user_id:
@@ -335,19 +345,32 @@ class ModelDecisionNode:
         }
 
     @staticmethod
-    def _current_turn_tool_call_count(messages: Sequence[BaseMessage]) -> int:
-        """统计最近一条用户消息之后已经产生的工具调用数量。"""
+    def _unchanged_tool_result_count(messages: Sequence[BaseMessage]) -> int:
+        """统计本轮末尾相同工具、参数及结果的连续次数，不限制有进展的调查。"""
 
-        current_turn: Sequence[BaseMessage] = messages
-        for index in range(len(messages) - 1, -1, -1):
-            if isinstance(messages[index], HumanMessage):
-                current_turn = messages[index + 1:]
-                break
-        return sum(
-            len(getattr(message, "tool_calls", []) or [])
-            for message in current_turn
-            if isinstance(message, AIMessage)
-        )
+        calls: dict[str, tuple[str, str]] = {}
+        last_result: tuple[str, str, str] | None = None
+        repeated = 0
+        for message in messages:
+            if isinstance(message, HumanMessage):
+                calls.clear()
+                last_result = None
+                repeated = 0
+            elif isinstance(message, AIMessage):
+                for call in message.tool_calls:
+                    calls[call["id"]] = (
+                        call["name"], json.dumps(call["args"], sort_keys=True, ensure_ascii=False),
+                    )
+            elif isinstance(message, ToolMessage):
+                call_signature = calls.get(message.tool_call_id)
+                if call_signature is None:
+                    last_result = None
+                    repeated = 0
+                    continue
+                result = (*call_signature, str(message.content))
+                repeated = repeated + 1 if result == last_result else 1
+                last_result = result
+        return repeated
 
     @staticmethod
     def _build_task_list_prompt(task_list: dict[str, Any] | None) -> str:
