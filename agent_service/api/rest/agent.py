@@ -8,6 +8,7 @@ import json
 import logging
 import queue
 import threading
+import traceback
 from typing import Any, Iterator
 
 from fastapi import APIRouter, Body, File, Form, HTTPException, Query, UploadFile
@@ -164,14 +165,35 @@ def _to_sse(events: Iterator[dict[str, Any]]) -> Iterator[str]:
     _stopped = threading.Event()
 
     def _pump_events() -> None:
+        """拥有源迭代器，异常也发布错误与终止哨兵，不把失败丢在线程中。"""
+
         try:
             for payload in events:
+                if _stopped.is_set():
+                    break
                 _queue.put(("data", payload))
-            _queue.put(("done", None))
         except GeneratorExit:
             pass
+        except Exception as exc:
+            # 只记录类型与栈位置；异常消息可能含提供商凭据或用户上下文。
+            logger.error(
+                "Agent SSE事件生成失败 | error_type=%s | traceback=%s",
+                type(exc).__name__, "".join(traceback.format_tb(exc.__traceback__)),
+            )
+            _queue.put(("data", {
+                "type": "error", "node": "error", "error": "internal server error",
+                "content": "Agent 执行失败，请查看后端日志。",
+            }))
         finally:
             _stopped.set()
+            try:
+                close = getattr(events, "close", None)
+                if close is not None:
+                    close()
+            except Exception as exc:
+                logger.error("关闭 Agent SSE源失败 | error_type=%s", type(exc).__name__)
+            finally:
+                _queue.put(("done", None))
 
     def _pump_heartbeats() -> None:
         while not _stopped.wait(timeout=DEFAULT_BUSINESS_LIMITS.agent_sse_heartbeat_seconds):
@@ -203,9 +225,11 @@ def _to_sse(events: Iterator[dict[str, Any]]) -> Iterator[str]:
                 continue
             yield f"data: {json.dumps(payload, ensure_ascii=False)}\n\n"
         yield "data: [DONE]\n\n"
-    except GeneratorExit:
+    finally:
         _stopped.set()
-        raise
+        # 源仍在阻塞操作中时只作有界等待；它恢复后会自行关闭，禁止跨线程 close。
+        _heartbeat_thread.join(timeout=DEFAULT_BUSINESS_LIMITS.agent_sse_queue_poll_seconds)
+        _event_thread.join(timeout=DEFAULT_BUSINESS_LIMITS.agent_sse_queue_poll_seconds)
 
 
 # ------------------------------------------------------------------

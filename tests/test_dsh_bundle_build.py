@@ -1,9 +1,11 @@
 """验证 DSH Runtime构建只接受 MW 锁定的上游源码与版本。
 
-本测试不执行实际 Node构建，只覆盖发布入口最前面的不可绕过校验。
+本测试不执行实际 Node构建，覆盖锁定制品校验、真实 Windows 长路径补包和 ZIP归档。
 """
 
+import argparse
 import json
+import os
 from pathlib import Path
 from subprocess import CompletedProcess
 import subprocess
@@ -11,6 +13,94 @@ import subprocess
 import pytest
 
 from scripts import build_dsh_windows_bundle as bundle
+
+
+@pytest.mark.skipif(os.name != "nt", reason="真实 Windows MAX_PATH 验证")
+def test_hydrate_and_archive_real_long_runtime_package(tmp_path: Path) -> None:
+    """真实长路径残包必须能删除补齐，ZIP 保留完整同版本运行时文件。"""
+
+    required = Path("build/src/baggage/propagation/W3CBaggagePropagator.js")
+    source = tmp_path / "source/node_modules/.pnpm/@opentelemetry+core@2.10.0/node_modules/@opentelemetry/core"
+    closure = tmp_path / "runtime"
+    padding = "p" * max(1, 230 - len(str(closure / "node_modules" / "plugin" / "node_modules/@opentelemetry/core")))
+    target = closure / "node_modules" / ("plugin" + padding) / "node_modules/@opentelemetry/core"
+
+    def io_path(path: Path) -> Path:
+        """仅用于创建确实超过 MAX_PATH 的 fixture，不借用被测修复。"""
+
+        return Path("\\\\?\\" + str(path.resolve()))
+
+    for package in (source, target):
+        io_path(package).mkdir(parents=True)
+        io_path(package / "package.json").write_text(
+            json.dumps({"name": "@opentelemetry/core", "version": "2.10.0"}), encoding="utf-8",
+        )
+    io_path(source / required).parent.mkdir(parents=True)
+    io_path(source / required).write_text("module.exports = {};", encoding="utf-8")
+    stale = target / required.with_suffix(".d.ts")
+    assert len(str(stale)) > 260
+    io_path(stale).parent.mkdir(parents=True)
+    io_path(stale).write_text("export {};", encoding="utf-8")
+
+    try:
+        bundle.hydrate_runtime_node_package(
+            dsh_root=tmp_path / "source", runtime_closure=closure,
+            package_name="@opentelemetry/core", required_file=required.as_posix(),
+        )
+        assert io_path(target / required).read_text(encoding="utf-8") == "module.exports = {};"
+        assert not io_path(stale).exists()
+        io_closure = bundle.windows_io_path(closure)
+        archive = tmp_path / "long-runtime.zip"
+        with bundle.zipfile.ZipFile(archive, "w") as package:
+            for path in bundle.runtime_files(io_closure):
+                package.write(path, path.relative_to(io_closure).as_posix())
+        with bundle.zipfile.ZipFile(archive) as package:
+            assert package.read((target / required).relative_to(closure).as_posix()) == b"module.exports = {};"
+    finally:
+        bundle.remove_build_tree(tmp_path / "source")
+        bundle.remove_build_tree(closure)
+
+
+@pytest.mark.skipif(os.name != "nt", reason="真实 Windows extended path 验证")
+def test_remove_build_tree_accepts_already_extended_path(tmp_path: Path) -> None:
+    """上层已转换的 Windows 路径不能再被清理器添加第二个前缀。"""
+
+    tree = tmp_path / "extended-cleanup"
+    tree.mkdir()
+    (tree / "file.txt").write_text("temporary", encoding="utf-8")
+    extended = Path("\\\\?\\" + str(tree.resolve()))
+    bundle.remove_build_tree(extended)
+    assert not tree.exists()
+
+
+@pytest.mark.skipif(os.name != "nt", reason="真实 Windows junction 边界验证")
+def test_hydrate_rejects_package_junction_outside_runtime_closure(tmp_path: Path) -> None:
+    """目录 junction 指向闭包外时拒绝补包，不能删除目标目录中的原文件。"""
+
+    closure = tmp_path / "runtime"
+    target = closure / "node_modules/@opentelemetry/core"
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    (outside / "package.json").write_text(
+        json.dumps({"name": "@opentelemetry/core", "version": "2.10.0"}), encoding="utf-8",
+    )
+    witness = outside / "witness.txt"
+    witness.write_text("must remain", encoding="utf-8")
+    target.parent.mkdir(parents=True)
+    subprocess.run(
+        ["cmd.exe", "/c", "mklink", "/J", str(target), str(outside)],
+        check=True, capture_output=True,
+    )
+    try:
+        with pytest.raises(ValueError, match="闭包根"):
+            bundle.hydrate_runtime_node_package(
+                dsh_root=tmp_path / "source", runtime_closure=closure,
+                package_name="@opentelemetry/core", required_file="build/required.js",
+            )
+        assert witness.read_text(encoding="utf-8") == "must remain"
+    finally:
+        # 仅删除 junction 本身；避免清理时跟随链接删除闭包外 fixture。
+        os.rmdir(target)
 
 
 def test_verify_upstream_accepts_only_locked_source(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -51,7 +141,7 @@ def test_verify_bundle_files_requires_exact_locked_artifacts(tmp_path: Path) -> 
 
     lock = json.loads(bundle.UPSTREAM_LOCK.read_text(encoding="utf-8"))
     version = str(lock["runtime_version"])
-    archive = tmp_path / f"dsh-runtime-win-x64-{version}.zip"
+    archive = tmp_path / "sdk.zip"
     archive.write_bytes(b"sdk")
     manifest = {
         "version": version,
@@ -61,13 +151,13 @@ def test_verify_bundle_files_requires_exact_locked_artifacts(tmp_path: Path) -> 
         "archive_size_bytes": archive.stat().st_size,
         "archive_sha256": bundle.sha256(archive),
     }
-    (tmp_path / f"dsh-runtime-win-x64-{version}.manifest.json").write_text(
+    (tmp_path / "sdk.manifest.json").write_text(
         json.dumps(manifest), encoding="utf-8",
     )
 
     assert bundle.verify_bundle_files(tmp_path) == (
         archive.resolve(),
-        tmp_path / f"dsh-runtime-win-x64-{version}.manifest.json",
+        tmp_path / "sdk.manifest.json",
     )
     archive.unlink()
     with pytest.raises(FileNotFoundError, match="缺少 DSH SDK ZIP"):
@@ -158,3 +248,47 @@ def test_checked_in_dsh_bundle_contains_complete_telemetry_runtime() -> None:
         names = set(package.namelist())
 
     assert required <= names
+
+
+@pytest.mark.parametrize("validation_fails", [False, True])
+def test_build_replaces_versioned_archives_only_after_validation(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, validation_fails: bool,
+) -> None:
+    """构建固定 sdk 文件；校验成功才清旧命名包，失败保留旧包供排查。"""
+
+    lock = json.loads(bundle.UPSTREAM_LOCK.read_text(encoding="utf-8"))
+    source, closure, output = tmp_path / "source", tmp_path / "closure", tmp_path / "output"
+    source.mkdir()
+    binary = closure / "node_modules/@deepseek-ai/dsh/lib/bin.js"
+    binary.parent.mkdir(parents=True)
+    binary.write_text("module.exports = {};", encoding="utf-8")
+    node = tmp_path / "node.exe"
+    node.write_bytes(b"node fixture")
+    output.mkdir()
+    old_files = [output / "dsh-runtime-win-x64-old.zip", output / "dsh-runtime-win-x64-old.manifest.json"]
+    for path in old_files:
+        path.write_bytes(b"old SDK")
+    unrelated = output / "README.md"
+    unrelated.write_text("retain", encoding="utf-8")
+    monkeypatch.setattr(bundle, "verify_upstream", lambda *_args: lock)
+    monkeypatch.setattr(bundle, "build_dsh", lambda _root: closure)
+    monkeypatch.setattr(bundle, "compile_launcher", lambda path: path.write_bytes(b"launcher fixture"))
+    monkeypatch.setattr(bundle.subprocess, "run", lambda *args, **kwargs: CompletedProcess(args[0], 0, "v24.19.0\n", ""))
+    args = argparse.Namespace(dsh_root=source, output_dir=output, version=lock["runtime_version"], node_executable=node)
+
+    if validation_fails:
+        def reject(_output: Path) -> None:
+            """复现发布校验失败，旧包仍需保留。"""
+
+            raise ValueError("invalid SDK")
+
+        monkeypatch.setattr(bundle, "verify_bundle_files", reject)
+        with pytest.raises(ValueError, match="invalid SDK"):
+            bundle.build_bundle(args)
+        assert all(path.is_file() for path in old_files)
+    else:
+        archive, manifest = bundle.build_bundle(args)
+        assert (archive.name, manifest.name) == ("sdk.zip", "sdk.manifest.json")
+        assert not any(path.exists() for path in old_files)
+        assert bundle.verify_bundle_files(output) == (archive.resolve(), manifest)
+    assert unrelated.read_text(encoding="utf-8") == "retain"

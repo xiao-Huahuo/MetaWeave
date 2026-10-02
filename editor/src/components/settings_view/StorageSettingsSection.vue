@@ -39,6 +39,8 @@ const settingsStore = useSettingsStore()
 const paths = ref<StoragePathEntry[]>([])
 const knowledgeDirTotal = ref(0)
 const runtimeTotal = ref(0)
+/** Reuse the backend's managed directory size rather than summing overlapping children. */
+const managedResourceTotal = computed(() => paths.value.find(p => p.key === 'managed_root')?.size_bytes ?? 0)
 const managedResourceDistribution = ref<Array<{ name: string; value: number }>>([])
 const loading = ref(false)
 const clearing = ref<string | null>(null)
@@ -298,10 +300,11 @@ watch(
       </button>
     </div>
 
-    <label class="model-download-setting">
+    <label class="model-download-setting toggle-row">
       <span>启用自动下载</span>
       <input
         type="checkbox"
+        role="switch"
         :checked="Boolean(settingsStore.profile.modelAutoDownloadEnabled)"
         :disabled="savingModelPreference"
         @change="handleModelAutoDownloadChange"
@@ -312,15 +315,17 @@ watch(
     <div class="stats-row">
       <!-- 左侧：数字 -->
       <div class="stats-left">
-        <div class="stat-card">
-          <div class="stat-card-dot knowledge-dot"></div>
-          <span class="stat-card-label">知识库</span>
-          <span class="stat-card-value">{{ formatBytes(knowledgeDirTotal) }}</span>
+        <div class="stat-card ui-metric-block">
+          <span class="ui-metric-label">知识库</span>
+          <span class="ui-metric-value">{{ formatBytes(knowledgeDirTotal) }}</span>
         </div>
-        <div class="stat-card">
-          <div class="stat-card-dot runtime-dot"></div>
-          <span class="stat-card-label">运行时</span>
-          <span class="stat-card-value">{{ formatBytes(runtimeTotal) }}</span>
+        <div class="stat-card ui-metric-block">
+          <span class="ui-metric-label">运行时</span>
+          <span class="ui-metric-value">{{ formatBytes(runtimeTotal) }}</span>
+        </div>
+        <div class="stat-card ui-metric-block">
+          <span class="ui-metric-label">托管资源(./mw)</span>
+          <span class="ui-metric-value">{{ formatBytes(managedResourceTotal) }}</span>
         </div>
       </div>
 
@@ -362,58 +367,60 @@ watch(
     <CompilerManagement :user-id="settingsStore.profile.userId" @storage-changed="loadStorageConfig" />
     <SdkManagement :user-id="settingsStore.profile.userId" @storage-changed="loadStorageConfig" />
 
-    <header class="storage-path-header">
-      <h4>存储路径</h4>
-    </header>
+    <section class="storage-path-block settings-block-surface" aria-labelledby="storage-path-title">
+      <header class="storage-path-header">
+        <h4 id="storage-path-title">存储路径</h4>
+      </header>
 
-    <!-- 路径树 -->
-    <div v-if="paths.length > 0" class="storage-tree">
-      <div>
-        <template v-for="item in treeItems" :key="item.entry.key">
-          <div class="tree-row" :class="{ 'tree-child': item.depth > 0 }">
-            <div class="tree-label-cell" :style="{ paddingLeft: `${item.depth * 20}px` }">
-              <button
-                v-if="item.hasChildren"
-                class="tree-collapse-btn"
-                @click="toggleCollapse(item.entry.key)"
-              >
-                <IcIcon name="chevron-right" :size="13" :class="{ rotated: !collapsedKeys.has(item.entry.key) }" />
-              </button>
-              <span v-else class="tree-spacer"></span>
-              <span class="tree-name" :class="{ 'child-name': item.depth > 0 }">{{ item.entry.label }}</span>
-            </div>
-            <div class="tree-value-cell">
-              <template v-if="item.depth === 0 && item.entry.key === 'knowledge_dir'">
-                <input v-model="knowledgeDirDraft" type="text" class="tree-input" :disabled="savingKey === item.entry.key" />
-                <button class="tree-explore-btn" title="在资源管理器中打开" @click="openInExplorer(item.entry.value)">
-                  <IcIcon name="folder-open" :size="14" />
+      <!-- 路径树 -->
+      <div v-if="paths.length > 0" class="storage-tree">
+        <div>
+          <template v-for="item in treeItems" :key="item.entry.key">
+            <div class="tree-row" :class="{ 'tree-child': item.depth > 0 }">
+              <div class="tree-label-cell" :style="{ paddingLeft: `${item.depth * 20}px` }">
+                <button
+                  v-if="item.hasChildren"
+                  class="tree-collapse-btn"
+                  @click="toggleCollapse(item.entry.key)"
+                >
+                  <IcIcon name="chevron-right" :size="13" :class="{ rotated: !collapsedKeys.has(item.entry.key) }" />
                 </button>
-                <button class="save-model-btn" :disabled="savingKey === item.entry.key || knowledgeDirDraft === item.entry.value" @click="handleSaveKnowledgeDir">
-                  {{ savingKey === item.entry.key ? '...' : '保存' }}
+                <span v-else class="tree-spacer"></span>
+                <span class="tree-name" :class="{ 'child-name': item.depth > 0 }">{{ item.entry.label }}</span>
+              </div>
+              <div class="tree-value-cell">
+                <template v-if="item.depth === 0 && item.entry.key === 'knowledge_dir'">
+                  <input v-model="knowledgeDirDraft" type="text" class="tree-input" :disabled="savingKey === item.entry.key" />
+                  <button class="tree-explore-btn" title="在资源管理器中打开" @click="openInExplorer(item.entry.value)">
+                    <IcIcon name="folder-open" :size="14" />
+                  </button>
+                  <button class="save-model-btn" :disabled="savingKey === item.entry.key || knowledgeDirDraft === item.entry.value" @click="handleSaveKnowledgeDir">
+                    {{ savingKey === item.entry.key ? '...' : '保存' }}
+                  </button>
+                </template>
+                <template v-else>
+                  <span class="tree-value mono">{{ item.entry.value }}</span>
+                </template>
+              </div>
+              <div class="tree-size-cell">{{ formatBytes(item.entry.size_bytes) }}</div>
+              <div class="tree-action-cell">
+                <button
+                  v-if="item.entry.can_clear"
+                  class="delete-btn"
+                  :disabled="clearing === item.entry.key"
+                  :title="`清空 ${item.entry.label}`"
+                  @click="handleClear(item.entry.key, item.entry.label)"
+                >
+                  <svg viewBox="0 0 448 512" class="svgIcon"><path d="M135.2 17.7L128 32H32C14.3 32 0 46.3 0 64S14.3 96 32 96H416c17.7 0 32-14.3 32-32s-14.3-32-32-32H320l-7.2-14.3C307.4 6.8 296.3 0 284.2 0H163.8c-12.1 0-23.2 6.8-28.6 17.7zM416 128H32L53.2 467c1.6 25.3 22.6 45 47.9 45H346.9c25.3 0 46.3-19.7 47.9-45L416 128z"></path></svg>
                 </button>
-              </template>
-              <template v-else>
-                <span class="tree-value mono">{{ item.entry.value }}</span>
-              </template>
+              </div>
             </div>
-            <div class="tree-size-cell">{{ formatBytes(item.entry.size_bytes) }}</div>
-            <div class="tree-action-cell">
-              <button
-                v-if="item.entry.can_clear"
-                class="delete-btn"
-                :disabled="clearing === item.entry.key"
-                :title="`清空 ${item.entry.label}`"
-                @click="handleClear(item.entry.key, item.entry.label)"
-              >
-                <svg viewBox="0 0 448 512" class="svgIcon"><path d="M135.2 17.7L128 32H32C14.3 32 0 46.3 0 64S14.3 96 32 96H416c17.7 0 32-14.3 32-32s-14.3-32-32-32H320l-7.2-14.3C307.4 6.8 296.3 0 284.2 0H163.8c-12.1 0-23.2 6.8-28.6 17.7zM416 128H32L53.2 467c1.6 25.3 22.6 45 47.9 45H346.9c25.3 0 46.3-19.7 47.9-45L416 128z"></path></svg>
-              </button>
-            </div>
-          </div>
-        </template>
+          </template>
+        </div>
       </div>
-    </div>
 
-    <p v-else-if="!loading" class="setting-hint">暂无存储路径数据</p>
+      <p v-else-if="!loading" class="setting-hint">暂无存储路径数据</p>
+    </section>
   </div>
 </template>
 
@@ -432,13 +439,8 @@ watch(
   align-items: center;
   justify-content: space-between;
   margin-bottom: var(--space-12);
-  border-bottom: 1px solid var(--color-border);
   color: var(--color-text);
   font-size: calc(13px * var(--font-scale));
-}
-
-.model-download-setting input {
-  accent-color: var(--color-primary);
 }
 
 .icon-btn {
@@ -503,52 +505,6 @@ watch(
   flex-direction: column;
   align-items: center;
   gap: var(--space-6);
-}
-
-/* ---- 数字卡片 ---- */
-.stat-card {
-  display: grid;
-  grid-template-columns: 10px 1fr auto;
-  align-items: center;
-  gap: var(--space-10);
-  min-height: 58px;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  padding: var(--space-10) var(--space-12);
-  background: rgba(255, 255, 255, 0.02);
-}
-
-.stat-card-dot {
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  flex-shrink: 0;
-}
-
-.knowledge-dot {
-  background: #4224eb;
-}
-
-.runtime-dot {
-  background: #eb2463;
-}
-
-.stat-card-label {
-  min-width: 0;
-  overflow: hidden;
-  color: var(--color-text-tertiary);
-  font-family: var(--font-ui);
-  font-size: var(--font-size-xs);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.stat-card-value {
-  flex: 0 0 auto;
-  color: var(--color-primary);
-  font-family: var(--font-ui);
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-semibold);
 }
 
 /* ---- 饼图 ---- */
@@ -623,8 +579,6 @@ watch(
 /* ---- 路径树 ---- */
 .storage-tree {
   position: relative;
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
   overflow: hidden;
 }
 
@@ -635,7 +589,6 @@ watch(
   gap: var(--space-10);
   padding: var(--space-6) var(--space-10);
   min-height: 44px;
-  border-bottom: 1px solid var(--color-border);
   background: var(--color-canvas);
 }
 
@@ -644,10 +597,6 @@ watch(
     grid-template-columns: 1fr;
     gap: var(--space-4);
   }
-}
-
-.tree-row:last-child {
-  border-bottom: none;
 }
 
 .tree-child {
@@ -785,26 +734,19 @@ watch(
   flex-shrink: 0;
 }
 
+.storage-path-block {
+  min-width: 0;
+  margin-top: var(--space-16);
+  padding: 14px;
+}
+
 .storage-path-header {
   min-height: 34px;
-  margin-top: var(--space-16);
-  border-bottom: 1px solid var(--color-border);
 }
 
 .storage-path-header h4 {
   margin: 0;
   color: var(--color-text);
   font-size: calc(14px * var(--font-scale));
-}
-</style>
-
-<style scoped>
-.stat-card {
-  min-height: 44px;
-  border: 0;
-  border-bottom: 1px solid var(--color-border);
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
 }
 </style>

@@ -7,6 +7,7 @@
 from __future__ import annotations
 
 import json
+from threading import Event
 from types import SimpleNamespace
 from typing import Any
 
@@ -21,9 +22,23 @@ from agent_service.models.session import SessionRecord
 from agent_service.schemas.message import MessageCreate
 from agent_service.schemas.session import SessionCreate
 from agent_service.services.message.service import MessageService
-from agent_service.services.child_agent import ChildAgentManager
+from agent_service.services.child_agent import ChildAgentContract, ChildAgentManager
 from agent_service.services.session.service import SessionService
 from tests.db_test_utils import create_test_engine
+
+
+@pytest.mark.parametrize("provider,tools,expected", [
+    ("dsh", ["dsh.read", "dsh.search", "dsh.git"], []),
+    ("dsh", ["read", "read_image", "pwsh"], ["read", "read_image", "pwsh"]),
+    ("native", ["dsh.read"], ["dsh.read"]),
+])
+def test_legacy_dsh_snapshot_does_not_advertise_invented_tools(provider, tools, expected) -> None:
+    """旧 DSH aliases 作为未知目录呈现；真实目录与原生工具不得被改名。"""
+
+    child = {"run_id": "child-legacy", "provider": provider, "allowed_tools": tools}
+    normalized = AgentCore._with_child_conversation_session("session", child)
+    assert normalized["allowed_tools"] == expected
+    assert child["allowed_tools"] == tools
 
 
 def _config() -> AgentConfig:
@@ -188,3 +203,131 @@ def test_native_coding_fallback_is_rejected_when_dsh_is_enabled() -> None:
             provider="native",
             workspace_root="D:/repo",
         )
+
+
+def test_rejected_dsh_continuation_preserves_active_parent_run() -> None:
+    """活动 DSH 续问被拒绝时，不得把原 Turn 的结果改投到新的父 run。"""
+
+    agent = object.__new__(AgentCore)
+    agent.config = _config()
+    agent.settings_service = SimpleNamespace(
+        is_dsh_coding_agent_enabled_for_user=lambda **kwargs: True,
+    )
+    agent.child_agent_manager = ChildAgentManager(max_workers=1, config=agent.config)
+    started = Event()
+    release = Event()
+
+    def execute(context):
+        """保持原任务活动以触发后端的续问拒绝路径。"""
+
+        started.set()
+        release.wait(timeout=2)
+        return "原任务完成"
+
+    try:
+        record = agent.child_agent_manager.spawn(
+            contract=ChildAgentContract(
+                goal="原任务",
+                parent_run_id="original-parent",
+                user_id="u1",
+                session_id="parent-session",
+                provider="dsh",
+            ),
+            executor=execute,
+        )
+        assert started.wait(timeout=1)
+        with pytest.raises(RuntimeError, match="仍在运行"):
+            agent._continue_child_from_runtime(
+                parent_run_id="new-parent",
+                user_id="u1",
+                session_id="parent-session",
+                run_id=record.run_id,
+                prompt="新追问",
+            )
+        assert record.contract.parent_run_id == "original-parent"
+        assert record.context is not None
+        assert record.context.parent_run_id == "original-parent"
+        release.set()
+        result = agent.child_agent_manager.wait_for_children(
+            parent_run_id="original-parent",
+            timeout_seconds=1,
+        )
+        assert result is not None
+        assert result.parent_run_id == "original-parent"
+        assert agent.child_agent_manager.drain_results("new-parent") == []
+    finally:
+        release.set()
+        agent.child_agent_manager.close()
+
+
+def test_dsh_continuation_rebinds_parent_without_old_turn_results() -> None:
+    """同一主会话的新父 run 续问成功后，只能收取新 Turn 的结果。"""
+
+    agent = object.__new__(AgentCore)
+    agent.config = _config()
+    agent.settings_service = SimpleNamespace(
+        is_dsh_coding_agent_enabled_for_user=lambda **kwargs: True,
+    )
+    agent.child_agent_manager = ChildAgentManager(max_workers=1, config=agent.config)
+    try:
+        record = agent.child_agent_manager.spawn(
+            contract=ChildAgentContract(
+                goal="原任务",
+                parent_run_id="original-parent",
+                user_id="u1",
+                session_id="parent-session",
+                provider="dsh",
+                mode="foreground",
+            ),
+            executor=lambda context: context.goal,
+        )
+        continued = json.loads(agent._continue_child_from_runtime(
+            parent_run_id="new-parent",
+            user_id="u1",
+            session_id="parent-session",
+            run_id=record.run_id,
+            prompt="新追问",
+            mode="foreground",
+        ))
+        assert continued["status"] == "completed"
+        assert continued["parent_run_id"] == "new-parent"
+        assert agent.child_agent_manager.drain_results("original-parent") == []
+        results = agent.child_agent_manager.drain_results("new-parent")
+        assert len(results) == 1
+        assert results[0].result == "新追问"
+    finally:
+        agent.child_agent_manager.close()
+
+
+@pytest.mark.parametrize("stale_source", ["snapshot", "late-tool"])
+def test_dsh_history_keeps_latest_lifecycle_result(stale_source: str) -> None:
+    """冷恢复时正式终态事件必须胜过旧快照或迟到的召唤工具结果。"""
+
+    config = _config()
+    engine = create_test_engine("sqlite://")
+    sessions = SessionService(config=config, engine=engine, create_tables=False)
+    messages = MessageService(config=config, engine=engine, create_tables=False)
+    parent = sessions.create_session(SessionCreate(user_id="u1", session_name="DSH 历史"))
+    child = {"run_id": "dsh-1", "provider": "dsh", "status": "completed", "result": "真实完成结果"}
+    messages.create_message(MessageCreate(
+        user_id="u1", session_id=parent.session_id, role="assistant", content="DSH 完成",
+        metadata_json={"child_agent_event": {"event_name": "child_agent.completed", "child": child}},
+    ))
+    stale = {**child, "status": "running", "result": None}
+    if stale_source == "snapshot":
+        sessions.update_session_state(parent.session_id, json.dumps({"child_agents": [stale]}))
+    else:
+        messages.create_message(MessageCreate(
+            user_id="u1", session_id=parent.session_id, role="tool", content=json.dumps(stale),
+        ))
+    agent = object.__new__(AgentCore)
+    agent.session_service = sessions
+    agent._get_message_service = lambda: messages
+    agent.child_agent_manager = ChildAgentManager(max_workers=1, config=config)
+    try:
+        restored = agent.list_child_agents_for_session(parent.session_id)
+        assert len(restored) == 1
+        assert restored[0]["status"] == "completed"
+        assert restored[0]["result"] == "真实完成结果"
+    finally:
+        agent.child_agent_manager.close()

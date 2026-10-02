@@ -1,0 +1,2 @@
+# Keep the locked DSH SDK patch applicable after Windows checkouts.
+resources/dsh/patches/*.patch text eol=lf

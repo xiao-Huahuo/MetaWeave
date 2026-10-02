@@ -102,77 +102,83 @@ function clearModelDraft(target: 'large' | 'small' | 'vision') {
 
 <template>
   <div class="setting-section settings-model-form">
-    <section class="effective-model-summary" aria-labelledby="effective-model-title">
+    <section class="effective-model-summary settings-module" aria-labelledby="effective-model-title">
       <h3 id="effective-model-title">当前生效</h3>
       <dl>
-        <div data-effective-model="large">
-          <dt>大模型</dt>
-          <dd>{{ modelConfigLoaded ? (effectiveLargeModelName || '未配置') : '正在读取...' }}</dd>
-          <span v-if="modelConfigLoaded">{{ effectiveLargeSourceLabel }}</span>
+        <div class="ui-metric-block" data-effective-model="large">
+          <dt class="ui-metric-label">大模型</dt>
+          <dd class="ui-metric-value ui-metric-text">{{ modelConfigLoaded ? (effectiveLargeModelName || '未配置') : '正在读取...' }}</dd>
+          <span v-if="modelConfigLoaded" class="ui-metric-label">{{ effectiveLargeSourceLabel }}</span>
         </div>
-        <div data-effective-model="small">
-          <dt>小模型</dt>
-          <dd>{{ modelConfigLoaded ? (effectiveSmallModelName || '未配置') : '正在读取...' }}</dd>
-          <span v-if="modelConfigLoaded">{{ effectiveSmallSourceLabel }}</span>
+        <div class="ui-metric-block" data-effective-model="small">
+          <dt class="ui-metric-label">小模型</dt>
+          <dd class="ui-metric-value ui-metric-text">{{ modelConfigLoaded ? (effectiveSmallModelName || '未配置') : '正在读取...' }}</dd>
+          <span v-if="modelConfigLoaded" class="ui-metric-label">{{ effectiveSmallSourceLabel }}</span>
         </div>
-        <div data-effective-model="vision">
-          <dt>视觉模型</dt>
-          <dd>{{ modelConfigLoaded ? (effectiveVisionModelName || '未配置') : '正在读取...' }}</dd>
-          <span v-if="modelConfigLoaded">{{ effectiveVisionSourceLabel }}</span>
+        <div class="ui-metric-block" data-effective-model="vision">
+          <dt class="ui-metric-label">视觉模型</dt>
+          <dd class="ui-metric-value ui-metric-text">{{ modelConfigLoaded ? (effectiveVisionModelName || '未配置') : '正在读取...' }}</dd>
+          <span v-if="modelConfigLoaded" class="ui-metric-label">{{ effectiveVisionSourceLabel }}</span>
         </div>
       </dl>
     </section>
-    <div class="model-heading">
-      <h3>大模型</h3>
-      <button class="delete-btn" type="button" title="清空大模型配置" aria-label="清空大模型配置" @click="clearModelDraft('large')">
-        <svg viewBox="0 0 448 512" class="svgIcon" aria-hidden="true"><path d="M135.2 17.7L128 32H32C14.3 32 0 46.3 0 64S14.3 96 32 96H416c17.7 0 32-14.3 32-32s-14.3-32-32-32H320l-7.2-14.3C307.4 6.8 296.3 0 284.2 0H163.8c-12.1 0-23.2 6.8-28.6 17.7zM416 128H32L53.2 467c1.6 25.3 22.6 45 47.9 45H346.9c25.3 0 46.3-19.7 47.9-45L416 128z"></path></svg>
-      </button>
-    </div>
-    <div class="model-block">
-      <input v-model="largeModelName" placeholder="模型名称" spellcheck="false" :readonly="!modelEditing" :class="{ readonly: !modelEditing }" />
-      <input v-model="largeBaseUrl" placeholder="Base URL" spellcheck="false" :readonly="!modelEditing" :class="{ readonly: !modelEditing }" />
-      <div class="capacity-row">
-        <label class="capacity-field"><span>上下文窗口</span><input v-model.number="largeContextWindowTokens" type="number" min="0" :readonly="!modelEditing" :class="{ readonly: !modelEditing }" /><span class="capacity-unit">Token</span></label>
-        <label class="capacity-field"><span>最大输出</span><input v-model.number="largeMaxOutputTokens" type="number" min="0" :readonly="!modelEditing" :class="{ readonly: !modelEditing }" /><span class="capacity-unit">Token（0=继承）</span></label>
+    <section class="settings-module settings-block-surface">
+      <div class="model-heading">
+        <h3>大模型</h3>
+        <button class="delete-btn" type="button" title="清空大模型配置" aria-label="清空大模型配置" @click="clearModelDraft('large')">
+          <svg viewBox="0 0 448 512" class="svgIcon" aria-hidden="true"><path d="M135.2 17.7L128 32H32C14.3 32 0 46.3 0 64S14.3 96 32 96H416c17.7 0 32-14.3 32-32s-14.3-32-32-32H320l-7.2-14.3C307.4 6.8 296.3 0 284.2 0H163.8c-12.1 0-23.2 6.8-28.6 17.7zM416 128H32L53.2 467c1.6 25.3 22.6 45 47.9 45H346.9c25.3 0 46.3-19.7 47.9-45L416 128z"></path></svg>
+        </button>
       </div>
-      <div class="key-row">
-        <input v-model="largeApiKey" :type="showLargeKey ? 'text' : 'password'" placeholder="API Key" spellcheck="false" :readonly="!modelEditing" :class="{ readonly: !modelEditing }" />
-        <button class="toggle-key" @click="showLargeKey = !showLargeKey">{{ showLargeKey ? '隐藏' : '显示' }}</button>
+      <div class="model-block">
+        <input v-model="largeModelName" placeholder="模型名称" spellcheck="false" :readonly="!modelEditing" :class="{ readonly: !modelEditing }" />
+        <input v-model="largeBaseUrl" placeholder="Base URL" spellcheck="false" :readonly="!modelEditing" :class="{ readonly: !modelEditing }" />
+        <div class="capacity-row">
+          <label class="capacity-field"><span>上下文窗口</span><input v-model.number="largeContextWindowTokens" type="number" min="0" :readonly="!modelEditing" :class="{ readonly: !modelEditing }" /><span class="capacity-unit">Token</span></label>
+          <label class="capacity-field"><span>最大输出</span><input v-model.number="largeMaxOutputTokens" type="number" min="0" :readonly="!modelEditing" :class="{ readonly: !modelEditing }" /><span class="capacity-unit">Token（0=继承）</span></label>
+        </div>
+        <div class="key-row">
+          <input v-model="largeApiKey" :type="showLargeKey ? 'text' : 'password'" placeholder="API Key" spellcheck="false" :readonly="!modelEditing" :class="{ readonly: !modelEditing }" />
+          <button class="toggle-key" @click="showLargeKey = !showLargeKey">{{ showLargeKey ? '隐藏' : '显示' }}</button>
+        </div>
       </div>
-    </div>
-    <div class="model-heading">
-      <h3>小模型</h3>
-      <button class="delete-btn" type="button" title="清空小模型配置" aria-label="清空小模型配置" @click="clearModelDraft('small')">
-        <svg viewBox="0 0 448 512" class="svgIcon" aria-hidden="true"><path d="M135.2 17.7L128 32H32C14.3 32 0 46.3 0 64S14.3 96 32 96H416c17.7 0 32-14.3 32-32s-14.3-32-32-32H320l-7.2-14.3C307.4 6.8 296.3 0 284.2 0H163.8c-12.1 0-23.2 6.8-28.6 17.7zM416 128H32L53.2 467c1.6 25.3 22.6 45 47.9 45H346.9c25.3 0 46.3-19.7 47.9-45L416 128z"></path></svg>
-      </button>
-    </div>
-    <div class="model-block">
-      <input v-model="smallModelName" placeholder="模型名称（留空继承大模型）" spellcheck="false" :readonly="!modelEditing" :class="{ readonly: !modelEditing }" />
-      <input v-model="smallBaseUrl" placeholder="Base URL（留空继承大模型）" spellcheck="false" :readonly="!modelEditing" :class="{ readonly: !modelEditing }" />
-      <div class="capacity-row">
-        <label class="capacity-field"><span>上下文窗口</span><input v-model.number="smallContextWindowTokens" type="number" min="0" :readonly="!modelEditing" :class="{ readonly: !modelEditing }" /><span class="capacity-unit">Token</span></label>
-        <label class="capacity-field"><span>最大输出</span><input v-model.number="smallMaxOutputTokens" type="number" min="0" :readonly="!modelEditing" :class="{ readonly: !modelEditing }" /><span class="capacity-unit">Token（0=继承）</span></label>
+    </section>
+    <section class="settings-module settings-block-surface">
+      <div class="model-heading">
+        <h3>小模型</h3>
+        <button class="delete-btn" type="button" title="清空小模型配置" aria-label="清空小模型配置" @click="clearModelDraft('small')">
+          <svg viewBox="0 0 448 512" class="svgIcon" aria-hidden="true"><path d="M135.2 17.7L128 32H32C14.3 32 0 46.3 0 64S14.3 96 32 96H416c17.7 0 32-14.3 32-32s-14.3-32-32-32H320l-7.2-14.3C307.4 6.8 296.3 0 284.2 0H163.8c-12.1 0-23.2 6.8-28.6 17.7zM416 128H32L53.2 467c1.6 25.3 22.6 45 47.9 45H346.9c25.3 0 46.3-19.7 47.9-45L416 128z"></path></svg>
+        </button>
       </div>
-      <div class="key-row">
-        <input v-model="smallApiKey" :type="showSmallKey ? 'text' : 'password'" placeholder="API Key" spellcheck="false" :readonly="!modelEditing" :class="{ readonly: !modelEditing }" />
-        <button class="toggle-key" @click="showSmallKey = !showSmallKey">{{ showSmallKey ? '隐藏' : '显示' }}</button>
+      <div class="model-block">
+        <input v-model="smallModelName" placeholder="模型名称（留空继承大模型）" spellcheck="false" :readonly="!modelEditing" :class="{ readonly: !modelEditing }" />
+        <input v-model="smallBaseUrl" placeholder="Base URL（留空继承大模型）" spellcheck="false" :readonly="!modelEditing" :class="{ readonly: !modelEditing }" />
+        <div class="capacity-row">
+          <label class="capacity-field"><span>上下文窗口</span><input v-model.number="smallContextWindowTokens" type="number" min="0" :readonly="!modelEditing" :class="{ readonly: !modelEditing }" /><span class="capacity-unit">Token</span></label>
+          <label class="capacity-field"><span>最大输出</span><input v-model.number="smallMaxOutputTokens" type="number" min="0" :readonly="!modelEditing" :class="{ readonly: !modelEditing }" /><span class="capacity-unit">Token（0=继承）</span></label>
+        </div>
+        <div class="key-row">
+          <input v-model="smallApiKey" :type="showSmallKey ? 'text' : 'password'" placeholder="API Key" spellcheck="false" :readonly="!modelEditing" :class="{ readonly: !modelEditing }" />
+          <button class="toggle-key" @click="showSmallKey = !showSmallKey">{{ showSmallKey ? '隐藏' : '显示' }}</button>
+        </div>
       </div>
-    </div>
-    <div class="model-heading">
-      <h3>视觉模型</h3>
-      <button class="delete-btn" type="button" title="清空视觉模型配置" aria-label="清空视觉模型配置" @click="clearModelDraft('vision')">
-        <svg viewBox="0 0 448 512" class="svgIcon" aria-hidden="true"><path d="M135.2 17.7L128 32H32C14.3 32 0 46.3 0 64S14.3 96 32 96H416c17.7 0 32-14.3 32-32s-14.3-32-32-32H320l-7.2-14.3C307.4 6.8 296.3 0 284.2 0H163.8c-12.1 0-23.2 6.8-28.6 17.7zM416 128H32L53.2 467c1.6 25.3 22.6 45 47.9 45H346.9c25.3 0 46.3-19.7 47.9-45L416 128z"></path></svg>
-      </button>
-    </div>
-    <div class="model-block">
-      <input v-model="visionModelName" aria-label="视觉模型名称" placeholder="模型名称（留空继承大模型）" spellcheck="false" :readonly="!modelEditing" :class="{ readonly: !modelEditing }" />
-      <input v-model="visionBaseUrl" aria-label="视觉模型 Base URL" placeholder="Base URL（留空继承大模型）" spellcheck="false" :readonly="!modelEditing" :class="{ readonly: !modelEditing }" />
-      <div class="key-row">
-        <input v-model="visionApiKey" :type="showVisionKey ? 'text' : 'password'" aria-label="视觉模型 API Key" placeholder="API Key（留空继承大模型）" autocomplete="off" spellcheck="false" :readonly="!modelEditing" :class="{ readonly: !modelEditing }" />
-        <button class="toggle-key" type="button" @click="showVisionKey = !showVisionKey">{{ showVisionKey ? '隐藏' : '显示' }}</button>
+    </section>
+    <section class="settings-module settings-block-surface">
+      <div class="model-heading">
+        <h3>视觉模型</h3>
+        <button class="delete-btn" type="button" title="清空视觉模型配置" aria-label="清空视觉模型配置" @click="clearModelDraft('vision')">
+          <svg viewBox="0 0 448 512" class="svgIcon" aria-hidden="true"><path d="M135.2 17.7L128 32H32C14.3 32 0 46.3 0 64S14.3 96 32 96H416c17.7 0 32-14.3 32-32s-14.3-32-32-32H320l-7.2-14.3C307.4 6.8 296.3 0 284.2 0H163.8c-12.1 0-23.2 6.8-28.6 17.7zM416 128H32L53.2 467c1.6 25.3 22.6 45 47.9 45H346.9c25.3 0 46.3-19.7 47.9-45L416 128z"></path></svg>
+        </button>
       </div>
-      <p class="model-inheritance-hint">供识图工具调用；三项留空时继承大模型。使用不同 Base URL 时需填写该服务的 API Key。</p>
-    </div>
+      <div class="model-block">
+        <input v-model="visionModelName" aria-label="视觉模型名称" placeholder="模型名称（留空继承大模型）" spellcheck="false" :readonly="!modelEditing" :class="{ readonly: !modelEditing }" />
+        <input v-model="visionBaseUrl" aria-label="视觉模型 Base URL" placeholder="Base URL（留空继承大模型）" spellcheck="false" :readonly="!modelEditing" :class="{ readonly: !modelEditing }" />
+        <div class="key-row">
+          <input v-model="visionApiKey" :type="showVisionKey ? 'text' : 'password'" aria-label="视觉模型 API Key" placeholder="API Key（留空继承大模型）" autocomplete="off" spellcheck="false" :readonly="!modelEditing" :class="{ readonly: !modelEditing }" />
+          <button class="toggle-key" type="button" @click="showVisionKey = !showVisionKey">{{ showVisionKey ? '隐藏' : '显示' }}</button>
+        </div>
+        <p class="model-inheritance-hint">供识图工具调用；三项留空时继承大模型。使用不同 Base URL 时需填写该服务的 API Key。</p>
+      </div>
+    </section>
     <div class="model-actions">
       <button v-if="!modelEditing" class="edit-model-btn" type="button" @click="modelEditing = true">{{ modelConfigSaved ? '编辑' : '配置' }}</button>
       <button v-if="modelEditing" class="save-model-btn" :disabled="modelSaving" @click="$emit('save')">
@@ -184,7 +190,7 @@ function clearModelDraft(target: 'large' | 'small' | 'vision') {
       <button v-if="modelEditing" class="cancel-model-btn" type="button" @click="$emit('cancel')">取消</button>
       <span v-if="modelMsg" class="feedback">{{ modelMsg }}</span>
     </div>
-    <section class="saved-model-section">
+    <section class="saved-model-section settings-module settings-block-surface">
       <h3>已保存的配置</h3>
       <p v-if="!savedConfigs.length" class="empty-hint">暂无已保存的模型配置。</p>
       <div v-else class="saved-model-grid">
@@ -209,51 +215,12 @@ function clearModelDraft(target: 'large' | 'small' | 'vision') {
 </template>
 
 <style scoped>
+.saved-model-section.settings-module :deep(.saved-config-row) {
+  border: 0;
+}
+
 .effective-model-summary {
   margin-bottom: var(--space-16);
-}
-
-.effective-model-summary dl {
-  margin: 0;
-  border-top: 1px solid var(--color-border);
-  border-bottom: 1px solid var(--color-border);
-}
-
-.effective-model-summary dl > div {
-  display: grid;
-  grid-template-columns: 72px minmax(0, 1fr) auto;
-  align-items: center;
-  gap: var(--space-10);
-  min-height: 38px;
-}
-
-.effective-model-summary dl > div + div {
-  border-top: 1px solid var(--color-border);
-}
-
-.effective-model-summary dt,
-.effective-model-summary dd,
-.effective-model-summary span {
-  margin: 0;
-  font-size: calc(12px * var(--font-scale));
-}
-
-.effective-model-summary dt,
-.effective-model-summary span {
-  color: var(--color-text-muted);
-}
-
-.effective-model-summary dd {
-  min-width: 0;
-  overflow: hidden;
-  color: var(--color-text);
-  font-family: var(--font-mono);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.effective-model-summary span {
-  white-space: nowrap;
 }
 
 .model-heading {

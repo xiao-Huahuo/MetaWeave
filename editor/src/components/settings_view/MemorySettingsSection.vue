@@ -45,12 +45,13 @@ defineEmits<{
       <span class="hint-text">关闭后跳过固定召回，并移除 Agent 的长期记忆工具</span>
     </div>
     <h3>系统提示</h3>
-    <div class="input-row">
-      <input
+    <div class="input-row memory-input-row">
+      <textarea
         v-model="newPromptContent"
+        rows="3"
+        aria-label="输入系统指令"
         placeholder="输入系统指令"
-        @keydown.enter="$emit('addPrompt')"
-      />
+      ></textarea>
       <button class="add-btn" :disabled="addingPrompt || !newPromptContent.trim()" @click="$emit('addPrompt')">
         {{ addingPrompt ? '...' : '添加' }}
       </button>
@@ -64,12 +65,13 @@ defineEmits<{
     </ul>
 
     <h3 class="memory-title">记忆注入</h3>
-    <div class="input-row">
-      <input
+    <div class="input-row memory-input-row">
+      <textarea
         v-model="newMemoryContent"
+        rows="3"
+        aria-label="输入记忆内容"
         placeholder="输入记忆内容"
-        @keydown.enter="$emit('addMemory')"
-      />
+      ></textarea>
       <button class="add-btn" :disabled="addingMemory || !newMemoryContent.trim()" @click="$emit('addMemory')">
         {{ addingMemory ? '...' : '添加' }}
       </button>
@@ -113,6 +115,43 @@ defineEmits<{
 </template>
 
 <style scoped>
+.memory-input-row {
+  flex-direction: column;
+  gap: var(--space-8);
+}
+
+.memory-input-row textarea {
+  flex: none;
+  width: 100%;
+  min-width: 0;
+  height: auto;
+  min-height: 88px;
+  padding: var(--space-8) var(--space-10);
+  line-height: 1.5;
+  resize: vertical;
+}
+
+.memory-input-row .add-btn {
+  align-self: flex-start;
+}
+
+/* Keep a one-line capsule's radius as explicit or wrapped lines increase height. */
+.entry-row {
+  align-self: flex-start;
+  min-width: 0;
+  max-width: 100%;
+  border-radius: calc(max(1lh, 20px) / 2 + var(--space-4));
+  background: color-mix(in srgb, var(--color-surface) 94%, var(--color-text) 6%);
+  font-size: calc(12px * var(--font-scale));
+  line-height: 1.5;
+}
+
+.entry-text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
 .hint-text {
   display: none;
 }

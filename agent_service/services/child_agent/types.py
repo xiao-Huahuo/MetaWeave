@@ -8,7 +8,7 @@
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass, field
 from enum import StrEnum
 from threading import Event, Lock
@@ -104,6 +104,7 @@ class ChildAgentExecutionContext:
 
     cancellation: 协作式停止信号,执行器应在安全检查点调用 `raise_if_stopped`。
     updates: 父 Agent 发来的上下文更新由管理器写入,执行器可调用 `drain_updates` 读取。
+    tool_catalog_callback: 外部 Runtime 握手后由管理器发布真实工具名和能力事件。
     """
 
     run_id: str
@@ -121,6 +122,7 @@ class ChildAgentExecutionContext:
     name: str = ""
     provider: str = "native"
     workspace_root: str = ""
+    tool_catalog_callback: Callable[[frozenset[str]], None] | None = field(default=None, repr=False)
     _updates: list[Mapping[str, Any]] = field(default_factory=list)
     _updates_lock: Lock = field(default_factory=Lock)
 
@@ -129,6 +131,14 @@ class ChildAgentExecutionContext:
 
         if self.cancellation.is_set():
             raise ChildAgentStopped("子 Agent 已收到停止信号。")
+
+    def publish_tools(self, tools: frozenset[str]) -> None:
+        """发布外部 Runtime 握手返回的真实目录；管理器负责原子更新与事件。"""
+
+        if self.tool_catalog_callback is not None:
+            self.tool_catalog_callback(tools)
+        else:
+            self.allowed_tools = tools
 
     def drain_updates(self) -> list[Mapping[str, Any]]:
         """读取并清空父 Agent 发来的上下文更新。"""

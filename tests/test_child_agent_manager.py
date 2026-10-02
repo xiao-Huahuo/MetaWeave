@@ -13,6 +13,7 @@ import time
 
 import pytest
 
+from agent_service.services.child_agent import manager as manager_module
 from agent_service.services.child_agent import (
     ChildAgentContract,
     ChildAgentEvent,
@@ -152,6 +153,76 @@ def test_child_completion_wakeup_claim_is_once_per_turn() -> None:
         manager.close()
 
 
+def test_concurrent_dsh_continuations_reserve_only_one_turn(monkeypatch: pytest.MonkeyPatch) -> None:
+    """两个续问同时通过旧终态检查时，只能预留和执行一个新 Turn。"""
+
+    manager = ChildAgentManager(max_workers=2)
+    reserving = Event()
+    competing = Event()
+    release_reservation = Event()
+    release_turn = Event()
+    outcomes: list[str] = []
+    prompts: list[str] = []
+    callers: list[Thread] = []
+
+    def execute(context):
+        """保持新 Turn 活动，防止另一续问在首个新 Turn 完成后合法启动。"""
+
+        prompts.append(context.goal)
+        if context.goal != "初始任务":
+            release_turn.wait(timeout=2)
+        return context.goal
+
+    def reserve_cancellation():
+        """在检查终态与写入 CREATED 之间暂停第一个续问。"""
+
+        if not reserving.is_set():
+            reserving.set()
+            release_reservation.wait(timeout=2)
+        else:
+            competing.set()
+        return Event()
+
+    def continue_turn(run_id: str, prompt: str) -> None:
+        """记录续问是否真正被接受。"""
+
+        try:
+            manager.continue_child(run_id=run_id, prompt=prompt)
+            outcomes.append("accepted")
+        except RuntimeError:
+            outcomes.append("rejected")
+
+    try:
+        record = manager.spawn(
+            contract=_contract(goal="初始任务", mode="foreground", provider="dsh"),
+            executor=execute,
+        )
+        monkeypatch.setattr(manager_module, "Event", reserve_cancellation)
+        callers = [
+            Thread(target=continue_turn, args=(record.run_id, "续问 A")),
+            Thread(target=continue_turn, args=(record.run_id, "续问 B")),
+        ]
+        callers[0].start()
+        assert reserving.wait(timeout=1)
+        callers[1].start()
+        competing.wait(timeout=0.2)
+        release_reservation.set()
+        for caller in callers:
+            caller.join(timeout=1)
+        assert all(not caller.is_alive() for caller in callers)
+        assert sorted(outcomes) == ["accepted", "rejected"]
+        release_turn.set()
+        manager.close()
+        assert len(prompts) == 2
+    finally:
+        release_reservation.set()
+        release_turn.set()
+        for caller in callers:
+            if caller.ident is not None:
+                caller.join(timeout=1)
+        manager.close()
+
+
 def test_background_children_run_concurrently_and_queue_results() -> None:
     """后台子 Agent 不阻塞父调用,并且同一父级可并发收集多个结果。"""
 
@@ -188,6 +259,125 @@ def test_background_children_run_concurrently_and_queue_results() -> None:
         assert {result.result for result in collected} == {"任务 A", "任务 B"}
     finally:
         release.set()
+        manager.close()
+
+
+def test_dsh_continuation_submission_failure_reaches_terminal_state(monkeypatch: pytest.MonkeyPatch) -> None:
+    """线程池拒绝续问提交时，新 Turn 必须进入失败终态并投递失败结果。"""
+
+    manager = ChildAgentManager()
+
+    def reject_submission(*args, **kwargs):
+        """模拟关闭或异常退出后的线程池提交失败。"""
+
+        raise RuntimeError("test submission rejected")
+
+    try:
+        record = manager.spawn(
+            contract=_contract(mode="foreground", provider="dsh"),
+            executor=lambda context: "完成",
+        )
+        monkeypatch.setattr(manager._executor, "submit", reject_submission)
+        with pytest.raises(RuntimeError):
+            manager.continue_child(run_id=record.run_id, prompt="继续任务")
+        assert record.status == ChildAgentStatus.FAILED
+        assert record.result is not None
+        results = manager.drain_results("parent_1")
+        assert len(results) == 1
+        assert results[0].status == ChildAgentStatus.FAILED
+    finally:
+        manager.close()
+
+
+def test_terminal_publication_waits_for_callback_before_continuation() -> None:
+    """终态落库完成后才允许结果消费、自动唤醒和新父 run 续问。"""
+
+    completing = Event()
+    release_completion = Event()
+    persisted: list[tuple[str, str]] = []
+
+    def on_event(event_name, record):
+        """模拟旧 Turn 的慢数据库回调，记录真实完成的写入顺序。"""
+
+        if event_name == "child_agent.completed":
+            if not completing.is_set():
+                completing.set()
+                release_completion.wait(timeout=2)
+            persisted.append((record.contract.parent_run_id, record.result.summary))
+
+    manager = ChildAgentManager(max_workers=2, event_callback=on_event)
+    try:
+        record = manager.spawn(
+            contract=_contract(provider="dsh", session_id="session-dsh"),
+            executor=lambda context: context.goal,
+        )
+        assert completing.wait(timeout=1)
+        assert record.status == ChildAgentStatus.RUNNING
+        assert manager.claim_completion_wakeup(record.run_id) is False
+        assert manager.wait_for_children(parent_run_id="parent_1", timeout_seconds=0.05) is None
+        events = manager.drain_events_for_session("session-dsh")
+        assert all(event.status != ChildAgentStatus.COMPLETED for event in events)
+        with pytest.raises(RuntimeError, match="仍在运行"):
+            manager.continue_child(run_id=record.run_id, prompt="续问", parent_run_id="new-parent")
+        assert record.contract.parent_run_id == "parent_1"
+        release_completion.set()
+        manager._futures[record.run_id].result(timeout=1)
+        result = manager.wait_for_children(parent_run_id="parent_1", timeout_seconds=1)
+        assert result is not None
+        assert result.summary == "完成测试任务"
+        events = manager.drain_events_for_session("session-dsh")
+        assert len(events) == 1
+        assert events[0].status == ChildAgentStatus.COMPLETED
+        assert manager.claim_completion_wakeup(record.run_id) is True
+        assert manager.claim_completion_wakeup(record.run_id) is False
+        manager.continue_child(
+            run_id=record.run_id,
+            prompt="续问",
+            parent_run_id="new-parent",
+            mode="foreground",
+        )
+        assert persisted == [("parent_1", "完成测试任务"), ("new-parent", "续问")]
+        assert manager.claim_completion_wakeup(record.run_id) is True
+        assert manager.claim_completion_wakeup(record.run_id) is False
+    finally:
+        release_completion.set()
+        manager.close()
+
+
+def test_terminal_callback_failure_still_publishes_result_and_event() -> None:
+    """终态回调异常也必须释放活动态并发布一次结果、通知及唤醒资格。"""
+
+    snapshots = []
+
+    def on_event(event_name, record):
+        """只在终态通知模拟持久化失败。"""
+
+        if event_name == "child_agent.completed":
+            snapshots.append(record)
+            raise RuntimeError("test terminal callback failed")
+
+    manager = ChildAgentManager(event_callback=on_event)
+    try:
+        with pytest.raises(RuntimeError, match="test terminal callback failed"):
+            manager.spawn(
+                contract=_contract(mode="foreground", session_id="session-dsh"),
+                executor=lambda context: "完成",
+            )
+        record = manager.get(snapshots[0].run_id)
+        assert record is not None
+        assert record.status == ChildAgentStatus.COMPLETED
+        result = manager.wait_for_children(parent_run_id="parent_1", timeout_seconds=1)
+        assert result is not None
+        assert result.result == "完成"
+        events = manager.drain_events_for_session("session-dsh")
+        assert [event.status for event in events] == [
+            ChildAgentStatus.CREATED,
+            ChildAgentStatus.RUNNING,
+            ChildAgentStatus.COMPLETED,
+        ]
+        assert manager.claim_completion_wakeup(record.run_id) is True
+        assert manager.claim_completion_wakeup(record.run_id) is False
+    finally:
         manager.close()
 
 

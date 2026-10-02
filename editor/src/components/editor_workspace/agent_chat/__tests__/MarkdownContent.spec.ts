@@ -9,6 +9,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { mount } from '@vue/test-utils'
 import { createPinia, setActivePinia } from 'pinia'
 import { nextTick } from 'vue'
+import markdownIcon from 'material-icon-theme/icons/markdown.svg?url'
+import pythonIcon from 'material-icon-theme/icons/python.svg?url'
+import vueIcon from 'material-icon-theme/icons/vue.svg?url'
+import pdfIcon from 'material-icon-theme/icons/pdf.svg?url'
+import imageIcon from 'material-icon-theme/icons/image.svg?url'
 
 import MarkdownContent from '../MarkdownContent.vue'
 import { useWorkspaceStore } from '@/stores/workspace'
@@ -54,6 +59,68 @@ describe('MarkdownContent source links', () => {
     expect(sourceLink.text()).toBe('01_climate_change_nasa.md')
     await sourceLink.trigger('click')
     expect(onNavigateSource).toHaveBeenCalledWith('1/3/01_climate_change_nasa.md')
+    expect(sourceLink.get('.markdown-link-icon img').attributes('src')).toBe(markdownIcon)
+  })
+
+  it('uses target file types for relative, absolute, encoded, and attachment Markdown links', async () => {
+    const wrapper = mount(MarkdownContent, {
+      props: { content: [
+        '[AgentCore](D:/Projects/agent_core.py:203)',
+        '[组件](./src/View.vue)',
+        '[文档](file:///D:/Knowledge/%E8%B5%84%E6%96%99.pdf)',
+        '[附件](session-upload://u1/library/s1/image.png)',
+        '[Windows](D:%5C资料%5Cmain.py)',
+      ].join(' · ') },
+    })
+    const links = wrapper.findAll('a')
+    expect(links.map((link) => link.text())).toEqual(['AgentCore', '组件', '文档', '附件', 'Windows'])
+    expect(links.map((link) => link.get('.markdown-link-icon img').attributes('src'))).toEqual([
+      pythonIcon, vueIcon, pdfIcon, imageIcon, pythonIcon,
+    ])
+    expect(links[0]?.attributes('href')).toBe('D:/Projects/agent_core.py:203')
+  })
+
+  it('requests only the website origin and keeps a fallback on favicon failure', async () => {
+    const wrapper = mount(MarkdownContent, {
+      props: { content: '[网站](https://github.com/private/path?token=secret#part)' },
+    })
+    const image = wrapper.get('.markdown-link-icon img')
+    const iconUrl = new URL(image.attributes('src'))
+    expect(iconUrl.origin).toBe('https://t0.gstatic.com')
+    expect(iconUrl.searchParams.get('url')).toBe('https://github.com')
+    expect(image.attributes('referrerpolicy')).toBe('no-referrer')
+    await image.trigger('error')
+    expect(wrapper.find('.markdown-link-icon img').exists()).toBe(false)
+    expect(wrapper.find('.markdown-link-icon__fallback').exists()).toBe(true)
+    const workspaceStore = useWorkspaceStore()
+    workspaceStore.tree = [{ name: 'added.md', path: 'added.md', isDir: false }]
+    await nextTick()
+    await new Promise((resolve) => window.setTimeout(resolve, 0))
+    expect(wrapper.findAll('.markdown-link-icon')).toHaveLength(1)
+  })
+
+  it('keeps icon clicks out of image preview and excludes icons from its gallery', async () => {
+    const workspaceStore = useWorkspaceStore()
+    workspaceStore.tree = [{ name: 'source.md', path: 'source.md', isDir: false }]
+    const onNavigateSource = vi.fn<(uri: string) => void>()
+    const wrapper = mount(MarkdownContent, {
+      props: { content: 'source.md\n\n![插图](https://example.com/diagram.png)', onNavigateSource },
+    })
+    await new Promise((resolve) => window.setTimeout(resolve, 0))
+    await wrapper.get('.source-file-link img').trigger('click')
+    expect(onNavigateSource).toHaveBeenCalledWith('source.md')
+    expect(openImagePreview).not.toHaveBeenCalled()
+    await wrapper.get('p > img').trigger('click')
+    expect(openImagePreview).toHaveBeenCalledWith([{ src: 'https://example.com/diagram.png', alt: '插图' }], 0)
+  })
+
+  it('keeps dangerous links sanitized and leaves fragment, mail, image, and code links undecorated', () => {
+    const wrapper = mount(MarkdownContent, {
+      props: { content: '[锚点](#part) [邮件](mailto:hello@example.com) [![图](https://example.com/p.png)](https://example.com)\n\n`[代码](https://github.com)`\n\n<a href="javascript:alert(1)">危险</a>' },
+    })
+    expect(wrapper.find('.markdown-link-icon').exists()).toBe(false)
+    expect(wrapper.find('a[href^="javascript:"]').exists()).toBe(false)
+    expect(wrapper.findAll('img')).toHaveLength(1)
   })
 
   it('opens every four-library K citation through the shared result sidebar', async () => {
@@ -301,6 +368,21 @@ describe('MarkdownContent streaming code highlight', () => {
 
     expect(wrapper.findAll('.markdown-body p')[0]?.element).toBe(stableParagraph)
     expect(wrapper.findAll('.markdown-body p')[1]?.text()).toContain('正在生成更多内容')
+  })
+
+  it('decorates streaming links without duplicating icons or replacing completed blocks', async () => {
+    const prefix = '[网站](https://github.com)\n\n'
+    const wrapper = mount(MarkdownContent, {
+      props: { content: prefix + '[脚本](./main.py)', isStreaming: true },
+    })
+    const stableLink = wrapper.get('a[href="https://github.com"]').element
+    expect(wrapper.findAll('.markdown-link-icon')).toHaveLength(2)
+    await wrapper.setProps({ content: prefix + '[脚本](./main.py) 后续内容' })
+    expect(wrapper.get('a[href="https://github.com"]').element).toBe(stableLink)
+    expect(wrapper.findAll('.markdown-link-icon')).toHaveLength(2)
+    await wrapper.setProps({ isStreaming: false })
+    await new Promise((resolve) => window.setTimeout(resolve, 0))
+    expect(wrapper.findAll('.markdown-link-icon')).toHaveLength(2)
   })
 
   it('removes the stream cursor without altering the final markdown content', async () => {

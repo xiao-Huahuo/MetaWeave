@@ -12,7 +12,6 @@ import re
 import threading
 import time
 from collections.abc import Iterator, Sequence
-from dataclasses import replace
 from typing import Any
 from uuid import uuid4
 
@@ -105,26 +104,29 @@ class ChildAgentRuntimeMixin:
 
         records = self.child_agent_manager.list_children_for_session(session_id)
         active_children = [self._child_record_to_dict(record) for record in records]
-        event_children = self._load_child_agents_from_messages(session_id)
         saved_children = self._load_session_state_list(session_id, "child_agents")
+        event_children = self._load_child_agents_from_messages(session_id, fallback_children=saved_children)
         # Live records win so the panel never renders a stale terminal status while a child is running.
         children_by_run_id = {
             str(child.get("run_id") or ""): self._with_child_conversation_session(session_id, child)
-            for child in [*event_children, *saved_children]
+            for child in event_children
         }
         children_by_run_id.update({child["run_id"]: child for child in active_children})
         return list(children_by_run_id.values())
 
-    def _load_child_agents_from_messages(self, session_id: str) -> list[dict[str, Any]]:
-        """从持久化工具结果和生命周期消息恢复被旧状态归一化丢失的子 Agent。"""
+    def _load_child_agents_from_messages(
+        self, session_id: str, *, fallback_children: Sequence[dict[str, Any]] = (),
+    ) -> list[dict[str, Any]]:
+        """正式生命周期事件优先；快照与旧工具返回仅补齐历史缺失字段。"""
 
         if self.session_service is None:
-            return []
+            return list(fallback_children)
         session = self.session_service.get_session(session_id)
         message_service = self._get_message_service()
         if session is None or message_service is None:
-            return []
-        children: dict[str, dict[str, Any]] = {}
+            return list(fallback_children)
+        children = {str(child.get("run_id") or ""): child for child in fallback_children}
+        authoritative_runs = set(children)
         messages = message_service.list_session_messages(
             user_id=session.user_id,
             session_id=session_id,
@@ -137,6 +139,8 @@ class ChildAgentRuntimeMixin:
                 try:
                     parsed = json.loads(message.content)
                     candidate = parsed if isinstance(parsed, dict) and parsed.get("run_id") else None
+                    if candidate is not None and str(candidate["run_id"]) in authoritative_runs:
+                        candidate = {**candidate, **children[str(candidate["run_id"])]}
                 except (json.JSONDecodeError, TypeError):
                     candidate = None
             metadata = message.metadata_json or {}
@@ -144,6 +148,7 @@ class ChildAgentRuntimeMixin:
             child = event.get("child") if isinstance(event, dict) else None
             if isinstance(child, dict) and child.get("run_id"):
                 candidate = {**(candidate or children.get(str(child["run_id"]), {})), **child}
+                authoritative_runs.add(str(child["run_id"]))
             if candidate is None:
                 continue
             run_id = str(candidate.get("run_id") or "")
@@ -173,7 +178,7 @@ class ChildAgentRuntimeMixin:
         """将子 Agent 记录转为 REST/gRPC/前端共用的普通字典。"""
 
         result = record.result
-        return {
+        child = {
             "run_id": record.run_id,
             "conversation_session_id": SessionService.child_agent_session_id(
                 record.contract.session_id,
@@ -193,9 +198,15 @@ class ChildAgentRuntimeMixin:
             "summary": result.summary if result is not None else "",
             "error": result.error if result is not None else None,
         }
+        return ChildAgentRuntimeMixin._with_child_conversation_session(record.contract.session_id, child)
     @staticmethod
     def _with_child_conversation_session(session_id: str, child: dict[str, Any]) -> dict[str, Any]:
-        """补全旧快照缺失的正式子对话 Session ID。"""
+        """补全旧子对话 ID，并把旧 DSH 虚构 aliases 目录作为未知能力呈现。"""
+
+        if child.get("provider") == "dsh" and any(
+            str(tool).startswith("dsh.") for tool in child.get("allowed_tools") or []
+        ):
+            child = {**child, "allowed_tools": []}
 
         run_id = str(child.get("run_id") or "")
         if not run_id:
@@ -425,10 +436,8 @@ class ChildAgentRuntimeMixin:
             if definition.name not in {"spawn_child_agent", "wait_for_child_agents", "continue_child_agent"}
         )
         if provider == "dsh":
-            parent_tools = frozenset(
-                {"dsh.read", "dsh.search"}
-                | ({"dsh.edit", "dsh.pwsh", "dsh.git", "dsh.test"} if access_mode != "readonly" else set())
-            )
+            # 真目录将在 Runtime 握手后发布；DSH 不继承 MW 原生工具名。
+            parent_tools = frozenset()
         contract = ChildAgentContract(
             goal=goal,
             parent_run_id=parent_run_id,
@@ -619,11 +628,12 @@ class ChildAgentRuntimeMixin:
             )
         if record.contract.session_id != session_id or record.contract.user_id != user_id:
             raise PermissionError(f"当前会话不能继续子 Agent {run_id}")
-        if record.contract.parent_run_id != parent_run_id:
-            record.contract = replace(record.contract, parent_run_id=parent_run_id)
-            assert record.context is not None
-            record.context.parent_run_id = parent_run_id
-        continued = self.child_agent_manager.continue_child(run_id=run_id, prompt=prompt, mode=mode)
+        continued = self.child_agent_manager.continue_child(
+            run_id=run_id,
+            prompt=prompt,
+            mode=mode,
+            parent_run_id=parent_run_id,
+        )
         return json.dumps(self._child_record_to_dict(continued), ensure_ascii=False)
 
     def _require_dsh_coding_agent_enabled(self, *, user_id: str) -> None:

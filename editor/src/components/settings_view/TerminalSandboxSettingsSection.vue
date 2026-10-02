@@ -254,7 +254,6 @@ function save() {
 
 .segment-table-header {
   min-height: 44px;
-  border-bottom: 1px solid var(--color-border);
   background: var(--color-surface-raised);
   color: var(--color-text-muted);
   font-size: calc(11px * var(--font-scale));
@@ -263,12 +262,7 @@ function save() {
 
 .segment-row {
   min-height: 38px;
-  border-bottom: 1px solid color-mix(in srgb, var(--color-border) 72%, transparent);
   background: transparent;
-}
-
-.segment-row:last-child {
-  border-bottom: 0;
 }
 
 .segment-row:hover {

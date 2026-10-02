@@ -13,6 +13,7 @@ import DOMPurify from 'dompurify'
 import { marked } from 'marked'
 import { hljs, isHighlightableLanguage } from '../codeHighlight'
 import { renderMathInHtml } from '../mathRender'
+import { decorateMarkdownLinks } from './markdownLinkIcons'
 
 import { useWorkspaceStore } from '@/stores/workspace'
 import { useFavoritesStore } from '@/stores/favorites'
@@ -122,6 +123,8 @@ function renderMarkdownHtml(source: string): string {
   const purifyConfig = {
     ALLOWED_ATTR: ['data-citation-idx', 'class', 'src', 'alt', 'referrerpolicy', 'style', 'href'],
     ADD_TAGS: ['sup', 'img'],
+    // Keep local file/attachment links while retaining DOMPurify's unsafe-protocol rejection.
+    ALLOWED_URI_REGEXP: /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|sms|cid|xmpp|matrix|file|session-upload):|[a-z]:(?:[\\/]|%5c|%2f)|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i,
   }
   // 代码高亮在 renderer 内完成:代码 fence 内的 HTML 由 hljs 转义保留(不再被剥离),
   // 裸 HTML 由 DOMPurify 统一净化防 XSS。
@@ -142,6 +145,7 @@ let fenceLength = 0
 function createMarkdownFragment(source: string): DocumentFragment {
   const template = document.createElement('template')
   template.innerHTML = renderMarkdownHtml(source)
+  decorateMarkdownLinks(template.content)
   return template.content
 }
 
@@ -221,6 +225,7 @@ function renderFinalContent() {
   const root = contentRef.value
   if (!root) return
   root.innerHTML = renderMarkdownHtml(props.content)
+  decorateMarkdownLinks(root)
   activeNodes = []
   streamedSource = ''
   pendingBlock = ''
@@ -251,10 +256,10 @@ const sourceLinkSignature = computed(() => {
 function handleClick(event: MouseEvent) {
   const target = event.target as HTMLElement
   // image preview
-  if (target.tagName === 'IMG' && target instanceof HTMLImageElement && target.src) {
+  if (target.tagName === 'IMG' && target instanceof HTMLImageElement && target.src && !target.closest('.markdown-link-icon')) {
     const root = contentRef.value
     if (root) {
-      const allImgs = root.querySelectorAll<HTMLImageElement>('img[src]')
+      const allImgs = root.querySelectorAll<HTMLImageElement>('img[src]:not(.markdown-link-icon img)')
       const items: ImagePreviewItem[] = []
       let clickIndex = -1
       allImgs.forEach((img, i) => {
@@ -553,6 +558,7 @@ async function highlightCodeBlocks() {
   linkSourceNames()
   const root = contentRef.value
   if (!root) return
+  decorateMarkdownLinks(root)
   // 代码高亮已在 sanitizedHtml(renderer)中随内容增量完成,此处只做 DOM 增强:
   // 文件名链接化与复制按钮挂接(流式结束后 v-html 不再更新,不会被冲掉)。
   // Add copy buttons to pre blocks
@@ -687,6 +693,43 @@ watch(sourceLinkSignature, () => {
   color: var(--color-accent);
   text-decoration: underline;
   text-underline-offset: 2px;
+  transition: color var(--transition-fast);
+}
+
+.markdown-body :deep(a:hover),
+.markdown-body :deep(a:focus-visible),
+.markdown-body :deep(.source-file-link:hover),
+.markdown-body :deep(.source-file-link:focus-visible) {
+  color: var(--color-primary-hover);
+}
+
+/* Inline icons occupy one text-sized slot and never become image-preview targets. */
+.markdown-body :deep(.markdown-link-icon) {
+  position: relative;
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  margin-inline-end: 0.3em;
+  vertical-align: -0.125em;
+  pointer-events: none;
+  user-select: none;
+}
+
+.markdown-body :deep(.markdown-link-icon > *) {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+}
+
+.markdown-body :deep(.markdown-link-icon img) { opacity: 0; }
+.markdown-body :deep(.markdown-link-icon.is-loaded img) { opacity: 1; }
+.markdown-body :deep(.markdown-link-icon.is-loaded > :not(img)) { visibility: hidden; }
+.markdown-body :deep(.markdown-link-icon__fallback) {
+  background: currentColor;
+  mask-size: contain;
+  mask-repeat: no-repeat;
 }
 
 .markdown-body :deep(table) {
@@ -743,10 +786,7 @@ watch(sourceLinkSignature, () => {
   text-align: inherit;
   text-decoration: underline;
   text-underline-offset: 2px;
-}
-
-.markdown-body :deep(.source-file-link:hover) {
-  color: var(--color-accent);
+  transition: color var(--transition-fast);
 }
 
 .markdown-body :deep(.agent-mounted-file) {

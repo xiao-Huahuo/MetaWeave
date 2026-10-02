@@ -246,27 +246,29 @@ onMounted(loadData)
     </div>
     <p class="safety-desc">{{ data._description }}</p>
 
-    <!-- 全局开关 -->
+    <!-- 勾选表示功能开启，接口的 *_disabled 标志按反向值保存。 -->
     <div class="safety-global-toggles">
       <div class="safety-global-row" :class="{ 'safety-global-risk': sensitiveDisabled }">
-        <label class="safety-global-label">敏感词库</label>
+        <label class="safety-global-label" for="sensitive-words-enabled">敏感词库</label>
         <input
-          :checked="sensitiveDisabled"
+          id="sensitive-words-enabled"
+          :checked="!sensitiveDisabled"
           type="checkbox"
-          class="safety-toggle safety-toggle-danger"
-          @change="data._sensitive_words_disabled = ($event.target as HTMLInputElement).checked"
+          class="safety-toggle"
+          @change="data._sensitive_words_disabled = !($event.target as HTMLInputElement).checked"
         />
         <span class="safety-global-text">
           {{ sensitiveDisabled ? '已关闭 — 敏感词检查通过,不再拦截' : '开启中' }}
         </span>
       </div>
       <div class="safety-global-row" :class="{ 'safety-global-risk': safetyDisabled }">
-        <label class="safety-global-label">安全审核系统</label>
+        <label class="safety-global-label" for="safety-audit-enabled">安全审核系统</label>
         <input
-          :checked="safetyDisabled"
+          id="safety-audit-enabled"
+          :checked="!safetyDisabled"
           type="checkbox"
-          class="safety-toggle safety-toggle-danger"
-          @change="data._safety_disabled = ($event.target as HTMLInputElement).checked"
+          class="safety-toggle"
+          @change="data._safety_disabled = !($event.target as HTMLInputElement).checked"
         />
         <span class="safety-global-text">
           {{ safetyDisabled ? '已关闭 — 三大审核层全部绕过' : '开启中' }}
@@ -488,10 +490,6 @@ onMounted(loadData)
   padding: var(--space-6) 0;
 }
 
-.safety-global-row + .safety-global-row {
-  border-top: 1px solid var(--color-border);
-}
-
 .safety-global-label {
   flex-shrink: 0;
   width: 110px;
@@ -638,16 +636,6 @@ onMounted(loadData)
   left: 14px;
   background: var(--color-primary);
   box-shadow: none;
-}
-
-.safety-toggle-danger:checked::before {
-  background: var(--color-danger) !important;
-}
-
-.safety-toggle-danger:checked::after {
-  background: var(--color-danger) !important;
-  left: 14px;
-  box-shadow: none !important;
 }
 
 .safety-subsection {
@@ -802,10 +790,6 @@ onMounted(loadData)
 
 .safety-actions {
   display: none;
-}
-
-.safety-global-row + .safety-global-row {
-  border-top: 0;
 }
 
 .secondary-model-btn {

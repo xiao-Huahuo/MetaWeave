@@ -123,8 +123,8 @@ scripts\build_dsh_sdk.bat D:\Projects\Python\deepseek-harness
 
 ```text
 resources/dsh/sdk/
-├── dsh-runtime-win-x64-<version>.zip
-└── dsh-runtime-win-x64-<version>.manifest.json
+├── sdk.zip
+└── sdk.manifest.json
 ```
 
 升级源码版本时必须同时完成以下步骤：
@@ -133,6 +133,8 @@ resources/dsh/sdk/
 2. 以新提交为基线重新生成并审核 `resources/dsh/patches/mw-runtime.patch`，解决无法应用或行为变化的部分。
 3. 必要时更新 `runtime_version`与 `node_major`，完成 DSH协议、只读 Web和 Windows Runtime测试。
 4. 运行一键脚本，提交新的锁文件、补丁、ZIP和 manifest；四者必须一起更新。
+
+制品始终使用 `sdk.zip` 与 `sdk.manifest.json`，默认安装位置为 `runtime/assets/sdks/dsh/sdk`。manifest中的 `version`用于兼容性与升级校验；更新时替换当前一套 SDK并清理旧安装目录，不按版本名并存多套 SDK，业务 Conversation历史单独保留。
 
 不要手工修改 manifest中的大小、归档哈希或补丁哈希；脚本会根据真实文件生成并复核。
 

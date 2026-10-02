@@ -34,6 +34,8 @@
 
 - id: tool-fs
   disabled: false
+  config:
+    readOnly: !!js process.env.DSH_PERMISSION_MODE === 'read-only'
 
 - id: tool-pwsh
   disabled: !!js process.env.DSH_PERMISSION_MODE === 'read-only'
@@ -68,4 +70,4 @@
 - insert:
     - id: sdk-jsonrpc-server
       name: '@deepseek-ai/dsh-sdk-jsonrpc-server'
-      inject: [agents, sessions]
+      inject: [agents, sessions, tools]

@@ -1,0 +1,46 @@
+{
+  "version": "0.1.0-rc.5+mw.2",
+  "source_repository": "https://github.com/deepseek-ai/deepseek-harness.git",
+  "source_commit": "47f943859bef60e4160492346772ded9b24f765a",
+  "patch_file": "resources/dsh/patches/mw-runtime.patch",
+  "patch_sha256": "e158b60871b2e4003c53f2cc7bdaa77ad27139847d6da78e513bfee192c35148",
+  "platform": "windows",
+  "arch": "x64",
+  "archive_file": "sdk.zip",
+  "archive_sha256": "a45d879133637ac34345fa9a672e066c5d553b1931255d2098689297e76066ac",
+  "archive_size_bytes": 66222943,
+  "installed_size_bytes": 191583631,
+  "executable": "node/node.exe",
+  "launcher": "dsh-job-launcher.exe",
+  "cordis_configs": {
+    "readonly": "config/mw.patch.yml",
+    "sandbox": "config/mw.patch.yml",
+    "full_access": "config/mw.patch.yml"
+  },
+  "launch_args": {
+    "readonly": [
+      "{runtime}",
+      "{root}/runtime/node/node_modules/@deepseek-ai/dsh/lib/bin.js",
+      "--profile",
+      "mw",
+      "--patch",
+      "{root}/config/mw.patch.yml"
+    ],
+    "sandbox": [
+      "{runtime}",
+      "{root}/runtime/node/node_modules/@deepseek-ai/dsh/lib/bin.js",
+      "--profile",
+      "mw",
+      "--patch",
+      "{root}/config/mw.patch.yml"
+    ],
+    "full_access": [
+      "{runtime}",
+      "{root}/runtime/node/node_modules/@deepseek-ai/dsh/lib/bin.js",
+      "--profile",
+      "mw",
+      "--patch",
+      "{root}/config/mw.patch.yml"
+    ]
+  }
+}

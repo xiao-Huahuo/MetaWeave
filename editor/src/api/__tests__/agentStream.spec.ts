@@ -21,6 +21,25 @@ vi.mock('@/api/client', async (importOriginal) => ({
 }))
 
 describe('Agent stream API client', () => {
+  it('keeps consecutive memory requests separate across conversations', () => {
+    const firstCall = mocks.streamLines.mock.calls.length
+    streamPrompt('memory-user', 'memory-session-1', '请记住：我偏好简洁回答。')
+    streamPrompt('memory-user', 'memory-session-2', '请记住：我的研究方向是 Transformer。')
+
+    const requests = mocks.streamLines.mock.calls.slice(firstCall)
+    expect(requests.map(([url]) => url)).toEqual(['/agent/stream', '/agent/stream'])
+    expect(requests.map(([, request]) => JSON.parse(String(request.body)))).toEqual([
+      {
+        user_id: 'memory-user', session_id: 'memory-session-1', prompt: '请记住：我偏好简洁回答。',
+        agent_mode: 'auto', agent_access_mode: 'sandbox',
+      },
+      {
+        user_id: 'memory-user', session_id: 'memory-session-2', prompt: '请记住：我的研究方向是 Transformer。',
+        agent_mode: 'auto', agent_access_mode: 'sandbox',
+      },
+    ])
+  })
+
   it('posts the complete investigation request to the backend tool loop', () => {
     streamPrompt('user-1', 'session-1', '调查知识库相关内容', {
       agentMode: 'plan', agentAccessMode: 'readonly',

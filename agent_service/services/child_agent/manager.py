@@ -15,6 +15,7 @@ from __future__ import annotations
 from collections import defaultdict
 from collections.abc import Callable, Mapping
 from concurrent.futures import Future, ThreadPoolExecutor
+from dataclasses import replace
 from queue import Empty, Queue
 from threading import Event, Lock
 import time
@@ -107,7 +108,10 @@ class ChildAgentManager:
         if self._ACCESS_RANK[effective_child_access] > self._ACCESS_RANK[effective_parent_access]:
             raise PermissionError("子 Agent 权限不能高于父 Agent 权限。")
 
-        if contract.allowed_tools is None:
+        if contract.provider == "dsh":
+            # DSH 工具由独立 Runtime 注册，握手前不能借用父工具或猜测 aliases。
+            effective_tools = frozenset()
+        elif contract.allowed_tools is None:
             effective_tools = parent_tools or frozenset()
         elif parent_tools is None:
             effective_tools = frozenset(contract.allowed_tools)
@@ -131,6 +135,7 @@ class ChildAgentManager:
             name=contract.name,
             provider=contract.provider,
             workspace_root=contract.workspace_root,
+            tool_catalog_callback=(lambda tools: self._publish_tools(run_id, tools)) if contract.provider == "dsh" else None,
         )
         record = ChildAgentRecord(
             run_id=run_id,
@@ -146,38 +151,49 @@ class ChildAgentManager:
             self._result_queues[contract.parent_run_id]
         self._emit("child_agent.created", record)
 
-        future = self._executor.submit(self._run, record, executor)
-        with self._lock:
-            self._futures[run_id] = future
+        future = self._submit(record, executor)
         if contract.mode == "foreground":
             future.result()
         return record
 
-    def continue_child(self, *, run_id: str, prompt: str, mode: str = "background") -> ChildAgentRecord:
-        """在同一 DSH Child Agent身份和热 Conversation中提交下一轮指令。"""
+    def continue_child(
+        self,
+        *,
+        run_id: str,
+        prompt: str,
+        mode: str = "background",
+        parent_run_id: str | None = None,
+    ) -> ChildAgentRecord:
+        """原子预留同一 DSH 的下一 Turn；新父 run 仅在预留成功时绑定。"""
 
         record = self._require_record(run_id)
-        if record.contract.provider != "dsh":
-            raise ValueError("只有 DSH 子 Agent支持持续追问")
         if not prompt.strip():
             raise ValueError("DSH 子 Agent追问不能为空")
         if mode not in {"foreground", "background"}:
             raise ValueError("子 Agent mode 必须是 foreground 或 background。")
-        if record.status in {ChildAgentStatus.CREATED, ChildAgentStatus.RUNNING}:
-            raise RuntimeError("DSH 子 Agent当前仍在运行")
-        assert record.context is not None
-        record.context.goal = prompt.strip()
-        record.context.cancellation = Event()
-        record.result = None
-        record.status = ChildAgentStatus.CREATED
+        # 状态检查和预留必须同属一个短临界区，避免重复提交同一 Conversation。
         with self._lock:
+            if self._closed:
+                raise RuntimeError("ChildAgentManager 已关闭。")
+            if record.contract.provider != "dsh":
+                raise ValueError("只有 DSH 子 Agent支持持续追问")
+            if record.status in {ChildAgentStatus.CREATED, ChildAgentStatus.RUNNING}:
+                raise RuntimeError("DSH 子 Agent当前仍在运行")
+            assert record.context is not None
+            previous_parent_run_id = record.contract.parent_run_id
+            if parent_run_id is not None:
+                record.contract = replace(record.contract, parent_run_id=parent_run_id)
+                record.context.parent_run_id = parent_run_id
+            record.context.goal = prompt.strip()
+            record.context.cancellation = Event()
+            record.result = None
+            record.status = ChildAgentStatus.CREATED
             self._turn_numbers[run_id] = self._turn_numbers.get(run_id, 0) + 1
-        self._discard_queued_results(record.contract.parent_run_id, run_id)
-        executor = self._executors[run_id]
-        self._emit("child_agent.turn_created", record)
-        future = self._executor.submit(self._run, record, executor)
-        with self._lock:
-            self._futures[run_id] = future
+            executor = self._executors[run_id]
+            created_record = replace(record)
+        self._discard_queued_results(previous_parent_run_id, run_id)
+        self._emit("child_agent.turn_created", created_record)
+        future = self._submit(record, executor)
         if mode == "foreground":
             future.result()
         return record
@@ -187,6 +203,21 @@ class ChildAgentManager:
 
         with self._lock:
             return self._records.get(run_id)
+
+    def _publish_tools(self, run_id: str, tools: frozenset[str]) -> None:
+        """原子更新 DSH 握手目录，锁外发布可持久化与流式消费的能力事件。"""
+
+        with self._lock:
+            record = self._records[run_id]
+            assert record.context is not None
+            if record.context.cancellation.is_set():
+                raise ChildAgentStopped("DSH 子 Agent 已停止，不能发布工具目录")
+            record.context.allowed_tools = tools
+            if record.effective_tools == tools:
+                return
+            record.effective_tools = tools
+            snapshot = replace(record)
+        self._emit("child_agent.capabilities", snapshot)
 
     def restore(
         self,
@@ -200,6 +231,10 @@ class ChildAgentManager:
 
         if status in {ChildAgentStatus.CREATED, ChildAgentStatus.RUNNING}:
             raise ValueError("不能从快照恢复活动中的子 Agent")
+        restored_tools = contract.allowed_tools or frozenset()
+        if contract.provider == "dsh" and any(tool.startswith("dsh.") for tool in restored_tools):
+            # 旧版目录是 MW 猜测的 aliases；等待新 Runtime 握手，不能改名假装真实。
+            restored_tools = frozenset()
         context = ChildAgentExecutionContext(
             run_id=run_id,
             parent_run_id=contract.parent_run_id,
@@ -207,7 +242,7 @@ class ChildAgentManager:
             user_id=contract.user_id,
             session_id=contract.session_id,
             agent_mode=contract.agent_mode,
-            allowed_tools=contract.allowed_tools or frozenset(),
+            allowed_tools=restored_tools,
             access_mode=contract.access_mode,
             input_refs=contract.input_refs,
             output_contract=contract.output_contract,
@@ -216,12 +251,13 @@ class ChildAgentManager:
             name=contract.name,
             provider=contract.provider,
             workspace_root=contract.workspace_root,
+            tool_catalog_callback=(lambda tools: self._publish_tools(run_id, tools)) if contract.provider == "dsh" else None,
         )
         record = ChildAgentRecord(
             run_id=run_id,
             contract=contract,
             status=status,
-            effective_tools=contract.allowed_tools or frozenset(),
+            effective_tools=restored_tools,
             effective_access_mode=contract.access_mode,
             context=context,
         )
@@ -444,11 +480,46 @@ class ChildAgentManager:
                 result=value,
                 summary=str(value) if isinstance(value, str) else "",
             )
+        self._finish(record, result)
+
+    def _finish(self, record: ChildAgentRecord, result: ChildAgentResult) -> None:
+        """先完成锁外终态落库，再原子发布终态、结果和可领取唤醒的内存事件。"""
+
+        event_name = f"child_agent.{result.status.value}"
+        completed_record = replace(record, status=result.status, result=result)
+        event = self._event_from_record(event_name, completed_record)
+        try:
+            if self._event_callback is not None:
+                self._event_callback(event_name, completed_record)
+        finally:
+            # 唯一锁顺序：manager 锁 → 已知 Queue 内部锁。两个邮箱均无界，
+            # put_nowait 只更新内存，不执行回调或等待；消费者 get 结束后才拿 manager 锁。
+            # 回调失败也必须发布终态，避免永久活动；新 Turn 此前始终不可预留。
+            with self._lock:
+                record.result = result
+                record.status = result.status
+                if event is not None:
+                    self._event_queues_by_session[event.session_id].put_nowait(event)
+                self._result_queues[result.parent_run_id].put_nowait(result)
+
+    def _submit(self, record: ChildAgentRecord, executor: ChildAgentExecutor) -> Future[Any]:
+        """锁外提交子任务；线程池拒绝时投递失败终态，避免记录永久停在 CREATED。"""
+
+        try:
+            future = self._executor.submit(self._run, record, executor)
+        except Exception as exc:
+            error = "子 Agent 任务提交失败。"
+            result = ChildAgentResult(
+                run_id=record.run_id,
+                parent_run_id=record.contract.parent_run_id,
+                status=ChildAgentStatus.FAILED,
+                error=error,
+            )
+            self._finish(record, result)
+            raise RuntimeError(error) from exc
         with self._lock:
-            self._result_queues[record.contract.parent_run_id].put(result)
-            record.result = result
-            record.status = result.status
-        self._emit(f"child_agent.{record.status.value}", record)
+            self._futures[record.run_id] = future
+        return future
 
     def _require_record(self, run_id: str) -> ChildAgentRecord:
         """读取运行记录,不存在时抛出明确错误。"""
@@ -499,28 +570,35 @@ class ChildAgentManager:
     def _emit(self, event_name: str, record: ChildAgentRecord) -> None:
         """向可选事件观察者发送状态变化。"""
 
-        session_id = record.contract.session_id
-        if session_id:
-            result = record.result
-            self._event_queues_by_session[session_id].put(
-                ChildAgentEvent(
-                    event_name=event_name,
-                    run_id=record.run_id,
-                    session_id=session_id,
-                    parent_run_id=record.contract.parent_run_id,
-                    goal=record.contract.goal,
-                    mode=record.contract.mode,
-                    status=record.status,
-                    access_mode=record.effective_access_mode,
-                    allowed_tools=tuple(sorted(record.effective_tools)),
-                    created_at=time.time(),
-                    category=record.contract.category,
-                    name=record.contract.name,
-                    provider=record.contract.provider,
-                    summary=result.summary if result is not None else "",
-                    result=result.result if result is not None else None,
-                    error=result.error if result is not None else None,
-                )
-            )
+        event = self._event_from_record(event_name, record)
+        if event is not None:
+            self._event_queues_by_session[event.session_id].put(event)
         if self._event_callback is not None:
             self._event_callback(event_name, record)
+
+    @staticmethod
+    def _event_from_record(event_name: str, record: ChildAgentRecord) -> ChildAgentEvent | None:
+        """从固定 Turn 快照构造事件，供普通通知与终态原子发布共用。"""
+
+        session_id = record.contract.session_id
+        if not session_id:
+            return None
+        result = record.result
+        return ChildAgentEvent(
+            event_name=event_name,
+            run_id=record.run_id,
+            session_id=session_id,
+            parent_run_id=record.contract.parent_run_id,
+            goal=record.contract.goal,
+            mode=record.contract.mode,
+            status=record.status,
+            access_mode=record.effective_access_mode,
+            allowed_tools=tuple(sorted(record.effective_tools)),
+            created_at=time.time(),
+            category=record.contract.category,
+            name=record.contract.name,
+            provider=record.contract.provider,
+            summary=result.summary if result is not None else "",
+            result=result.result if result is not None else None,
+            error=result.error if result is not None else None,
+        )

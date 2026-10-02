@@ -863,8 +863,8 @@ CHILD_AGENT_TOOL_DEFINITIONS: list[BuiltinToolDefinition] = [
             "properties": {
                 "goal": {"type": "string", "description": "子 Agent 必须完成的具体目标。"},
                 "mode": {"type": "string", "description": "foreground 或 background。默认 background。"},
-                "allowed_tools": {"type": "array", "description": "允许子 Agent 使用的工具名列表。"},
-                "access_mode": {"type": "string", "description": "readonly、sandbox 或 full_access。"},
+                "allowed_tools": {"type": "array", "description": "MW 原生子 Agent 的工具白名单；DSH 使用 Runtime 握手后的真实目录，不能填写 dsh.search/git/test 等不存在的别名。"},
+                "access_mode": {"type": "string", "enum": ["readonly", "sandbox", "full_access"], "description": "DSH readonly 仅 read/read_image，无 Shell 与目录枚举。Python版本、Git状态、文件计数、命令、测试和写入须用 sandbox；full_access 不受文件沙盒限制。"},
                 "input_refs": {"type": "array", "description": "传给子 Agent 的输入引用列表。"},
                 "output_contract": {"type": "object", "description": "对子 Agent 结果格式的要求。"},
                 "agent_type": {

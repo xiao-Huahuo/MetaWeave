@@ -649,7 +649,7 @@ function removeAttachment(attachment: AgentUploadedAttachment) {
 .bubble.assistant :deep(.markdown-body h5),
 .bubble.assistant :deep(.markdown-body h6),
 .bubble.assistant :deep(.markdown-body .citation-anchor),
-.bubble.assistant :deep(.markdown-body .source-file-link) {
+.bubble.assistant :deep(.markdown-body .source-file-link:not(:hover):not(:focus-visible)) {
   color: var(--color-message-bubble-text);
 }
 

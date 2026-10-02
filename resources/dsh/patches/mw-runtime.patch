@@ -11,10 +11,9 @@ index fdd4740b3c..28c7bef25a 100644
      "@deepseek-ai/dsh-skill": "workspace:^",
      "@deepseek-ai/dsh-skill-filesystem": "workspace:^",
 diff --git a/apps/web/src/main.ts b/apps/web/src/main.ts
-index feb85db15a..5e2d78bacc 100644
 --- a/apps/web/src/main.ts
 +++ b/apps/web/src/main.ts
-@@ -5,6 +5,29 @@
+@@ -5,6 +5,51 @@
   */
  import { AppWebEntry } from '@deepseek-ai/dsh-client-web'
  
@@ -39,6 +38,28 @@ index feb85db15a..5e2d78bacc 100644
 +    }
 +  `
 +  document.head.append(style)
++  /** Keep managed composers inert after initial mount and later React updates. */
++  const lockManagedInputs = (): void => {
++    for (const control of document.querySelectorAll<HTMLInputElement | HTMLTextAreaElement>('textarea, input:not([type="search"])')) {
++      if (!control.readOnly) control.readOnly = true
++      if (!control.disabled) control.disabled = true
++    }
++    for (const control of document.querySelectorAll<HTMLButtonElement>('button[type="submit"]')) {
++      if (!control.disabled) control.disabled = true
++    }
++    for (const control of document.querySelectorAll<HTMLElement>('[contenteditable="true"]')) {
++      control.contentEditable = 'false'
++    }
++  }
++  lockManagedInputs()
++  const readonlyObserver = new MutationObserver(lockManagedInputs)
++  readonlyObserver.observe(document.body, {
++    childList: true,
++    subtree: true,
++    attributes: true,
++    attributeFilter: ['disabled', 'readonly', 'contenteditable'],
++  })
++  window.addEventListener('pagehide', () => { readonlyObserver.disconnect() }, { once: true })
 +}
 +
  const el = document.getElementById('root')
@@ -250,7 +271,6 @@ index 5f0aaca21d..06c8639d30 100644
    SessionPromptParams,
    SessionPromptResult,
 diff --git a/packages/sdk/protocol/src/types.ts b/packages/sdk/protocol/src/types.ts
-index 533b5f23c5..20abcdd97e 100644
 --- a/packages/sdk/protocol/src/types.ts
 +++ b/packages/sdk/protocol/src/types.ts
 @@ -1,5 +1,5 @@
@@ -260,7 +280,7 @@ index 533b5f23c5..20abcdd97e 100644
   * request/result pairs and the four server-to-client notification payloads
   * exchanged over the newline-delimited JSON-RPC stdio transport. The server
   * plugin (`@deepseek-ai/dsh-sdk-jsonrpc-server`) and SDK clients share these shapes;
-@@ -27,7 +27,37 @@ export interface InitializeParams {
+@@ -27,7 +27,39 @@
  /** Wire-stable server identity returned by initialization. */
  export interface InitializeResult {
    /** Wire-stable server identity (`deepseek-harness-sdk-runtime`) and version. */
@@ -282,6 +302,8 @@ index 533b5f23c5..20abcdd97e 100644
 +  disposition: 'created' | 'resumed' | 'already-open'
 +  /** Last event sequence currently present on the opened Session, or -1. */
 +  durableSeq: number
++  /** Actual model-facing tool names after this agent's scoped restrictions. */
++  tools: string[]
 +}
 +
 +/** Flush one already-open SDK Session. */
@@ -299,7 +321,7 @@ index 533b5f23c5..20abcdd97e 100644
  }
  
  /** One user turn on one SDK session. */
-@@ -100,6 +130,8 @@ export interface HarnessSdkNotificationMap {
+@@ -100,6 +132,8 @@
  /** Client-to-server request methods with their param and result shapes. */
  export interface HarnessSdkRequestMap {
    'initialize': { params: InitializeParams; result: InitializeResult }
@@ -309,25 +331,23 @@ index 533b5f23c5..20abcdd97e 100644
    'shutdown': { params: undefined; result: Record<string, never> }
  }
 diff --git a/packages/sdk/server/src/index.ts b/packages/sdk/server/src/index.ts
-index 20cb892b53..fdd8e164eb 100644
 --- a/packages/sdk/server/src/index.ts
 +++ b/packages/sdk/server/src/index.ts
-@@ -18,8 +18,8 @@ import { HarnessSdkJsonRpcServer } from './server.ts'
+@@ -18,8 +18,8 @@
  export * from './server.ts'
  
  export const name = 'sdk-jsonrpc-server'
 -// Only the agent factory is required; initialize reads the optional LLM seam with ctx.get().
 -export const inject = ['agents']
 +// SessionStore owns the explicit flush barrier; initialize reads the optional LLM seam with ctx.get().
-+export const inject = ['agents', 'sessions']
++export const inject = ['agents', 'sessions', 'tools']
  
  /** JSON-RPC deployment config plus runtime-only test hooks. */
  export interface JsonRpcConfig {
 diff --git a/packages/sdk/server/src/server.ts b/packages/sdk/server/src/server.ts
-index 195caa908d..99b7d19ac8 100644
 --- a/packages/sdk/server/src/server.ts
 +++ b/packages/sdk/server/src/server.ts
-@@ -11,6 +11,7 @@ import type { Agent, AgentHandle } from '@deepseek-ai/dsh-agent'
+@@ -11,6 +11,7 @@
  import { createUserMessage } from '@deepseek-ai/dsh-llm'
  import { carrierKeyOf, type Scoped } from '@deepseek-ai/dsh-scope'
  import { SessionId } from '@deepseek-ai/dsh-session'
@@ -335,7 +355,7 @@ index 195caa908d..99b7d19ac8 100644
  import type SubagentRuntime from '@deepseek-ai/dsh-subagent'
  import type { SubagentRunEndInfo } from '@deepseek-ai/dsh-subagent'
  import * as LlmDeepSeek from '@deepseek-ai/dsh-llm-deepseek'
-@@ -19,6 +20,10 @@ import type {
+@@ -19,6 +20,10 @@
    InitializeResult,
    JsonRpcTransportPeer,
    SessionEventNotification,
@@ -346,7 +366,7 @@ index 195caa908d..99b7d19ac8 100644
    SessionPromptParams,
    SessionPromptResult,
    SubagentFinishedNotification,
-@@ -121,7 +126,53 @@ export class HarnessSdkJsonRpcServer {
+@@ -121,7 +126,53 @@
        if (this.provider !== 'deepseek-official') throw new Error(`no adapter registered for provider "${this.provider}"`)
        this.llmFiber = await this.ctx.plugin(LlmDeepSeek, {})
      }
@@ -355,7 +375,7 @@ index 195caa908d..99b7d19ac8 100644
 +      serverInfo: {
 +        name: 'deepseek-harness-sdk-runtime',
 +        version: '0.0.1',
-+        capabilities: ['mw-session-open-v1', 'mw-session-flush-v1'],
++        capabilities: ['mw-session-open-v1', 'mw-session-flush-v1', 'mw-tools-v1'],
 +      },
 +    }
 +  }
@@ -401,7 +421,7 @@ index 195caa908d..99b7d19ac8 100644
    }
  
    /**
-@@ -191,6 +242,10 @@ export class HarnessSdkJsonRpcServer {
+@@ -191,6 +242,10 @@
      switch (method) {
        case 'initialize':
          return this.initialize(params as unknown as InitializeParams)
@@ -412,7 +432,7 @@ index 195caa908d..99b7d19ac8 100644
        case 'session/prompt':
          return this.prompt(params as unknown as SessionPromptParams)
        case 'shutdown':
-@@ -234,6 +289,34 @@ export class HarnessSdkJsonRpcServer {
+@@ -234,6 +289,35 @@
      return rec
    }
  
@@ -441,6 +461,7 @@ index 195caa908d..99b7d19ac8 100644
 +      sessionId,
 +      disposition,
 +      durableSeq: record.handle.agent.session.events.at(-1)?.seq ?? -1,
++      tools: this.ctx.tools.schemas(record.handle.agent).map(tool => tool.name).sort(),
 +    }
 +  }
 +
@@ -448,10 +469,9 @@ index 195caa908d..99b7d19ac8 100644
      return this.ctx.get('llm')?.listProviders().some(entry => entry.id === provider) ?? false
    }
 diff --git a/packages/sdk/server/tests/plugin-apply.spec.ts b/packages/sdk/server/tests/plugin-apply.spec.ts
-index 320a61ac63..c6e893df82 100644
 --- a/packages/sdk/server/tests/plugin-apply.spec.ts
 +++ b/packages/sdk/server/tests/plugin-apply.spec.ts
-@@ -161,7 +161,13 @@ describe('dsh-sdk-jsonrpc-server plugin apply', () => {
+@@ -161,7 +161,13 @@
        expect(response).toEqual({
          jsonrpc: '2.0',
          id: 'init-1',
@@ -460,27 +480,26 @@ index 320a61ac63..c6e893df82 100644
 +          serverInfo: {
 +            name: 'deepseek-harness-sdk-runtime',
 +            version: '0.0.1',
-+            capabilities: ['mw-session-open-v1', 'mw-session-flush-v1'],
++            capabilities: ['mw-session-open-v1', 'mw-session-flush-v1', 'mw-tools-v1'],
 +          },
 +        },
        })
        expect(harness.exits()).toEqual([])
      } finally {
 diff --git a/packages/sdk/server/tests/server.spec.ts b/packages/sdk/server/tests/server.spec.ts
-index 495f1d90f4..5b69168d78 100644
 --- a/packages/sdk/server/tests/server.spec.ts
 +++ b/packages/sdk/server/tests/server.spec.ts
-@@ -124,8 +124,16 @@ describe('HarnessSdkJsonRpcServer', () => {
+@@ -124,8 +124,16 @@
          provider: 'deepseek-official',
          model: 'dsagent-model',
          maxTokens: 321,
 -      }) as { serverInfo: { name: string } }
 +      }) as { serverInfo: { name: string; capabilities: string[] } }
        expect(init.serverInfo.name).toBe('deepseek-harness-sdk-runtime')
-+      expect(init.serverInfo.capabilities).toEqual(['mw-session-open-v1', 'mw-session-flush-v1'])
++      expect(init.serverInfo.capabilities).toEqual(['mw-session-open-v1', 'mw-session-flush-v1', 'mw-tools-v1'])
 +
 +      await expect(server.handleRequest('session/open', { sessionId: 'main' })).resolves.toMatchObject({
-+        sessionId: 'main', disposition: 'created', durableSeq: -1,
++        sessionId: 'main', disposition: 'created', durableSeq: -1, tools: ctx.tools.schemas().map(tool => tool.name).sort(),
 +      })
 +      await expect(server.handleRequest('session/open', { sessionId: 'main' })).resolves.toMatchObject({
 +        sessionId: 'main', disposition: 'already-open', durableSeq: -1,
@@ -488,16 +507,16 @@ index 495f1d90f4..5b69168d78 100644
  
        const receipt = await server.handleRequest('session/prompt', {
          sessionId: 'main',
-@@ -147,6 +155,9 @@ describe('HarnessSdkJsonRpcServer', () => {
+@@ -146,6 +154,9 @@
+           method: 'session.status',
            params: { sessionId: 'main', status: 'idle' },
          })
-       })
++      })
 +      await expect(server.handleRequest('session/flush', { sessionId: 'main' })).resolves.toMatchObject({
 +        sessionId: 'main', durableSeq: expect.any(Number),
-+      })
+       })
  
        await server.handleRequest('session/prompt', {
-         sessionId: 'main',
 diff --git a/pnpm-lock.yaml b/pnpm-lock.yaml
 index 1490a0f9f7..14ab2f92c8 100644
 --- a/pnpm-lock.yaml
@@ -1873,7 +1892,7 @@ index 069378e8cb..ac17ebc2a4 100644
    }
  }
 diff --git a/scripts/build-exe-for-python-sdk.ts b/scripts/build-exe-for-python-sdk.ts
-index da1cea67c4..afed4a26a2 100644
+index da1cea67c4..55fef4e03b 100644
 --- a/scripts/build-exe-for-python-sdk.ts
 +++ b/scripts/build-exe-for-python-sdk.ts
 @@ -17,7 +17,7 @@ const root = resolve(import.meta.dirname, '..')
@@ -1988,6 +2007,19 @@ index da1cea67c4..afed4a26a2 100644
    }
  
    /** Build all package artifacts unless `--skip-build` was passed. */
+@@ -251,10 +276,10 @@ class SingleExeBuild {
+       '--filter',
+       DEPLOY_ROOT_PACKAGE,
+       'deploy',
+-      '--legacy',
++      '--config.inject-workspace-packages=true',
++      '--ignore-scripts',
+       '--prod',
+       '--config.node-linker=hoisted',
+-      '--config.auto-install-peers=false',
+       '--config.link-workspace-packages=true',
+       this.staging,
+     ])
 @@ -380,9 +405,16 @@ class SingleExeBuild {
     * @returns the executable path and, on macOS, its helper path.
     */
@@ -2098,3 +2130,27 @@ index c87d562f59..e52d2b220b 100644
  if (failures.length > 0) {
    console.error('verify-runtime-closure: required workspace peers are missing from python/sdk-runtime dependencies:')
    for (const failure of failures) console.error(`  ${failure}`)
+
+diff --git a/packages/fs/tool-fs/src/index.ts b/packages/fs/tool-fs/src/index.ts
+--- a/packages/fs/tool-fs/src/index.ts
++++ b/packages/fs/tool-fs/src/index.ts
+@@ -25,2 +25,4 @@
+ export interface Config {
++  /** Register only text and image readers; mutating tools remain unavailable. */
++  readOnly?: boolean
+   /** Default and maximum number of lines returned by one `read` call. */
+@@ -36,2 +38,3 @@
+ export const Config: z<Config> = z.object({
++  readOnly: z.boolean().default(false),
+   readLimit: z.number().default(READ_LIMIT),
+@@ -75,5 +78,7 @@
+   // the mounted ctx.fs confines (ctx.fs.sandboxMode).
+-  const sandbox = new FsSandboxController(ctx)
+-  applyWriteTool(ctx, sandbox)
+-  applyEditTool(ctx, sandbox)
++  if (!resolved.readOnly) {
++    const sandbox = new FsSandboxController(ctx)
++    applyWriteTool(ctx, sandbox)
++    applyEditTool(ctx, sandbox)
++  }
+ }

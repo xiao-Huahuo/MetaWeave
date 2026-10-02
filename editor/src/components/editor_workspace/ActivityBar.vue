@@ -85,7 +85,7 @@ function handleRipple(e: MouseEvent) {
 }
 
 const agentIconSrc = computed(() => {
-  if (props.agentActive && props.displayMode === 'management') return lightLogo
+  if (props.displayMode === 'management' && (!props.isDark || props.agentActive)) return lightLogo
   return darkLogo
 })
 type ActivityMenu = 'knowledge' | 'scanner' | 'entertainment' | 'mine'
@@ -758,8 +758,9 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', closeActivityM
 .activity-bar.management .activity-button > .activity-agent-icon {
   position: absolute;
   top: 50%;
-  left: var(--space-8);
-  transform: translateY(-50%);
+  /* Center every icon in the 18px slot, including the wider Agent logo. */
+  left: calc(var(--space-8) + 9px);
+  transform: translate(-50%, -50%);
 }
 
 .knowledge-group {

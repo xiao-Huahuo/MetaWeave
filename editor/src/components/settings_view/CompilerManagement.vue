@@ -136,7 +136,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <section class="management-block compiler-management" aria-labelledby="compiler-management-title">
+  <section class="management-block compiler-management settings-block-surface" aria-labelledby="compiler-management-title">
     <header class="management-header">
       <h4 id="compiler-management-title">编译管理</h4>
       <button type="button" class="plain-icon-button" title="刷新编译器状态" aria-label="刷新编译器状态" :disabled="loading" @click="refresh">
@@ -207,6 +207,8 @@ onUnmounted(() => {
 .management-block {
   container-type: inline-size;
   margin-top: var(--space-16);
+  min-width: 0;
+  padding: 14px;
   font-family: var(--font-ui);
 }
 
@@ -215,10 +217,8 @@ onUnmounted(() => {
   min-height: 34px;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid var(--color-border);
 }
 .management-header h4 { margin: 0; color: var(--color-text); font-size: calc(14px * var(--font-scale)); }
-.management-item { border-bottom: 1px solid var(--color-border); }
 .management-summary {
   display: grid;
   min-height: 56px;
@@ -257,7 +257,7 @@ onUnmounted(() => {
 .management-details dl > div { display: grid; grid-template-columns: 92px minmax(0, 1fr); padding: var(--space-6) 0; }
 .management-details dt { color: var(--color-text-muted); font-size: calc(11px * var(--font-scale)); }
 .management-details dd { min-width: 0; margin: 0; overflow-wrap: anywhere; color: var(--color-text-secondary); font-size: calc(11px * var(--font-scale)); }
-.engine-list { margin-top: var(--space-8); border-top: 1px solid var(--color-border); }
+.engine-list { margin-top: var(--space-8); }
 .engine-row { display: grid; grid-template-columns: 12px 80px 64px minmax(0, 1fr); align-items: center; gap: var(--space-8); min-height: 32px; color: var(--color-text-secondary); font-size: calc(11px * var(--font-scale)); }
 .engine-row code { overflow: hidden; font-family: var(--font-mono); text-overflow: ellipsis; white-space: nowrap; }
 .mono { font-family: var(--font-mono); }

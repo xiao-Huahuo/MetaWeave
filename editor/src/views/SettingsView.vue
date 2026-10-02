@@ -1259,7 +1259,6 @@ onBeforeUnmount(() => {
   display: flex;
   gap: var(--space-4);
   margin: var(--space-12) 0 var(--space-8);
-  border-bottom: 1px solid var(--color-border);
 }
 
 .terminal-page-tab {
@@ -1296,7 +1295,6 @@ onBeforeUnmount(() => {
   gap: var(--space-8);
   min-height: 30px;
   padding: 0 var(--space-8);
-  border: 1px solid var(--color-border);
   background: var(--color-canvas);
 }
 
@@ -1887,7 +1885,8 @@ onBeforeUnmount(() => {
   gap: var(--space-4);
 }
 
-.input-row input {
+.input-row input,
+.input-row textarea {
   flex: 1;
   height: 28px;
   padding: 0 var(--space-10);
@@ -1900,7 +1899,8 @@ onBeforeUnmount(() => {
   outline: none;
 }
 
-.input-row input:focus {
+.input-row input:focus,
+.input-row textarea:focus {
   border-color: var(--color-primary);
 }
 
@@ -2182,16 +2182,17 @@ onBeforeUnmount(() => {
 
 .settings-model-form .effective-model-summary { margin-bottom: var(--space-16); }
 .settings-model-form .effective-model-summary h3 { margin: 0 0 var(--space-10); }
-.settings-model-form .effective-model-summary dl { margin: 0; border-block: 1px solid var(--color-border); }
-.settings-model-form .effective-model-summary dl > div { display:grid; grid-template-columns:84px minmax(0,1fr) auto; align-items:center; gap:var(--space-10); min-height:38px; }
-.settings-model-form .effective-model-summary dl > div + div { border-top:1px solid var(--color-border); }
-.settings-model-form .effective-model-summary dt,
-.settings-model-form .effective-model-summary dd,
-.settings-model-form .effective-model-summary span { margin:0; font-size:calc(12px * var(--font-scale)); }
-.settings-model-form .effective-model-summary dt,
-.settings-model-form .effective-model-summary span { color:var(--color-text-muted); }
-.settings-model-form .effective-model-summary dd { min-width:0; overflow:hidden; color:var(--color-text); font-family:var(--font-mono); text-overflow:ellipsis; white-space:nowrap; }
+.settings-model-form .effective-model-summary dl { display: grid; gap: var(--space-8); margin: 0; }
+/* Model summaries share Debug's metric blocks; only text wrapping differs. */
+.settings-model-form .effective-model-summary dt { flex: 0 0 72px; margin: 0; }
+.settings-model-form .effective-model-summary dd { flex: 1; min-width: 0; margin: 0; overflow-wrap: anywhere; white-space: normal; }
+.settings-model-form .effective-model-summary .ui-metric-block > span { flex-shrink: 0; }
 .settings-model-form .model-heading { display:flex; align-items:center; min-height:28px; margin-bottom:var(--space-10); }
+
+@media (max-width: 480px) {
+  .settings-model-form .effective-model-summary .ui-metric-block { display: grid; grid-template-columns: 72px minmax(0, 1fr); }
+  .settings-model-form .effective-model-summary .ui-metric-block > span { grid-column: 2; }
+}
 
 @media (prefers-reduced-motion: reduce) {
   .settings-model-form input:not([type='checkbox']),

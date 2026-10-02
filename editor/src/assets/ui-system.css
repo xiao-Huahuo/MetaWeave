@@ -87,6 +87,42 @@
   --color-git-ignored: #a1842b;
 }
 
+/* Shared summary blocks, extracted from Debug's context assembly overview. */
+.ui-metric-block {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-10);
+  min-height: 58px;
+  min-width: 0;
+  border: 0;
+  border-radius: 6px;
+  padding: var(--space-10) var(--space-12);
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.ui-metric-label {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--color-text-tertiary);
+  font-family: var(--font-ui);
+  font-size: var(--font-size-xs);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ui-metric-value {
+  flex: 0 0 auto;
+  color: var(--color-primary);
+  font-family: var(--font-ui);
+  font-size: var(--font-size-lg);
+  font-weight: var(--font-weight-semibold);
+}
+
+.ui-metric-text {
+  font-size: var(--font-size-sm);
+}
+
 /* Shared gray, borderless form surface with a translucent focus ring. */
 .form-input-surface {
   border: 0 !important;
@@ -222,6 +258,59 @@ button.v1-icon-button:disabled {
 
 .filter-capsule-btn[data-state='open'] .filter-chevron {
   transform: rotate(180deg);
+}
+
+/* Settings management blocks reuse the Skill card's complete border treatment. */
+.settings-block-surface {
+  border: 1px solid var(--color-border);
+  border-radius: 28px;
+  background: var(--color-surface);
+  outline: 2px solid var(--workspace-panel-outline);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--library-form-ring);
+}
+
+/* Only the light management rail adopts card depth and settings-sidebar colors. */
+:root[data-theme="light"] .activity-bar.management {
+  --color-activity-bar-bg: var(--color-surface);
+  --color-activity-bar-muted: var(--color-text-secondary);
+  --color-activity-bar-text: var(--color-text-primary);
+  --color-activity-bar-hover: var(--color-primary-softer);
+  /* Composite the translucent settings selection over white, preserving color fades. */
+  --color-activity-bar-active-bg: color(from var(--color-primary-soft) srgb
+    calc(r * alpha + 1 - alpha)
+    calc(g * alpha + 1 - alpha)
+    calc(b * alpha + 1 - alpha) / 1);
+  --color-activity-bar-active-text: var(--color-primary);
+  --color-activity-bar-guide: var(--color-border);
+  --color-activity-bar-border: var(--color-border);
+  outline: 2px solid var(--workspace-panel-outline);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 2px var(--library-form-ring);
+}
+
+:root[data-theme="light"] .activity-bar.management .library-entry-icon {
+  color: inherit;
+}
+
+/* Match the theme button's base to the light management rail. */
+:root[data-theme="light"] .activity-bar.management .theme-toggle-button::before,
+:root[data-theme="light"] .activity-bar.management .theme-toggle-face {
+  background: var(--color-surface);
+}
+
+/* Keep the light button flat in normal, hover, focus, and pressed states. */
+:root[data-theme="light"] .activity-bar.management .theme-toggle-button .theme-toggle-face,
+:root[data-theme="light"] .activity-bar.management .theme-loader,
+:root[data-theme="light"] .activity-bar.management .theme-loader::before {
+  box-shadow: none;
+}
+
+/* Keep configuration modules spaced consistently inside the shared Skill border. */
+.settings-module {
+  min-width: 0;
+  margin-bottom: var(--space-16);
+  padding: 14px;
 }
 
 .library-form-surface,

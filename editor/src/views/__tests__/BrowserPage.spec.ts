@@ -1,9 +1,10 @@
 /*
- * Embedded browser page theme synchronization tests.
+ * Embedded browser page theme and managed-navigation regression tests.
  *
  * Usage:
  * Verifies that the application theme mode reaches the native Chromium view
- * both at creation time and after a live theme switch.
+ * both at creation time and after a live theme switch, and that a DSH access
+ * token reaches native navigation without appearing in the address bar.
  */
 import { defineComponent } from 'vue'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -23,6 +24,7 @@ vi.mock('@/api/settings', () => ({
 
 const BrowserChromeStub = defineComponent({
   name: 'BrowserChrome',
+  props: { address: { type: String, default: '' } },
   emits: ['bounds'],
   mounted() {
     this.$emit('bounds', { x: 10, y: 20, width: 600, height: 400 })
@@ -66,6 +68,43 @@ describe('BrowserPage theme synchronization', () => {
     settingsStore.setThemeMode('light')
     await flushPromises()
     expect(browserConfigure).toHaveBeenLastCalledWith(expect.objectContaining({ themeMode: 'light' }))
+
+    wrapper.unmount()
+  })
+
+  it('keeps a managed DSH authentication fragment out of the address bar', async () => {
+    const requestedUrl = 'http://127.0.0.1:3080/#mw_token=test-token&session=child-session&readonly=1'
+    const displayUrl = 'http://127.0.0.1:3080/#session=child-session&readonly=1'
+    const browserNavigate = vi.fn().mockResolvedValue(true)
+    let receiveState: ((state: BrowserViewState) => void) | undefined
+    Object.defineProperty(window, 'agentEditorDesktop', {
+      configurable: true,
+      value: {
+        isDesktop: true,
+        browserShow: vi.fn().mockResolvedValue(true),
+        browserConfigure: vi.fn().mockResolvedValue(true),
+        browserHide: vi.fn().mockResolvedValue(true),
+        browserSetBounds: vi.fn().mockResolvedValue(true),
+        browserNavigate,
+        browserCommand: vi.fn().mockResolvedValue(true),
+        onBrowserState: vi.fn((callback) => {
+          receiveState = callback
+          return () => {}
+        }),
+      },
+    })
+
+    const wrapper = mount(BrowserPage, {
+      props: { activityOverlayOpen: false, initialUrl: requestedUrl, sidebar: true },
+      global: { stubs: { BrowserChrome: BrowserChromeStub } },
+    })
+    await flushPromises()
+
+    expect(browserNavigate).toHaveBeenCalledWith(requestedUrl)
+    expect(wrapper.findComponent(BrowserChromeStub).props('address')).not.toContain('test-token')
+    receiveState?.({ url: displayUrl, title: 'DSH', canGoBack: false, canGoForward: false, loading: false })
+    await flushPromises()
+    expect(wrapper.findComponent(BrowserChromeStub).props('address')).toBe(displayUrl)
 
     wrapper.unmount()
   })

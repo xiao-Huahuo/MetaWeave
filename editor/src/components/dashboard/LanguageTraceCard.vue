@@ -133,29 +133,29 @@ const rawContextJson = computed(() => {
 
         <div v-if="contextMode === 'readable'" class="source-groups">
           <div class="assembly-overview">
-            <div class="metric-row">
-              <span class="metric-label">消息</span>
-              <span class="metric-value">{{ selectedSnapshot?.messages.length ?? 0 }}</span>
+            <div class="metric-row ui-metric-block">
+              <span class="metric-label ui-metric-label">消息</span>
+              <span class="metric-value ui-metric-value">{{ selectedSnapshot?.messages.length ?? 0 }}</span>
             </div>
-            <div class="metric-row">
-              <span class="metric-label">工具定义</span>
-              <span class="metric-value">{{ selectedSnapshot?.tools.length ?? 0 }}</span>
+            <div class="metric-row ui-metric-block">
+              <span class="metric-label ui-metric-label">工具定义</span>
+              <span class="metric-value ui-metric-value">{{ selectedSnapshot?.tools.length ?? 0 }}</span>
             </div>
-            <div class="metric-row">
-              <span class="metric-label">模型层级</span>
-              <span class="metric-value metric-text">{{ selectedSnapshot?.model_tier ?? '—' }}</span>
+            <div class="metric-row ui-metric-block">
+              <span class="metric-label ui-metric-label">模型层级</span>
+              <span class="metric-value ui-metric-value ui-metric-text">{{ selectedSnapshot?.model_tier ?? '—' }}</span>
             </div>
-            <div class="metric-row">
-              <span class="metric-label">有效窗口</span>
-              <span class="metric-value">{{ selectedSnapshot?.context_budget?.effective_window_tokens ?? 0 }}</span>
+            <div class="metric-row ui-metric-block">
+              <span class="metric-label ui-metric-label">有效窗口</span>
+              <span class="metric-value ui-metric-value">{{ selectedSnapshot?.context_budget?.effective_window_tokens ?? 0 }}</span>
             </div>
-            <div class="metric-row">
-              <span class="metric-label">最终输入</span>
-              <span class="metric-value">{{ selectedSnapshot?.context_budget?.final_input_tokens ?? 0 }}</span>
+            <div class="metric-row ui-metric-block">
+              <span class="metric-label ui-metric-label">最终输入</span>
+              <span class="metric-value ui-metric-value">{{ selectedSnapshot?.context_budget?.final_input_tokens ?? 0 }}</span>
             </div>
-            <div class="metric-row">
-              <span class="metric-label">表示降级</span>
-              <span class="metric-value">{{ selectedSnapshot?.context_budget?.representations?.filter(item => item.representation !== 'full').length ?? 0 }}</span>
+            <div class="metric-row ui-metric-block">
+              <span class="metric-label ui-metric-label">表示降级</span>
+              <span class="metric-value ui-metric-value">{{ selectedSnapshot?.context_budget?.representations?.filter(item => item.representation !== 'full').length ?? 0 }}</span>
             </div>
           </div>
 
@@ -381,39 +381,6 @@ const rawContextJson = computed(() => {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: var(--space-8);
-}
-
-.metric-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-10);
-  min-height: 58px;
-  min-width: 0;
-  border: 0;
-  border-radius: 6px;
-  padding: var(--space-10) var(--space-12);
-  background: rgba(255, 255, 255, 0.02);
-}
-
-.metric-label {
-  min-width: 0;
-  overflow: hidden;
-  color: var(--color-text-tertiary);
-  font-size: var(--font-size-xs);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.metric-value {
-  flex: 0 0 auto;
-  color: var(--color-primary);
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-semibold);
-}
-
-.metric-text {
-  font-size: var(--font-size-sm);
 }
 
 .assembly-list,

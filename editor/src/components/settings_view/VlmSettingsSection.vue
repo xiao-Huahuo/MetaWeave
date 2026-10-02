@@ -137,48 +137,50 @@ onMounted(load)
 
 <template>
   <div class="setting-section settings-model-form vlm-settings">
-    <section class="effective-model-summary" aria-labelledby="effective-vlm-title">
+    <section class="effective-model-summary settings-module" aria-labelledby="effective-vlm-title">
       <h3 id="effective-vlm-title">当前生效</h3>
       <dl>
-        <div><dt>解析器</dt><dd>{{ effectiveParser }}</dd><span>{{ effective?.configured ? '远程 MinerU' : '本地 PaddleOCR' }}</span></div>
-        <div><dt>模型</dt><dd>{{ effective?.model || '未配置' }}</dd><span>{{ effective?.configured ? '已配置' : '未配置 API' }}</span></div>
+        <div class="ui-metric-block"><dt class="ui-metric-label">解析器</dt><dd class="ui-metric-value ui-metric-text">{{ effectiveParser }}</dd><span class="ui-metric-label">{{ effective?.configured ? '远程 MinerU' : '本地 PaddleOCR' }}</span></div>
+        <div class="ui-metric-block"><dt class="ui-metric-label">模型</dt><dd class="ui-metric-value ui-metric-text">{{ effective?.model || '未配置' }}</dd><span class="ui-metric-label">{{ effective?.configured ? '已配置' : '未配置 API' }}</span></div>
       </dl>
     </section>
     <p v-if="loading" class="setting-hint">正在读取配置…</p>
     <template v-else-if="draft">
-      <div class="setting-row toggle-row"><label>开启 VLM</label><input v-model="draft.enabled" type="checkbox" :disabled="!editing" /><span class="hint-text">灌库优先使用 MinerU；远程不可用时回退本地 PaddleOCR</span></div>
-      <div class="setting-row toggle-row"><label>OCR</label><input v-model="draft.ocr_enabled" type="checkbox" :disabled="!editing" /><span class="hint-text">本地模式开启时会立即准备 PaddleOCR 结构化流水线</span></div>
-      <div class="model-heading"><h3>MinerU 精准 API</h3></div>
-      <div class="model-block vlm-model-block">
-        <label for="vlm-key">API Key</label>
-        <div class="key-row"><input id="vlm-key" v-model="draft.api_key" :type="showKey ? 'text' : 'password'" placeholder="MinerU API Key" autocomplete="off" spellcheck="false" :readonly="!editing" :class="{ readonly: !editing }" /><button class="toggle-key" type="button" @click="showKey = !showKey">{{ showKey ? '隐藏' : '显示' }}</button></div>
-        <label for="vlm-model">模型</label>
-        <select id="vlm-model" v-model="draft.model" :disabled="!editing" :class="{ readonly: !editing }"><option value="vlm">vlm</option><option value="pipeline">pipeline</option></select>
-      </div>
-      <div class="capacity-row vlm-limits-grid">
-        <label>并发<input v-model.number="draft.max_concurrency" type="number" min="1" :max="Math.max(1, Math.floor(draft.result_rate_per_minute * draft.poll_interval_seconds / 60))" :readonly="!editing" :class="{ readonly: !editing }" /></label>
-        <label>文件上限（MB）<input v-model.number="fileLimitMb" type="number" min="1" max="200" :readonly="!editing" :class="{ readonly: !editing }" /></label>
-        <label>页数上限<input v-model.number="draft.max_pages" type="number" min="1" max="600" :readonly="!editing" :class="{ readonly: !editing }" /></label>
-        <label>提交/分钟<input v-model.number="draft.submit_rate_per_minute" type="number" min="1" max="300" :readonly="!editing" :class="{ readonly: !editing }" /></label>
-        <label>查询/分钟<input v-model.number="draft.result_rate_per_minute" type="number" min="1" max="1000" :readonly="!editing" :class="{ readonly: !editing }" /></label>
-      </div>
-      <div class="model-actions">
-        <button v-if="!editing" class="edit-model-btn" type="button" @click="editing = true">{{ effective?.configured ? '编辑' : '配置' }}</button>
-        <button v-if="editing" class="save-model-btn" type="button" :disabled="saving" @click="save">{{ saving ? '保存中…' : '保存' }}</button>
-        <button v-if="editing" class="edit-model-btn" type="button" @click="beginSavePreset">保存模型配置</button>
-        <button v-if="editing" class="edit-model-btn" type="button" :disabled="checking" @click="check">{{ checking ? '检查中…' : '检查连接' }}</button>
-        <button v-if="editing" class="cancel-model-btn" type="button" @click="load">取消</button>
-        <span v-if="message" class="feedback">{{ message }}</span><span v-if="error" class="feedback error">{{ error }}</span>
-      </div>
-      <form v-if="presetNameOpen" class="preset-name-form" @submit.prevent="savePreset">
-        <label for="vlm-preset-name">配置名称</label>
-        <input id="vlm-preset-name" v-model="presetLabel" type="text" required autofocus placeholder="例如：MinerU 精准解析" />
-        <div class="preset-name-actions">
-          <button class="save-model-btn" type="submit">保存配置</button>
-          <button class="cancel-model-btn" type="button" @click="presetNameOpen = false; presetLabel = ''">取消</button>
+      <section class="settings-module settings-block-surface">
+        <div class="setting-row toggle-row"><label>开启 VLM</label><input v-model="draft.enabled" type="checkbox" :disabled="!editing" /><span class="hint-text">灌库优先使用 MinerU；远程不可用时回退本地 PaddleOCR</span></div>
+        <div class="setting-row toggle-row"><label>OCR</label><input v-model="draft.ocr_enabled" type="checkbox" :disabled="!editing" /><span class="hint-text">本地模式开启时会立即准备 PaddleOCR 结构化流水线</span></div>
+        <div class="model-heading"><h3>MinerU 精准 API</h3></div>
+        <div class="model-block vlm-model-block">
+          <label for="vlm-key">API Key</label>
+          <div class="key-row"><input id="vlm-key" v-model="draft.api_key" :type="showKey ? 'text' : 'password'" placeholder="MinerU API Key" autocomplete="off" spellcheck="false" :readonly="!editing" :class="{ readonly: !editing }" /><button class="toggle-key" type="button" @click="showKey = !showKey">{{ showKey ? '隐藏' : '显示' }}</button></div>
+          <label for="vlm-model">模型</label>
+          <select id="vlm-model" v-model="draft.model" :disabled="!editing" :class="{ readonly: !editing }"><option value="vlm">vlm</option><option value="pipeline">pipeline</option></select>
         </div>
-      </form>
-      <section class="saved-model-section">
+        <div class="capacity-row vlm-limits-grid">
+          <label>并发<input v-model.number="draft.max_concurrency" type="number" min="1" :max="Math.max(1, Math.floor(draft.result_rate_per_minute * draft.poll_interval_seconds / 60))" :readonly="!editing" :class="{ readonly: !editing }" /></label>
+          <label>文件上限（MB）<input v-model.number="fileLimitMb" type="number" min="1" max="200" :readonly="!editing" :class="{ readonly: !editing }" /></label>
+          <label>页数上限<input v-model.number="draft.max_pages" type="number" min="1" max="600" :readonly="!editing" :class="{ readonly: !editing }" /></label>
+          <label>提交/分钟<input v-model.number="draft.submit_rate_per_minute" type="number" min="1" max="300" :readonly="!editing" :class="{ readonly: !editing }" /></label>
+          <label>查询/分钟<input v-model.number="draft.result_rate_per_minute" type="number" min="1" max="1000" :readonly="!editing" :class="{ readonly: !editing }" /></label>
+        </div>
+        <div class="model-actions">
+          <button v-if="!editing" class="edit-model-btn" type="button" @click="editing = true">{{ effective?.configured ? '编辑' : '配置' }}</button>
+          <button v-if="editing" class="save-model-btn" type="button" :disabled="saving" @click="save">{{ saving ? '保存中…' : '保存' }}</button>
+          <button v-if="editing" class="edit-model-btn" type="button" @click="beginSavePreset">保存模型配置</button>
+          <button v-if="editing" class="edit-model-btn" type="button" :disabled="checking" @click="check">{{ checking ? '检查中…' : '检查连接' }}</button>
+          <button v-if="editing" class="cancel-model-btn" type="button" @click="load">取消</button>
+          <span v-if="message" class="feedback">{{ message }}</span><span v-if="error" class="feedback error">{{ error }}</span>
+        </div>
+        <form v-if="presetNameOpen" class="preset-name-form" @submit.prevent="savePreset">
+          <label for="vlm-preset-name">配置名称</label>
+          <input id="vlm-preset-name" v-model="presetLabel" type="text" required autofocus placeholder="例如：MinerU 精准解析" />
+          <div class="preset-name-actions">
+            <button class="save-model-btn" type="submit">保存配置</button>
+            <button class="cancel-model-btn" type="button" @click="presetNameOpen = false; presetLabel = ''">取消</button>
+          </div>
+        </form>
+      </section>
+      <section class="saved-model-section settings-module settings-block-surface">
         <h3>已保存的配置</h3>
         <p v-if="!presets.length" class="empty-hint">暂无已保存的 VLM 模型配置。</p>
         <div v-else class="saved-model-grid">
@@ -192,6 +194,10 @@ onMounted(load)
 </template>
 
 <style scoped>
+.saved-model-section.settings-module :deep(.saved-config-row) {
+  border: 0;
+}
+
 .vlm-model-block { display:grid; grid-template-columns:112px minmax(0,1fr); align-items:center; gap:var(--space-8) var(--space-10); }
 .vlm-model-block > label { color:var(--color-text); font-size:calc(13px * var(--font-scale)); }
 .vlm-model-block > select { min-width:0; height:28px; padding:0 var(--space-12); color:var(--color-text); font:calc(12px * var(--font-scale)) var(--font-mono); }
@@ -200,7 +206,7 @@ onMounted(load)
 .vlm-limits-grid label { display:grid; grid-template-columns:112px minmax(0,1fr); align-items:center; gap:var(--space-10); color:var(--color-text); font-size:calc(13px * var(--font-scale)); }
 .vlm-limits-grid input { width:100%; height:28px; padding:0 var(--space-12); color:var(--color-text); font:calc(12px * var(--font-scale)) var(--font-mono); }
 .vlm-limits-grid input.readonly { color:var(--color-text-muted); cursor:default; }
-.preset-name-form { display:grid; grid-template-columns:112px minmax(0,1fr) auto; align-items:center; gap:var(--space-10); margin-top:var(--space-10); padding-top:var(--space-10); border-top:1px solid var(--color-border); }
+.preset-name-form { display:grid; grid-template-columns:112px minmax(0,1fr) auto; align-items:center; gap:var(--space-10); margin-top:var(--space-10); padding-top:var(--space-10); }
 .preset-name-form > label { color:var(--color-text); font-size:calc(13px * var(--font-scale)); }
 .preset-name-form > input { width:100%; height:28px; }
 .preset-name-actions { display:flex; align-items:center; gap:var(--space-6); }

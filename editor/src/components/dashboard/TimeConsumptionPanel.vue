@@ -167,13 +167,13 @@ function fileTypeOf(node: KnowledgeFileNode): string {
           <div class="planning-title"><span>全库数字总览</span></div>
           <div class="planning-left">
             <div class="planning-metrics">
-              <div class="metric-row">
-                <span class="metric-label">知识库文件</span>
-                <span class="metric-value">{{ knowledgeFileCount }}</span>
+              <div class="metric-row ui-metric-block">
+                <span class="metric-label ui-metric-label">知识库文件</span>
+                <span class="metric-value ui-metric-value">{{ knowledgeFileCount }}</span>
               </div>
-              <div class="metric-row">
-                <span class="metric-label">图书馆图书</span>
-                <span class="metric-value">{{ libraryBookCount }}</span>
+              <div class="metric-row ui-metric-block">
+                <span class="metric-label ui-metric-label">图书馆图书</span>
+                <span class="metric-value ui-metric-value">{{ libraryBookCount }}</span>
               </div>
             </div>
 
@@ -312,37 +312,6 @@ function fileTypeOf(node: KnowledgeFileNode): string {
   display: grid;
   grid-template-columns: minmax(0, 1fr);
   gap: var(--space-8);
-}
-
-.metric-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-8);
-  min-height: 58px;
-  min-width: 0;
-  border: 0;
-  border-radius: 28px;
-  padding: var(--space-10) var(--space-12);
-  background: rgba(255, 255, 255, 0.02);
-}
-
-.metric-label {
-  min-width: 0;
-  overflow: hidden;
-  color: var(--color-text-tertiary);
-  font-family: var(--font-ui);
-  font-size: var(--font-size-xs);
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.metric-value {
-  flex: 0 0 auto;
-  color: var(--color-primary);
-  font-family: var(--font-ui);
-  font-size: var(--font-size-lg);
-  font-weight: var(--font-weight-semibold);
 }
 
 .type-share-panel {

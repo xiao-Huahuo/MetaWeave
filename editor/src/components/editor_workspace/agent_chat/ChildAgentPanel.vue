@@ -13,15 +13,20 @@ import { fetchChildAgentDshWeb, fetchChildAgents, stopChildAgent } from '@/api/a
 import type { ChildAgentRecord } from '@/api/agent'
 import { getChildAgentAvatar } from '@/utils/childAgentAvatar'
 import { preloadChildAgentConversations } from '@/components/editor_workspace/agent_chat/childAgentConversations'
+import { useWorkspaceStore } from '@/stores/workspace'
 
 const props = defineProps<{
   sessionId: string
   userId: string
 }>()
 
+const workspaceStore = useWorkspaceStore()
+
 const emit = defineEmits<{
   close: []
   'open-conversation': [child: ChildAgentRecord]
+  /** DSH Web 已交给浏览器侧栏，通知父组件收起旧 Agent 详情列。 */
+  'open-dsh-web': []
   'children-update': [children: ChildAgentRecord[]]
 }>()
 
@@ -112,6 +117,7 @@ async function stopChild(child: ChildAgentRecord) {
   }
 }
 
+/** 普通子 Agent 展开完整对话；DSH 在现有原生浏览器侧栏打开其受管 Web 会话。 */
 async function openChild(child: ChildAgentRecord) {
   if (child.provider !== 'dsh') {
     emit('open-conversation', child)
@@ -119,11 +125,8 @@ async function openChild(child: ChildAgentRecord) {
   }
   try {
     const response = await fetchChildAgentDshWeb(child.run_id, props.userId, props.sessionId)
-    if (window.agentEditorDesktop?.openExternal) {
-      await window.agentEditorDesktop.openExternal(response.url)
-    } else {
-      window.open(response.url, '_blank', 'noopener,noreferrer')
-    }
+    workspaceStore.openBrowserSidebar(response.url)
+    emit('open-dsh-web')
     error.value = ''
   } catch (reason) {
     error.value = reason instanceof Error ? reason.message : 'DSH Web 打开失败'

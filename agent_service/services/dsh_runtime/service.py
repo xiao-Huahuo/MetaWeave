@@ -14,6 +14,7 @@ import shutil
 import subprocess
 import sys
 import threading
+import time
 import zipfile
 from pathlib import Path
 from typing import Any
@@ -39,7 +40,6 @@ class DshRuntimePackageManager:
         self.versions_dir = self.root / "versions"
         self.work_dir = self.root / "work"
         self.current_file = self.root / "current.json"
-        self.versions_dir.mkdir(parents=True, exist_ok=True)
         self.work_dir.mkdir(parents=True, exist_ok=True)
         self._lock = threading.RLock()
         self._cancel = threading.Event()
@@ -81,12 +81,13 @@ class DshRuntimePackageManager:
     def start_install(self, *, repair: bool = False) -> dict[str, Any]:
         """异步安装固定 Runtime；相同任务运行中时返回当前状态。"""
 
+        pending_cleanup = bool(self._legacy_sdk_paths())
         with self._lock:
             if self._worker is not None and self._worker.is_alive():
                 return self.get_management_status()
             if not self._bundle_is_available():
                 raise ValueError("当前 MW 构建缺少内置 SDK 制品")
-            if self._progress["status"] == "ready" and not repair:
+            if self._progress["status"] == "ready" and not repair and not pending_cleanup:
                 return self.get_management_status()
             if self._leases:
                 raise ValueError("DSH Runtime 正在被子 Agent 使用，不能修复")
@@ -121,30 +122,43 @@ class DshRuntimePackageManager:
             self._assert_managed_path(version_dir)
             if version_dir.exists():
                 self._remove_tree(version_dir)
+            self._cleanup_legacy_sdk()
             self.current_file.unlink(missing_ok=True)
             self._set_progress("missing", "尚未安装")
             return self.get_management_status()
 
-    def acquire_runtime(self, owner: str) -> Path:
-        """首次使用时懒解压 Runtime，随后建立租约并阻止卸载。"""
+    def acquire_runtime(self, owner: str, *, cancellation: threading.Event | None = None) -> Path:
+        """有界等待共享安装；单个租用者取消不影响其他租用者的安装。"""
 
-        with self._lock:
+        deadline = time.monotonic() + self.config.dsh.startup_timeout_seconds
+        if cancellation is not None and cancellation.is_set():
+            raise InterruptedError("DSH Runtime 租用已取消")
+        requested_install = False
+        while True:
+            if cancellation is not None and cancellation.is_set():
+                raise InterruptedError("DSH Runtime 租用已取消")
             executable = self._runtime_executable()
-        if executable is None:
-            self.start_install()
+            pending_cleanup = bool(self._legacy_sdk_paths())
             with self._lock:
                 worker = self._worker
-            if worker is not None:
-                worker.join()
-        with self._lock:
-            executable = self._runtime_executable()
-            if executable is None:
+                installing = worker is not None and worker.is_alive()
+                if executable is not None and not pending_cleanup and not installing:
+                    self._leases.add(owner)
+                    return executable
+            if installing:
+                requested_install = True
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    raise TimeoutError("等待 DSH Runtime 安装超时")
+                worker.join(timeout=min(remaining, 0.1))
+                continue
+            if requested_install:
                 raise FileNotFoundError(f"DSH Runtime 安装失败: {self._progress['message']}")
-            self._leases.add(owner)
-            return executable
+            self.start_install()
+            requested_install = True
 
     def release_runtime(self, owner: str) -> None:
-        """释放调用方持有的 Runtime 版本租约。"""
+        """释放调用方持有的 Runtime 租约。"""
 
         with self._lock:
             self._leases.discard(owner)
@@ -214,7 +228,7 @@ class DshRuntimePackageManager:
     def _install_worker(self) -> None:
         """在后台完成内置清单、ZIP、签名、自检和原子切换。"""
 
-        staging = self.versions_dir / f".{self.config.dsh.runtime_version}-{uuid4().hex}"
+        staging = self.work_dir / f".sdk-{uuid4().hex}"
         try:
             manifest, archive_path = self._load_bundled_manifest()
             self._validate_manifest(manifest)
@@ -239,12 +253,11 @@ class DshRuntimePackageManager:
                 json.dumps(manifest, ensure_ascii=False, indent=2),
                 encoding="utf-8",
             )
-            destination = self.versions_dir / self.config.dsh.runtime_version
-            self._assert_managed_path(destination)
-            if destination.exists():
-                self._remove_tree(destination)
-            os.replace(staging, destination)
+            destination = self._installed_version_dir()
+            self._set_progress("installing", "正在发布 Windows Runtime")
+            self._finalize_install_directory(staging, destination)
             self._write_current(manifest)
+            self._cleanup_legacy_sdk(staging=staging)
             self._set_progress("ready", "可用", processed_bytes=0, total_bytes=0, progress=None)
         except _InstallCancelled:
             self._set_progress("missing", "安装已取消")
@@ -257,17 +270,50 @@ class DshRuntimePackageManager:
             with self._lock:
                 self._worker = None
 
+    def _finalize_install_directory(self, staging: Path, destination: Path) -> None:
+        """有界发布已验证的目录，只重试 Windows 短时占用并响应安装 owner 取消。"""
+
+        staging, destination = staging.resolve(), destination.resolve()
+        for target in (staging, destination):
+            self._assert_managed_path(target)
+        if staging.parent != self.work_dir.resolve() or not staging.name.startswith(".sdk-"):
+            raise ValueError("DSH 安装临时目录必须位于受管 work 目录内")
+        if destination != self._installed_version_dir():
+            raise ValueError("DSH 安装目标必须是固定 sdk 目录")
+        with self._lock:
+            if self._leases:
+                raise ValueError("DSH Runtime 正在被子 Agent 使用，不能修复")
+        if self._cancel.is_set():
+            raise _InstallCancelled
+        if destination.exists():
+            self._remove_tree(destination)
+        deadline = time.monotonic() + self.config.dsh.install_finalize_timeout_seconds
+        while True:
+            if self._cancel.is_set():
+                raise _InstallCancelled
+            try:
+                os.replace(staging, destination)
+                return
+            except PermissionError as exc:
+                if getattr(exc, "winerror", None) not in {5, 32}:
+                    raise
+                remaining = deadline - time.monotonic()
+                if remaining <= 0:
+                    raise
+                if self._cancel.wait(min(remaining, self.config.dsh.filesystem_retry_delay_seconds)):
+                    raise _InstallCancelled from exc
+
     def _load_bundled_manifest(self) -> tuple[dict[str, Any], Path]:
         """读取 EXE内置 manifest，并安全解析同目录 ZIP路径。"""
 
-        manifest_path = self.bundle_dir / (
-            f"dsh-runtime-win-x64-{self.config.dsh.runtime_version}.manifest.json"
-        )
+        manifest_path = self.bundle_dir / "sdk.manifest.json"
         if not manifest_path.is_file():
             raise FileNotFoundError("当前 MW 构建缺少内置 SDK manifest")
         parsed = json.loads(manifest_path.read_text(encoding="utf-8"))
         if not isinstance(parsed, dict):
             raise ValueError("内置 DSH Runtime manifest必须是 JSON对象")
+        if parsed.get("archive_file") != "sdk.zip":
+            raise ValueError("内置 DSH SDK压缩包必须命名为 sdk.zip")
         archive = (self.bundle_dir / str(parsed.get("archive_file") or "")).resolve()
         if self.bundle_dir not in archive.parents or not archive.is_file():
             raise FileNotFoundError("当前 MW 构建缺少内置 SDK ZIP")
@@ -385,6 +431,7 @@ class DshRuntimePackageManager:
         temporary.write_text(
             json.dumps({
                 "version": manifest["version"],
+                "directory": "sdk",
                 "executable": manifest["executable"],
                 "launcher": manifest["launcher"],
             }),
@@ -393,13 +440,15 @@ class DshRuntimePackageManager:
         os.replace(temporary, self.current_file)
 
     def _runtime_executable(self) -> Path | None:
-        """解析已安装且仍位于受管版本目录中的 Runtime。"""
+        """解析已安装且仍位于固定 SDK 目录中的 Runtime。"""
 
         if not self.current_file.is_file():
             return None
         try:
             current = json.loads(self.current_file.read_text(encoding="utf-8"))
             if current.get("version") != self.config.dsh.runtime_version:
+                return None
+            if current.get("directory") != "sdk":
                 return None
             version_dir = self._installed_version_dir()
             executable = (version_dir / str(current["executable"])).resolve()
@@ -410,9 +459,29 @@ class DshRuntimePackageManager:
             return None
 
     def _installed_version_dir(self) -> Path:
-        """返回当前配置版本的规范化受管目录。"""
+        """返回固定 sdk 目录；真实兼容版本保留在 manifest 与 current metadata。"""
 
-        return (self.versions_dir / self.config.dsh.runtime_version).resolve()
+        return (self.root / "sdk").resolve()
+
+    def _legacy_sdk_paths(self, *, staging: Path | None = None) -> list[Path]:
+        """只列出旧 versions 与已知 .sdk-* 临时目录，排除当前安装 owner。"""
+
+        paths = [self.versions_dir] if self.versions_dir.exists() else []
+        paths.extend(
+            path for path in self.work_dir.glob(".sdk-*")
+            if path.is_dir() and (staging is None or path.resolve() != staging.resolve())
+        )
+        return paths
+
+    def _cleanup_legacy_sdk(self, *, staging: Path | None = None) -> None:
+        """新 SDK 发布后清理明确受管的旧缓存；失败向安装 owner 传播。"""
+
+        with self._lock:
+            if self._leases:
+                raise ValueError("DSH Runtime 正在被子 Agent 使用，不能清理")
+        for path in self._legacy_sdk_paths(staging=staging):
+            self._assert_managed_path(path)
+            self._remove_tree(path)
 
     def _reconcile_status(self, *, update_working: bool = True) -> None:
         """以磁盘事实修正非运行中状态。"""
@@ -422,7 +491,10 @@ class DshRuntimePackageManager:
         }:
             return
         if self._runtime_executable() is not None:
-            self._set_progress("ready", "可用")
+            if self._legacy_sdk_paths():
+                self._set_progress("failed", "旧 SDK缓存或安装临时目录尚未清理，请修复安装")
+            else:
+                self._set_progress("ready", "可用")
         elif update_working or self._progress["status"] in _READY_STATES:
             self._set_progress("missing", "尚未安装")
 

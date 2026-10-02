@@ -26,6 +26,7 @@ config = AgentConfig.load_config({"model": {"model_name": "moonshot-v1-8k"}})
 from __future__ import annotations
 
 import json
+import math
 import os
 import sys
 from dataclasses import asdict, dataclass, field
@@ -481,6 +482,14 @@ class AgentConfig:
             "\n\n【子 Agent类型】调用 spawn_child_agent 时必须填写 agent_type：\n"
             "- explore：只读搜索与理解文件、知识库或代码结构，不修改内容。\n"
             "- dsh：deepseek-harness代码 Agent；需要绝对 workspace_root。\n"
+            "  DSH readonly仅提供 read / read_image，不提供 Shell、目录枚举或命令执行。\n"
+            "  目录盘点、python --version、git status、Git分支、文件计数与测试应选择 access_mode=sandbox；"
+            "命令通过 pwsh 工具运行，没有独立的 search/git/test 工具。任务要求不写文件时必须在 goal 中明确说明。\n"
+            "  不能突破父 Agent 的访问权限；父 Agent为readonly时，应说明命令任务受限并等待用户调整权限。\n"
+            "  工具范围以启动后的真实能力事件为准；completed只表示本轮结束，"
+            "必须逐项核对结果及失败项，不能把部分完成宣称为完全可用。\n"
+            "  后台召唤初始 allowed_tools 为空表示等待 Runtime握手，"
+            "应等待能力事件或任务结果，不能据此宣称 DSH没有工具。\n"
             "- coding：MW原生代码 Agent，仅作为 DSH不可用时的后备；需要绝对 workspace_root。\n"
             "当前选择规则：{coding_rule}\n"
             "mode只表示前台或后台执行，不是 Agent类型。"
@@ -1514,12 +1523,22 @@ class AgentConfig:
         signer_thumbprint: 可选的 Windows Authenticode 证书指纹。
         max_live_runtimes: 同时保留的 DSH热 Runtime上限。
         idle_timeout_seconds: 空闲 Runtime可在后续调度时回收的秒数。
+        startup_timeout_seconds: 安装、启动与 Session握手的整体等待上限。
+        turn_timeout_seconds: 单个代码 Turn的整体执行上限，独立于 RPC请求超时。
+        shutdown_timeout_seconds: SDK退出和生命周期线程回收的有界等待时间。
+        install_finalize_timeout_seconds: Windows 安装目录被占用时的发布重试期限。
+        filesystem_retry_delay_seconds: 安装目录发布重试之间可取消的等待间隔。
         """
 
-        runtime_version: str = "0.1.0-rc.5+mw.1"
+        runtime_version: str = "0.1.0-rc.5+mw.2"
         signer_thumbprint: str = ""
         max_live_runtimes: int = 2
         idle_timeout_seconds: int = 600
+        startup_timeout_seconds: float = 120.0
+        turn_timeout_seconds: float = 1800.0
+        shutdown_timeout_seconds: float = 5.0
+        install_finalize_timeout_seconds: float = 5.0
+        filesystem_retry_delay_seconds: float = 0.1
 
         def __post_init__(self) -> None:
             """拒绝会破坏 Runtime容量控制的非正参数。"""
@@ -1528,6 +1547,12 @@ class AgentConfig:
                 raise ValueError("dsh.max_live_runtimes 必须为正数")
             if self.idle_timeout_seconds <= 0:
                 raise ValueError("dsh.idle_timeout_seconds 必须为正数")
+            for name in (
+                "startup_timeout_seconds", "turn_timeout_seconds", "shutdown_timeout_seconds",
+                "install_finalize_timeout_seconds", "filesystem_retry_delay_seconds",
+            ):
+                if not math.isfinite(getattr(self, name)) or getattr(self, name) <= 0:
+                    raise ValueError(f"dsh.{name} 必须为有限正数")
 
     constants: Constants = field(default_factory=Constants)
     appearance: AppearanceConfig = field(default_factory=AppearanceConfig)
@@ -1705,6 +1730,11 @@ class AgentConfig:
             "AGENT_DSH_SIGNER_THUMBPRINT": ("dsh", "signer_thumbprint", str),
             "AGENT_DSH_MAX_LIVE_RUNTIMES": ("dsh", "max_live_runtimes", int),
             "AGENT_DSH_IDLE_TIMEOUT_SECONDS": ("dsh", "idle_timeout_seconds", int),
+            "AGENT_DSH_STARTUP_TIMEOUT_SECONDS": ("dsh", "startup_timeout_seconds", float),
+            "AGENT_DSH_TURN_TIMEOUT_SECONDS": ("dsh", "turn_timeout_seconds", float),
+            "AGENT_DSH_SHUTDOWN_TIMEOUT_SECONDS": ("dsh", "shutdown_timeout_seconds", float),
+            "AGENT_DSH_INSTALL_FINALIZE_TIMEOUT_SECONDS": ("dsh", "install_finalize_timeout_seconds", float),
+            "AGENT_DSH_FILESYSTEM_RETRY_DELAY_SECONDS": ("dsh", "filesystem_retry_delay_seconds", float),
             "AGENT_MODEL_PROVIDER": ("model", "provider", str),
             "AGENT_MODEL_NAME": ("model", "model_name", str),
             "AGENT_MODEL_API_KEY": ("model", "api_key", str),

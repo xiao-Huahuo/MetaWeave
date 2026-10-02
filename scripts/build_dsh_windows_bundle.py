@@ -57,6 +57,19 @@ def run(command: list[str], *, cwd: Path) -> None:
     subprocess.run(command, cwd=cwd, check=True)
 
 
+def windows_io_path(path: Path) -> Path:
+    """为 Windows 文件 IO 保留或生成扩展路径，支持 UNC 且不重复添加前缀。"""
+
+    if os.name != "nt":
+        return path
+    resolved = str(path.resolve())
+    if resolved.startswith("\\\\?\\"):
+        return Path(resolved)
+    if resolved.startswith("\\\\"):
+        return Path("\\\\?\\UNC\\" + resolved[2:])
+    return Path("\\\\?\\" + resolved)
+
+
 def remove_build_tree(root: Path) -> None:
     """可靠删除含长路径和 Git只读文件的 Windows临时构建树。"""
 
@@ -71,8 +84,7 @@ def remove_build_tree(root: Path) -> None:
         except FileNotFoundError:
             return
 
-    extended = "\\\\?\\" + str(root.resolve())
-    shutil.rmtree(extended, onexc=make_writable)
+    shutil.rmtree(windows_io_path(root), onexc=make_writable)
 
 
 def verify_upstream(dsh_root: Path, requested_version: str) -> dict[str, object]:
@@ -121,7 +133,7 @@ def verify_bundle_files(bundle_dir: Path) -> tuple[Path, Path]:
 
     lock = json.loads(UPSTREAM_LOCK.read_text(encoding="utf-8"))
     version = str(lock["runtime_version"])
-    manifest_path = bundle_dir / f"dsh-runtime-win-x64-{version}.manifest.json"
+    manifest_path = bundle_dir / "sdk.manifest.json"
     if not manifest_path.is_file():
         raise FileNotFoundError(f"缺少 DSH SDK manifest: {manifest_path}")
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
@@ -129,6 +141,8 @@ def verify_bundle_files(bundle_dir: Path) -> tuple[Path, Path]:
         raise ValueError("DSH SDK manifest与 upstream.json 锁定版本不一致")
     if manifest.get("patch_sha256") != sha256(MW_PATCH):
         raise ValueError("DSH SDK manifest与当前 MW补丁不一致，请重新生产 SDK")
+    if manifest.get("archive_file") != "sdk.zip":
+        raise ValueError("DSH SDK manifest必须引用固定的 sdk.zip")
     archive = (bundle_dir / str(manifest.get("archive_file") or "")).resolve()
     if bundle_dir.resolve() not in archive.parents or not archive.is_file():
         raise FileNotFoundError("缺少 DSH SDK ZIP或 archive_file越界")
@@ -162,7 +176,8 @@ def hydrate_runtime_node_package(
 ) -> None:
     """用 pnpm 完整包补齐 Runtime 闭包中被追踪器裁残的同版本 Node 包。"""
 
-    pnpm_root = dsh_root / "node_modules" / ".pnpm"
+    pnpm_root = windows_io_path(dsh_root) / "node_modules" / ".pnpm"
+    runtime_closure = windows_io_path(runtime_closure)
     source_packages: dict[str, Path] = {}
     for package_json in pnpm_root.glob(f"*/node_modules/{package_name}/package.json"):
         payload = json.loads(package_json.read_text(encoding="utf-8"))
@@ -170,14 +185,16 @@ def hydrate_runtime_node_package(
     targets = list(runtime_closure.glob(f"node_modules/**/node_modules/{package_name}/package.json"))
     targets.extend(runtime_closure.glob(f"node_modules/{package_name}/package.json"))
     for package_json in targets:
-        target = package_json.parent
+        target = windows_io_path(package_json.parent)
+        if runtime_closure not in target.parents:
+            raise ValueError("Node Runtime 包目录越过闭包根，不能删除或复制")
         if (target / required_file).is_file():
             continue
         version = str(json.loads(package_json.read_text(encoding="utf-8")).get("version") or "")
         source = source_packages.get(version)
         if source is None or not (source / required_file).is_file():
             raise FileNotFoundError(f"Node Runtime 闭包缺少 {package_name}@{version}/{required_file}")
-        shutil.rmtree(target)
+        remove_build_tree(target)
         shutil.copytree(source, target)
 
 
@@ -231,7 +248,8 @@ def build_bundle(args: argparse.Namespace) -> tuple[Path, Path]:
     required_node_major = int(upstream["node_major"])
     if not node_version.startswith(f"v{required_node_major}."):
         raise RuntimeError(f"受管 DSH Runtime要求 Node {required_node_major}，当前为 {node_version}")
-    runtime_closure = build_dsh(dsh_root)
+    # hydration、遍历、stat 和 ZIP 写入共用同一扩展根，relative_to 不混用路径形式。
+    runtime_closure = windows_io_path(build_dsh(dsh_root))
     hydrate_runtime_node_package(
         dsh_root=dsh_root,
         runtime_closure=runtime_closure,
@@ -262,7 +280,7 @@ def build_bundle(args: argparse.Namespace) -> tuple[Path, Path]:
             if source.is_file():
                 shutil.copy2(source, staging / legal_name)
 
-        archive = output_dir / f"dsh-runtime-win-x64-{args.version}.zip"
+        archive = output_dir / "sdk.zip"
         with zipfile.ZipFile(archive, "w", compression=zipfile.ZIP_DEFLATED, compresslevel=9) as bundle:
             for path in sorted(staging.rglob("*")):
                 if path.is_file():
@@ -304,9 +322,15 @@ def build_bundle(args: argparse.Namespace) -> tuple[Path, Path]:
                 "full_access": launch,
             },
         }
-        manifest_path = output_dir / f"dsh-runtime-win-x64-{args.version}.manifest.json"
+        manifest_path = output_dir / "sdk.manifest.json"
         manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         verify_bundle_files(output_dir)
+        # 固定包完整校验后才移除旧命名制品，防止失败构建先删掉可用包。
+        for retired in output_dir.glob("dsh-runtime-win-x64-*"):
+            if retired.is_file() and (retired.suffix == ".zip" or retired.name.endswith(".manifest.json")):
+                if retired.resolve().parent != output_dir:
+                    raise ValueError("旧 SDK制品路径越过输出目录")
+                retired.unlink()
         return archive, manifest_path
 
 

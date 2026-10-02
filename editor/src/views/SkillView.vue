@@ -114,7 +114,7 @@ watch(
         </div>
         <div v-if="group.items.length" class="skill-grid">
           <TransitionGroup appear name="sc" tag="div" class="skill-grid-inner">
-          <article v-for="(skill, i) in group.items" :key="skill.skill_id" class="skill-card" :style="{ '--i': i }">
+          <article v-for="(skill, i) in group.items" :key="skill.skill_id" class="skill-card settings-block-surface" :style="{ '--i': i }">
             <div class="card-head">
               <div>
                 <h3>{{ skill.name }}</h3>
@@ -448,7 +448,6 @@ tools: (可选) 需要启用的工具列表
 
 .group-title {
   justify-content: space-between;
-  border-bottom: 1px solid var(--color-border);
   padding-bottom: var(--space-8);
 }
 
@@ -475,12 +474,6 @@ tools: (可选) 需要启用的工具列表
   min-width: 0;
   margin-bottom: var(--space-12);
   padding: 14px;
-  border: 1px solid var(--color-border);
-  border-radius: 28px;
-  background: var(--color-surface);
-  outline: 2px solid var(--workspace-panel-outline);
-  outline-offset: 2px;
-  box-shadow: 0 0 0 2px var(--library-form-ring);
   color: var(--color-text);
   transition: background var(--transition-fast), border-color var(--transition-fast);
   break-inside: avoid;
@@ -549,7 +542,6 @@ tools: (可选) 需要启用的工具列表
   flex-direction: column;
   gap: var(--space-6);
   padding-top: var(--space-10);
-  border-top: 1px solid var(--color-border);
   min-height: 64px;
   justify-content: center;
 }
@@ -719,7 +711,6 @@ tools: (可选) 需要启用的工具列表
   justify-content: space-between;
   margin-bottom: var(--space-20);
   padding-bottom: var(--space-16);
-  border-bottom: 2px solid var(--color-border);
 }
 
 .spec-modal header h2 {

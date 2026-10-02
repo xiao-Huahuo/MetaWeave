@@ -206,7 +206,7 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <section class="management-block model-management" aria-labelledby="model-management-title">
+  <section class="management-block model-management settings-block-surface" aria-labelledby="model-management-title">
     <header class="management-header">
       <h4 id="model-management-title">模型管理</h4>
       <button type="button" class="plain-icon-button" title="刷新模型状态" aria-label="刷新模型状态" :disabled="loading" @click="refresh({ checkDisk: true })">
@@ -295,6 +295,8 @@ onUnmounted(() => {
 .management-block {
   container-type: inline-size;
   margin-top: var(--space-16);
+  min-width: 0;
+  padding: 14px;
   font-family: var(--font-ui);
 }
 
@@ -303,7 +305,6 @@ onUnmounted(() => {
   min-height: 34px;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid var(--color-border);
 }
 
 .management-header h4 {
@@ -311,10 +312,6 @@ onUnmounted(() => {
   color: var(--color-text);
   font-size: calc(14px * var(--font-scale));
 }
-
-.management-list { border-bottom: 1px solid var(--color-border); }
-.management-item { border-top: 1px solid var(--color-border); }
-.management-item:first-child { border-top: 0; }
 
 .management-summary {
   display: grid;

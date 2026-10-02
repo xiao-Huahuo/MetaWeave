@@ -74,7 +74,7 @@ async function navigatePendingUrl() {
   const url = pendingUrl.value.trim()
   if (!desktop || !browserShown || !url) return
   pendingUrl.value = ''
-  address.value = url
+  // Native state supplies the display URL after removing managed DSH credentials.
   await desktop.browserNavigate(url)
 }
 

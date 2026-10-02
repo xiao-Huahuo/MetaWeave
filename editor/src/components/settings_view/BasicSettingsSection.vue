@@ -303,7 +303,6 @@ async function appendBlockedFileType(suffix: string): Promise<void> {
   gap: var(--space-12);
   margin-top: var(--space-12);
   padding-top: var(--space-14);
-  border-top: 1px solid var(--color-border);
 }
 
 .logout-section h3 {

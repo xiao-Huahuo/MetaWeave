@@ -143,7 +143,7 @@ onBeforeUnmount(() => {
 </script>
 
 <template>
-  <section class="sdk-management" aria-labelledby="sdk-management-title">
+  <section class="sdk-management settings-block-surface" aria-labelledby="sdk-management-title">
     <header class="management-header">
       <h4 id="sdk-management-title">SDK 与运行组件</h4>
       <button type="button" class="icon-action" title="刷新 SDK 状态" :disabled="loading" @click="refresh">
@@ -193,10 +193,9 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-.sdk-management { container-type: inline-size; margin-top: var(--space-16); font-family: var(--font-ui); }
-.management-header { display: flex; min-height: 34px; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--color-border); }
+.sdk-management { container-type: inline-size; min-width: 0; margin-top: var(--space-16); padding: 14px; font-family: var(--font-ui); }
+.management-header { display: flex; min-height: 34px; align-items: center; justify-content: space-between; }
 .management-header h4 { margin: 0; color: var(--color-text); font-size: calc(14px * var(--font-scale)); }
-.management-item { border-bottom: 1px solid var(--color-border); }
 .management-summary { display: grid; min-height: 56px; grid-template-columns: 24px minmax(180px, 1.5fr) auto 90px 70px minmax(120px, auto); align-items: center; gap: var(--space-8); }
 .icon-action, .actions button { border: 0; background: transparent; color: var(--color-text-muted); cursor: pointer; }
 .icon-action { display: inline-grid; width: 26px; height: 26px; place-items: center; padding: 0; }

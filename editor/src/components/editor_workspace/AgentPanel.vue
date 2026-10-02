@@ -713,6 +713,12 @@ function showChildAgentConversation(child: ChildAgentRecord) {
   selectedChildAgent.value = child
 }
 
+/** DSH 复用原生浏览器侧栏；收起旧对话与环境详情，为主对话保留可读宽度。 */
+function showDshBrowser() {
+  selectedChildAgent.value = null
+  if (environmentWorkspaceOpen.value) toggleEnvironmentWorkspace()
+}
+
 function syncSelectedChildAgent(children: ChildAgentRecord[]) {
   if (!selectedChildAgent.value) return
   selectedChildAgent.value = children.find((child) => child.run_id === selectedChildAgent.value?.run_id) ?? null
@@ -1107,6 +1113,7 @@ function handleChangeUpdated(event: CustomEvent<AgentChangeSnapshot>) {
           :user-id="userId || ''"
           @close="closeChildAgentCard"
           @open-conversation="showChildAgentConversation"
+          @open-dsh-web="showDshBrowser"
           @children-update="syncSelectedChildAgent"
         />
       </section>
