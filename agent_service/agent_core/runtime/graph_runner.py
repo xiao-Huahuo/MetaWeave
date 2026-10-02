@@ -777,6 +777,10 @@ class GraphRunnerMixin:
                     citation_map=_citation_map,
                     agent_access_mode=effective_access_mode,
                     long_term_memory_enabled=long_term_memory_enabled,
+                    user_question_asker=lambda **kwargs: self.user_question_service.ask(
+                        user_id=user_id, session_id=session_id, run_id=effective_run_id,
+                        cancel_event=cancel_event, emit=token_queue.put, message_service=message_service, **kwargs,
+                    ),
                     child_agent_spawner=(
                         None
                         if not allow_child_spawn
@@ -1041,6 +1045,9 @@ class GraphRunnerMixin:
                             },
                         },
                     }
+
+                elif item_type in {"user_question", "user_question_resolved"}:
+                    yield item
 
                 elif item_type == "task_list_updated":
                     yield {

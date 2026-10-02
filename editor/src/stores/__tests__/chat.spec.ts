@@ -267,6 +267,28 @@ describe('chat reference history', () => {
     nowSpy.mockRestore()
   })
 
+  it('keeps first-delta latency metadata stable while later text is still buffered', async () => {
+    const store = useChatStore()
+    let metadataAfterFirstDelta: Record<string, unknown> | undefined
+    let metadataAfterSecondDelta: Record<string, unknown> | undefined
+    apiMocks.streamPrompt.mockImplementation(async function* () {
+      yield {
+        type: 'delta', node: 'agent', content: '开头',
+        metadata: { latency: { first_agent_delta_ms: 1200 } },
+      }
+      metadataAfterFirstDelta = store.messages.find((message) => message.role === 'assistant')?.metadata
+      yield { type: 'delta', node: 'agent', content: '继续' }
+      // Later tokens must stay in the animation-frame buffer without invalidating the message.
+      metadataAfterSecondDelta = store.messages.find((message) => message.role === 'assistant')?.metadata
+    })
+
+    await store.send('user-1', 'session-1', '继续')
+
+    expect(store.messages.find((message) => message.role === 'assistant')?.content).toBe('开头继续')
+    expect(metadataAfterFirstDelta?.backend_first_delta_seconds).toBe(1.2)
+    expect(metadataAfterSecondDelta).toBe(metadataAfterFirstDelta)
+  })
+
   it('does not persist changing per-token latency metadata from thinking chunks', async () => {
     apiMocks.streamPrompt.mockImplementation(async function* () {
       yield {
@@ -725,6 +747,79 @@ describe('chat reference history', () => {
 
     expect(action?.node).toBe('action')
     expect(action?.trace?.some((trace) => trace.event === 'tool_call_end')).toBe(true)
+  })
+
+  it('does not traverse immutable model requests through a devtools-style deep subscription', () => {
+    const store = useChatStore()
+    const olderContextRead = vi.fn(() => 'previous model request')
+    const latestContextRead = vi.fn(() => 'latest model request')
+    store.messages = [{ role: 'assistant', content: '', node: 'agent' }]
+    store.setContextSnapshots([
+      { messages: [{ role: 'user', get content() { return olderContextRead() } }] },
+      { messages: [{ role: 'user', get content() { return latestContextRead() } }] },
+    ])
+    // Vue Devtools subscribes synchronously and deeply, independently of our IPC watcher.
+    const observe = vi.fn()
+    const unsubscribe = store.$subscribe(observe, { flush: 'sync' })
+    olderContextRead.mockClear()
+    latestContextRead.mockClear()
+
+    try {
+      store.messages[0]!.content += '新文字'
+
+      expect(observe).toHaveBeenCalled()
+      expect(olderContextRead).not.toHaveBeenCalled()
+      expect(latestContextRead).not.toHaveBeenCalled()
+      store.setContextSnapshots([{ messages: [{ role: 'user', content: '更新后的请求' }] }])
+      expect(store.contextSnapshots).toHaveLength(1)
+      expect(store.contextMirror).toEqual([{ role: 'user', content: '更新后的请求' }])
+    } finally {
+      unsubscribe()
+    }
+  })
+
+  it('does not traverse previous history or context snapshots when live text changes', async () => {
+    const sent: Array<{ type: string; value: unknown }> = []
+    Object.defineProperty(window, 'agentEditorDesktop', {
+      configurable: true,
+      value: {
+        windowSync: (type: string, value: unknown) => sent.push({ type, value }),
+      } as Partial<AgentEditorDesktopApi>,
+    })
+    const historyRead = vi.fn(() => 'large historical tool result')
+    const contextRead = vi.fn(() => 'large model request')
+    const store = useSessionChatStore('shallow-sync-regression')
+    store.messages = [
+      { role: 'assistant', content: '历史正文', metadata: { get raw_content() { return historyRead() } } },
+      { role: 'assistant', content: '', node: 'agent' },
+    ]
+    store.setContextSnapshots([{
+      messages: [{ role: 'user', get content() { return contextRead() } }],
+    }])
+    store.isStreaming = true
+    await nextTick()
+    historyRead.mockClear()
+    contextRead.mockClear()
+    sent.length = 0
+
+    store.messages[1]!.content += '新文字'
+    await nextTick()
+
+    expect(historyRead).not.toHaveBeenCalled()
+    expect(contextRead).not.toHaveBeenCalled()
+    expect(sent).toHaveLength(0)
+    store.currentNode = 'planner'
+    await nextTick()
+    expect(sent.at(-1)).toMatchObject({ type: 'chat-meta', value: { currentNode: 'planner' } })
+    store.isStreaming = false
+    await nextTick()
+    expect(sent.at(-1)).toMatchObject({ type: 'chat-state', value: { isStreaming: false } })
+
+    store.$dispose()
+    sent.length = 0
+    store.currentNode = 'disposed'
+    await nextTick()
+    expect(sent).toHaveLength(0)
   })
 
   it('mirrors live text as ordered deltas without serializing full history for every update', async () => {

@@ -48,6 +48,9 @@ export function decorateMarkdownLinks(root: ParentNode): void {
     image.src = isWeb
       ? `https://t0.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=${encodeURIComponent(url.origin)}&size=32&drop_404_icon=true`
       : materialFileIconForNode({ name, path, isDir: path.endsWith('/') }).src
+    // Resource identity survives an error removing the img, so stream patches
+    // keep the fallback instead of requesting the same failed icon every frame.
+    icon.dataset.iconSrc = image.src
     icon.appendChild(image)
     link.prepend(icon)
   })

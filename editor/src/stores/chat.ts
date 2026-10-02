@@ -6,16 +6,18 @@
  * mirrors console chat behavior while staying typed for the editor front-end.
  */
 
-import { computed, ref } from 'vue'
+import { computed, effectScope, markRaw, ref, watch } from 'vue'
 import { acceptHMRUpdate, defineStore } from 'pinia'
 
-import { claimChildAgentWakeup, deleteAgentAttachment, fetchChildAgents, fetchTaskSuggestions, streamPrompt } from '@/api/agent'
+import { answerAgentQuestion, cancelAgentSession, fetchAgentQuestions, claimChildAgentWakeup, deleteAgentAttachment, fetchChildAgents, fetchTaskSuggestions, streamPrompt } from '@/api/agent'
 import type {
   AgentAccessMode,
   AgentAttachmentUploadResponse,
   AgentLoopMode,
   AgentModelRequestSnapshot,
   ChildAgentRecord,
+  AgentQuestionRequest,
+  AgentQuestionAnswer,
 } from '@/api/agent'
 import { fetchMessages } from '@/api/session'
 import type { SessionMessageRecord } from '@/api/session'
@@ -211,6 +213,11 @@ function traceIdentity(trace: Record<string, unknown>): string {
 const createChatStore = (storeId: string) => defineStore(storeId, () => {
   const messages = ref<AgentChatMessage[]>([])
   const isStreaming = ref(false)
+  /** Backend requests survive surface switches; selections remain temporary UI drafts. */
+  const pendingQuestions = ref<AgentQuestionRequest[]>([])
+  const questionSubmitting = ref(false)
+  const questionError = ref('')
+  const pendingQuestion = computed(() => pendingQuestions.value[0] ?? null)
   /** Timestamp shared by all loading indicators for the active user turn. */
   const streamStartedAtMs = ref(0)
   const currentNode = ref('')
@@ -252,7 +259,37 @@ const createChatStore = (storeId: string) => defineStore(storeId, () => {
   const toolPreviewMinMs = 800
 
   const lastMessage = computed(() => messages.value.length > 0 ? messages.value[messages.value.length - 1] : null)
-  const canSend = computed(() => !isStreaming.value)
+  const canSend = computed(() => !isStreaming.value && !pendingQuestion.value)
+
+  /** Restore active backend waits without replacing requests received by a live stream. */
+  async function restoreQuestions(userId: string, sessionId: string) {
+    const previous = pendingQuestions.value
+    try {
+      const result = await fetchAgentQuestions(userId, sessionId)
+      if (loadedSessionId.value === sessionId && !isStreaming.value && pendingQuestions.value === previous) pendingQuestions.value = result.requests ?? []
+    } catch {
+      // History remains usable if the runtime is restarting; streamed requests stay authoritative.
+    }
+  }
+
+  /** Answer the waiting tool in the same run, without creating a new chat turn. */
+  async function submitQuestionAnswers(answers: Record<string, AgentQuestionAnswer>) {
+    const request = pendingQuestion.value
+    if (!request || questionSubmitting.value) return
+    questionSubmitting.value = true
+    questionError.value = ''
+    try {
+      await answerAgentQuestion(request, answers)
+      pendingQuestions.value = pendingQuestions.value.filter(item => item.request_id !== request.request_id)
+      if (isStreaming.value) resetStreamTimeout()
+    } catch (error) {
+      if (pendingQuestions.value.some(item => item.request_id === request.request_id)) {
+        questionError.value = error instanceof Error ? error.message : '回答提交失败，请重试'
+      }
+    } finally {
+      questionSubmitting.value = false
+    }
+  }
 
   function appendMessage(message: AgentChatMessage) {
     const appended = { ...message }
@@ -274,8 +311,10 @@ const createChatStore = (storeId: string) => defineStore(storeId, () => {
     const snapshots = Array.isArray(value)
       ? value.filter((item): item is AgentModelRequestSnapshot => Boolean(item && typeof item === 'object'))
       : []
-    contextSnapshots.value = snapshots
-    contextMirror.value = snapshots.length > 0 ? snapshots[snapshots.length - 1]!.messages : []
+    // Exact model requests are immutable and replaced together. Devtools also
+    // deeply subscribes to Pinia, so neither array should be traversed per token.
+    contextSnapshots.value = markRaw(snapshots)
+    contextMirror.value = markRaw(snapshots.length > 0 ? [...snapshots[snapshots.length - 1]!.messages] : [])
   }
 
   function findLastAssistant() {
@@ -497,6 +536,7 @@ const createChatStore = (storeId: string) => defineStore(storeId, () => {
       if (requestId !== historyRequestId) return
       messages.value = restoreHistoryMessages(history)
       loadedSessionId.value = sessionId
+      void restoreQuestions(userId, sessionId)
       // History restoration must never behave like a live task-list update:
       // otherwise it opens the sidebar without enabling a matching card.
       void useTaskListStore().load(sessionId, { open: false })
@@ -532,6 +572,7 @@ const createChatStore = (storeId: string) => defineStore(storeId, () => {
         Object.assign(existing, message)
         return existing
       })
+      void restoreQuestions(userId, sessionId)
     } catch (error) {
       console.debug('静默同步会话历史失败:', error)
     } finally {
@@ -575,7 +616,7 @@ const createChatStore = (storeId: string) => defineStore(storeId, () => {
     agentAccessMode: AgentAccessMode = 'sandbox',
     options: { wakeup?: boolean; childAgentEvent?: Record<string, unknown> } = {},
   ) {
-    if (!prompt.trim()) {
+    if (!prompt.trim() || pendingQuestion.value) {
       return
     }
     const sessionStore = useSessionStore()
@@ -606,6 +647,8 @@ const createChatStore = (storeId: string) => defineStore(storeId, () => {
     streamAbortController = new AbortController()
     const signal = streamAbortController.signal
     isStreaming.value = true
+    pendingQuestions.value = []
+    questionError.value = ''
     compressionStatus.value = 'idle'
     streamingSessionId.value = targetSessionId || ''
     if (targetSessionId) sessionStore.setSessionStreaming(targetSessionId, true)
@@ -857,6 +900,19 @@ const createChatStore = (storeId: string) => defineStore(storeId, () => {
         }
         resetStreamTimeout() // 每次收到新 chunk 重置超时计时器
 
+        if (chunk.type === 'user_question' || chunk.type === 'user_question_resolved') {
+          forceFlushContent()
+          forceFlushThinking()
+          const request = chunk.question_request as AgentQuestionRequest
+          if (request?.request_id && request.session_id === targetSessionId && request.user_id === userId) {
+            const remaining = pendingQuestions.value.filter(item => item.request_id !== request.request_id)
+            pendingQuestions.value = request.status === 'pending' ? [...remaining, request] : remaining
+            questionError.value = request.status === 'timed_out' ? '提问等待已超时' : ''
+            resetStreamTimeout()
+          }
+          continue
+        }
+
         if (chunk.type === 'system_prompt' && content) {
           messages.value = messages.value.filter((message) => message.role !== 'system')
           messages.value.push({ role: 'system', content, metadata })
@@ -1001,9 +1057,13 @@ const createChatStore = (storeId: string) => defineStore(storeId, () => {
           attachMetadataToMessage(message, metadata)
           const backendFirstDeltaMs = asFiniteNumber(asRecord(message.metadata?.latency).first_agent_delta_ms)
           if (backendFirstDeltaMs !== null) {
-            message.metadata = {
-              ...(message.metadata ?? {}),
-              backend_first_delta_seconds: Math.round((backendFirstDeltaMs / 1000) * 10) / 10,
+            const firstDeltaSeconds = Math.round((backendFirstDeltaMs / 1000) * 10) / 10
+            // First-delta latency is fixed; later tokens must not invalidate metadata before the draft frame.
+            if (message.metadata?.backend_first_delta_seconds !== firstDeltaSeconds) {
+              message.metadata = {
+                ...(message.metadata ?? {}),
+                backend_first_delta_seconds: firstDeltaSeconds,
+              }
             }
           }
           if (announcedToolCalls.length > 0) {
@@ -1053,6 +1113,7 @@ const createChatStore = (storeId: string) => defineStore(storeId, () => {
         forceFlushThinking()
         attachCitationMapToLastFinalAssistant()
         isStreaming.value = false
+        pendingQuestions.value = []
         if (targetSessionId) sessionStore.setSessionStreaming(targetSessionId, false)
         streamingSessionId.value = ''
         streamStartedAtMs.value = 0
@@ -1090,6 +1151,8 @@ const createChatStore = (storeId: string) => defineStore(storeId, () => {
     historyAbortController = null
     clearStreamTimeout()
     messages.value = []
+    pendingQuestions.value = []
+    questionError.value = ''
     contextMirror.value = []
     contextSnapshots.value = []
     contextUsage.value = null
@@ -1262,6 +1325,7 @@ const createChatStore = (storeId: string) => defineStore(storeId, () => {
 
   function resetStreamTimeout() {
     clearStreamTimeout()
+    if (pendingQuestions.value.length > 0) return
     streamTimeoutId = window.setTimeout(() => {
       cancelStream()
     }, streamTimeoutMs)
@@ -1273,12 +1337,17 @@ const createChatStore = (storeId: string) => defineStore(storeId, () => {
    * interrupted, while action/child rows keep their renderer-specific node.
    */
   function cancelStream() {
-    if (!isStreaming.value) return
+    const question = pendingQuestion.value
+    if (!isStreaming.value && !question) return
+    if (question) void cancelAgentSession(question.session_id).catch(error => {
+      streamError.value = error instanceof Error ? error.message : '取消提问失败'
+    })
     clearStreamTimeout()
     streamAbortController?.abort()
     forceFlushContent()
     forceFlushThinking()
     isStreaming.value = false
+    pendingQuestions.value = []
     const lastAssistant = findLastAssistant()
     if (lastAssistant && lastAssistant.node !== 'action' && lastAssistant.node !== 'child_agent') {
       lastAssistant.node = 'interrupted'
@@ -1348,6 +1417,11 @@ const createChatStore = (storeId: string) => defineStore(storeId, () => {
   return {
     messages,
     isStreaming,
+    pendingQuestions,
+    pendingQuestion,
+    questionSubmitting,
+    questionError,
+    submitQuestionAnswers,
     streamStartedAtMs,
     currentNode,
     streamError,
@@ -1389,6 +1463,7 @@ interface AgentChatWindowState {
   seq: number
   messages: AgentChatMessage[]
   isStreaming: boolean
+  pendingQuestions: AgentQuestionRequest[]
   streamStartedAtMs: number
   currentNode: string
   streamError: string
@@ -1471,6 +1546,7 @@ function nextWindowSyncSequence(sessionId: string): number {
 function chatMetaState(store: AgentChatStoreInstance): AgentChatMetaState {
   return {
     isStreaming: store.isStreaming,
+    pendingQuestions: store.pendingQuestions,
     streamStartedAtMs: store.streamStartedAtMs,
     currentNode: store.currentNode,
     streamError: store.streamError,
@@ -1499,6 +1575,7 @@ function broadcastChatState(sessionId: string, store: AgentChatStoreInstance) {
     seq: nextWindowSyncSequence(sessionId),
     messages: store.messages,
     isStreaming: store.isStreaming,
+    pendingQuestions: store.pendingQuestions,
     streamStartedAtMs: store.streamStartedAtMs,
     currentNode: store.currentNode,
     streamError: store.streamError,
@@ -1566,6 +1643,7 @@ function applyRemoteChatState(payload: AgentChatWindowState) {
   store.$patch((state) => {
     state.messages = cloneForWindowSync(payload.messages)
     state.isStreaming = Boolean(payload.isStreaming)
+    state.pendingQuestions = payload.pendingQuestions ?? []
     state.streamStartedAtMs = Number.isFinite(payload.streamStartedAtMs) ? payload.streamStartedAtMs : 0
     state.currentNode = payload.currentNode || ''
     state.streamError = payload.streamError || ''
@@ -1591,6 +1669,7 @@ function applyRemoteChatMeta(payload: AgentChatMetaEvent) {
   applyingRemoteState.add(payload.sessionId)
   store.$patch((state) => {
     state.isStreaming = Boolean(payload.isStreaming)
+    state.pendingQuestions = payload.pendingQuestions ?? []
     state.streamStartedAtMs = Number.isFinite(payload.streamStartedAtMs) ? payload.streamStartedAtMs : 0
     state.currentNode = payload.currentNode || ''
     state.streamError = payload.streamError || ''
@@ -1664,7 +1743,13 @@ function registerChatWindowSync(sessionId: string, store: AgentChatStoreInstance
   let previousMessageCount = store.messages.length
   let previousMetaState = chatMetaState(store)
   let previousPendingAttachmentCount = store.pendingAttachments.length
-  store.$subscribe(() => {
+  // The store owns this detached scope: component unmounts must not stop mirroring.
+  // Watch references and counts only; Pinia $subscribe deeply walks every historical
+  // message and model request on each live token, even when its callback does nothing.
+  const syncScope = effectScope(true)
+  syncScope.run(() => watch(() => [
+    chatMetaState(store), store.messages.length, store.pendingAttachments.length,
+  ], () => {
     const streamingChanged = store.isStreaming !== wasStreaming
     const messageCountChanged = store.messages.length !== previousMessageCount
     const nextMetaState = chatMetaState(store)
@@ -1680,7 +1765,13 @@ function registerChatWindowSync(sessionId: string, store: AgentChatStoreInstance
     previousPendingAttachmentCount = store.pendingAttachments.length
     wasStreaming = store.isStreaming
     previousMessageCount = store.messages.length
-  }, { detached: true, flush: 'post' })
+  }, { flush: 'post' }))
+  const disposeStore = store.$dispose
+  store.$dispose = () => {
+    syncScope.stop()
+    if (windowSyncedStores.get(sessionId) === store) windowSyncedStores.delete(sessionId)
+    disposeStore()
+  }
   installChatWindowSyncListener()
   window.agentEditorDesktop?.windowSync?.('chat-sync-request', { sessionId })
 }

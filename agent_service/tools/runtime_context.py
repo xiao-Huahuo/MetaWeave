@@ -75,6 +75,8 @@ class ToolRuntimeState:
     child_agent_spawner: Callable[..., str] | None = None
     child_agent_waiter: Callable[..., str] | None = None
     child_agent_continuation: Callable[..., str] | None = None
+    # 当前图线程的同步提问入口，返回前不得继续模型执行。
+    user_question_asker: Callable[..., str] | None = None
     latest_file_patch: dict[str, str | bool] | None = None
 
 
@@ -122,6 +124,7 @@ def set_tool_runtime(
     child_agent_spawner: Callable[..., str] | None = None,
     child_agent_waiter: Callable[..., str] | None = None,
     child_agent_continuation: Callable[..., str] | None = None,
+    user_question_asker: Callable[..., str] | None = None,
 ) -> None:
     """
     设置当前线程的工具运行时状态。
@@ -163,6 +166,7 @@ def set_tool_runtime(
         child_agent_spawner=child_agent_spawner,
         child_agent_waiter=child_agent_waiter,
         child_agent_continuation=child_agent_continuation,
+        user_question_asker=user_question_asker,
     )
 
 

@@ -370,6 +370,24 @@ describe('MarkdownContent streaming code highlight', () => {
     expect(wrapper.findAll('.markdown-body p')[1]?.text()).toContain('正在生成更多内容')
   })
 
+  it.each([
+    ['prose', '长段落正文'.repeat(2000), '继续输出', 'p'],
+    ['code', '```python\n' + 'print("长代码块")\n'.repeat(200), 'print("后续")', 'pre code'],
+    ['list', '- 已生成条目\n- 当前条目', '\n- 后续条目', 'li'],
+    ['table', '| 列名 |\n| --- |\n| 已生成行 |', '\n| 后续行 |', 'tbody tr'],
+  ])('preserves the active %s prefix DOM while more text streams', async (_name, prefix, delta, selector) => {
+    const wrapper = mount(MarkdownContent, {
+      props: { content: prefix, isStreaming: true },
+    })
+    const prefixNode = wrapper.get(selector).element
+    const prefixText = prefixNode.firstChild
+    await wrapper.setProps({ content: prefix + delta })
+    expect(wrapper.get(selector).element === prefixNode).toBe(true)
+    expect(wrapper.get(selector).element.firstChild === prefixText).toBe(true)
+    expect(wrapper.text()).toContain(delta.replace(/^\s*- /, '').replace(/\|/g, '').trim())
+    wrapper.unmount()
+  })
+
   it('decorates streaming links without duplicating icons or replacing completed blocks', async () => {
     const prefix = '[网站](https://github.com)\n\n'
     const wrapper = mount(MarkdownContent, {
@@ -383,6 +401,51 @@ describe('MarkdownContent streaming code highlight', () => {
     await wrapper.setProps({ isStreaming: false })
     await new Promise((resolve) => window.setTimeout(resolve, 0))
     expect(wrapper.findAll('.markdown-link-icon')).toHaveLength(2)
+  })
+
+  it('keeps the active link icon loaded while following text grows', async () => {
+    const wrapper = mount(MarkdownContent, {
+      props: { content: '[脚本](./main.py)', isStreaming: true },
+    })
+    const icon = wrapper.get('.markdown-link-icon').element
+    await wrapper.get('.markdown-link-icon img').trigger('load')
+    await wrapper.setProps({ content: '[脚本](./main.py) 继续输出' })
+    expect(wrapper.get('.markdown-link-icon').element === icon).toBe(true)
+    expect(wrapper.get('.markdown-link-icon').classes()).toContain('is-loaded')
+    await wrapper.setProps({ content: '[脚本](./next.vue) 继续输出' })
+    await wrapper.get('.markdown-link-icon img').trigger('load')
+    expect(wrapper.get('.markdown-link-icon').classes()).toContain('is-loaded')
+    wrapper.unmount()
+  })
+
+  it('keeps a failed link icon fallback instead of retrying on each body batch', async () => {
+    const wrapper = mount(MarkdownContent, {
+      props: { content: '[网站](https://example.com)', isStreaming: true },
+    })
+    const icon = wrapper.get('.markdown-link-icon').element
+    await wrapper.get('.markdown-link-icon img').trigger('error')
+    await wrapper.setProps({ content: '[网站](https://example.com) 继续输出' })
+    expect(wrapper.get('.markdown-link-icon').element === icon).toBe(true)
+    expect(wrapper.find('.markdown-link-icon img').exists()).toBe(false)
+    expect(wrapper.find('.markdown-link-icon__fallback').exists()).toBe(true)
+    wrapper.unmount()
+  })
+
+  it('keeps long text laid out while still repairing newly completed inline markup', async () => {
+    const prefix = '长段落正文'.repeat(400)
+    const wrapper = mount(MarkdownContent, {
+      props: { content: prefix, isStreaming: true },
+    })
+    const firstText = wrapper.get('p').element.firstChild
+    await wrapper.setProps({ content: prefix + '后续正文' })
+    expect(firstText?.nodeValue).toBe(prefix)
+    await wrapper.setProps({ content: prefix + '后续正文 **强调内容** [链接](https://example.com)' })
+    expect(wrapper.get('strong').text()).toBe('强调内容')
+    expect(wrapper.get('a').text()).toBe('链接')
+    await wrapper.setProps({ content: prefix + '后续正文 **强调内容** [链接](https://example.com) <img src="x" onerror="alert(1)">', isStreaming: false })
+    expect(wrapper.text()).toContain(prefix + '后续正文 强调内容')
+    expect(wrapper.get('img[src="x"]').attributes('onerror')).toBeUndefined()
+    wrapper.unmount()
   })
 
   it('removes the stream cursor without altering the final markdown content', async () => {

@@ -1,0 +1,5 @@
+/* SettingsDisclosure's shared motion; a floating panel can reverse the entry offset to rise from its anchor. */
+.settings-disclosure-enter-active, .settings-disclosure-leave-active { overflow: hidden; transition: height 220ms ease, opacity 180ms ease, transform 180ms ease; transform-origin: top left; }
+.settings-disclosure-enter-from, .settings-disclosure-leave-to { opacity: 0; transform: translateY(var(--settings-slide-offset, -4px)); }
+.settings-disclosure-enter-to, .settings-disclosure-leave-from { opacity: 1; transform: translateY(0); }
+@media (prefers-reduced-motion: reduce) { .settings-disclosure-enter-active, .settings-disclosure-leave-active { transition: none; } }

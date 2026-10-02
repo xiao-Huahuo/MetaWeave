@@ -1,11 +1,112 @@
-/* Historical session attachment citation recovery tests. */
+/* Streaming body isolation, bottom-follow behavior, and historical attachment citation tests. */
 import { mount } from '@vue/test-utils'
 import { createPinia } from 'pinia'
+import { defineComponent, h, nextTick, onUpdated, reactive } from 'vue'
 import { describe, expect, it, vi } from 'vitest'
 
 import MessageList from '../MessageList.vue'
 
 describe('MessageList attachment citation recovery', () => {
+  it('leaves completed bubbles untouched while only the last body grows', async () => {
+    Object.defineProperty(HTMLElement.prototype, 'scrollTo', { value: vi.fn(), configurable: true })
+    const updatedMessages: string[] = []
+    const messages = reactive([
+      { message_id: 'old-user', role: 'user' as const, content: 'Earlier prompt' },
+      { message_id: 'old-answer', role: 'assistant' as const, node: 'agent', content: 'Completed answer' },
+      { message_id: 'new-user', role: 'user' as const, content: 'Current prompt' },
+      { message_id: 'new-answer', role: 'assistant' as const, node: 'agent', content: 'First word' },
+    ])
+    const wrapper = mount(MessageList, {
+      props: { messages, isStreaming: true },
+      global: {
+        plugins: [createPinia()],
+        stubs: {
+          MessageBubble: defineComponent({
+            props: ['message', 'isStreaming', 'isThinkingActive', 'userAvatar', 'agentAvatar', 'showAvatar', 'showActions', 'knowledgeSources', 'citationMap', 'changeSnapshot'],
+            setup(props) {
+              onUpdated(() => updatedMessages.push(props.message.message_id))
+              return () => h('div', props.message.content)
+            },
+          }),
+          FinalTurnSummary: true, LoadingState: true, LoaderCube: true,
+        },
+      },
+    })
+    updatedMessages.length = 0
+    messages[3]!.content += ' continues'
+    await nextTick()
+
+    expect(updatedMessages).toEqual(['new-answer'])
+    wrapper.unmount()
+  })
+
+  it('coalesces body follow into a frame and yields to upward scrolling', async () => {
+    const scrollTo = vi.fn()
+    Object.defineProperty(HTMLElement.prototype, 'scrollTo', { value: scrollTo, configurable: true })
+    const callbacks: FrameRequestCallback[] = []
+    const frameSpy = vi.spyOn(window, 'requestAnimationFrame').mockImplementation((callback) => {
+      callbacks.push(callback)
+      return callbacks.length
+    })
+    const messages = reactive([{ role: 'assistant' as const, content: 'First word', node: 'agent' }])
+    const wrapper = mount(MessageList, {
+      props: { messages, isStreaming: true },
+      global: {
+        plugins: [createPinia()],
+        stubs: { MessageBubble: true, FinalTurnSummary: true, LoadingState: true, LoaderCube: true },
+      },
+    })
+    const list = wrapper.get('.message-list')
+    const readHeight = vi.fn(() => 1000)
+    Object.defineProperties(list.element, {
+      scrollHeight: { get: readHeight },
+      clientHeight: { value: 300 },
+      scrollTop: { value: 700, writable: true },
+    })
+    scrollTo.mockClear()
+    messages[0]!.content += ' grows'
+    await nextTick()
+    await nextTick()
+    messages[0]!.content += ' again'
+    await nextTick()
+    await nextTick()
+
+    expect(scrollTo).not.toHaveBeenCalled()
+    expect(readHeight).not.toHaveBeenCalled()
+    expect(callbacks).toHaveLength(1)
+    callbacks[0]?.(performance.now())
+    expect(scrollTo).toHaveBeenCalledOnce()
+    expect(readHeight).toHaveBeenCalledOnce()
+
+    scrollTo.mockClear()
+    messages[0]!.content += ' while user scrolls'
+    await nextTick()
+    await nextTick()
+    await list.trigger('wheel')
+    list.element.scrollTop = 400
+    await list.trigger('scroll')
+    callbacks[1]?.(performance.now())
+    callbacks[2]?.(performance.now())
+    expect(scrollTo).not.toHaveBeenCalled()
+
+    messages[0]!.content += ' in history view'
+    await nextTick()
+    await nextTick()
+    expect(callbacks).toHaveLength(3)
+    expect(scrollTo).not.toHaveBeenCalled()
+
+    list.element.scrollTop = 700
+    await list.trigger('scroll')
+    callbacks[3]?.(performance.now())
+    messages[0]!.content += ' back at bottom'
+    await nextTick()
+    await nextTick()
+    callbacks[4]?.(performance.now())
+    expect(scrollTo).toHaveBeenCalledOnce()
+    wrapper.unmount()
+    frameSpy.mockRestore()
+  })
+
   it('coalesces repeated scroll events into one animation-frame layout read', async () => {
     Object.defineProperty(HTMLElement.prototype, 'scrollTo', { value: vi.fn(), configurable: true })
     const callbacks: FrameRequestCallback[] = []

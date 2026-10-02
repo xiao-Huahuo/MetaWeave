@@ -173,6 +173,8 @@ class AgentCore(ChildAgentRuntimeMixin, GraphRunnerMixin, SessionRuntimeMixin, M
         self.tool_registry = ToolRegistry.with_builtin_tools() if tools is None else None
         self.tool_executor = ToolExecutor(registry=self.tool_registry) if self.tool_registry is not None else None
         self.cancellation_runtime = CancellationRuntime()
+        from agent_service.services.user_question.service import UserQuestionService
+        self.user_question_service = UserQuestionService(config=config, message_service=message_service)
         self._session_state_lock = threading.Lock()
         self.tools = list(tools) if tools is not None else self.tool_registry.to_langchain_tools()
         if message_service is not None:
@@ -246,6 +248,7 @@ class AgentCore(ChildAgentRuntimeMixin, GraphRunnerMixin, SessionRuntimeMixin, M
 
         logger.info("AgentCore 正在释放调度器资源...")
         self.cancellation_runtime.cancel_all()
+        self.user_question_service.close()
         self.child_agent_manager.close()
         self.task_scheduler.shutdown()
         logger.info("AgentCore 资源释放完成")

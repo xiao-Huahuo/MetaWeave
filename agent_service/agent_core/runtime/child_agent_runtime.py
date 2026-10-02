@@ -433,7 +433,8 @@ class ChildAgentRuntimeMixin:
         parent_tools = frozenset(
             definition.name
             for definition in (parent_registry.definitions.values() if parent_registry else [])
-            if definition.name not in {"spawn_child_agent", "wait_for_child_agents", "continue_child_agent"}
+            # 用户交互由主 Agent 承担；子对话没有输入框消费者，不能进入同步提问等待。
+            if definition.name not in {"spawn_child_agent", "wait_for_child_agents", "continue_child_agent", "request_user_input"}
         )
         if provider == "dsh":
             # 真目录将在 Runtime 握手后发布；DSH 不继承 MW 原生工具名。

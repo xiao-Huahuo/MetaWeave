@@ -52,6 +52,8 @@ export const API_ROUTES = {
   KNOWLEDGE_INDEX_STATUS: '/knowledge/index/status',
   AGENT_STREAM: '/agent/stream',
   AGENT_STREAM_RUN: '/agent/stream-run',
+  AGENT_QUESTIONS: '/agent/questions',
+  AGENT_CANCEL: '/agent/cancel',
   AGENT_ATTACHMENTS_UPLOAD: '/agent/attachments/upload',
   AGENT_ATTACHMENTS: '/agent/attachments',
   AGENT_ATTACHMENT_RAW: '/agent/attachments/raw',

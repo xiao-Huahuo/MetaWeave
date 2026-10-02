@@ -1037,14 +1037,14 @@ function handleChangeUpdated(event: CustomEvent<AgentChangeSnapshot>) {
       <MessageList
         ref="messageListRef"
         :messages="chatStore.messages"
-        :is-streaming="chatStore.isStreaming"
+        :is-streaming="chatStore.isStreaming && !chatStore.pendingQuestion"
         :merge-assistants="settingsStore.chatMode === 'chat'"
         :suggestions="chatStore.taskSuggestions"
         :compact="props.mode === 'panel'"
         @bottom-change="handleMessageBottomChange"
         @select-suggestion="sendSuggestion"
       />
-      <StreamingIndicator :is-streaming="chatStore.isStreaming" :has-content="hasStreamingContent" />
+      <StreamingIndicator :is-streaming="chatStore.isStreaming && !chatStore.pendingQuestion" :has-content="hasStreamingContent" />
       <p v-if="chatStore.streamError" class="stream-error">{{ chatStore.streamError }}</p>
       <button
         v-if="hasMessages && !isMessageListAtBottom"
@@ -1059,7 +1059,8 @@ function handleChangeUpdated(event: CustomEvent<AgentChangeSnapshot>) {
         </svg>
       </button>
       <div v-if="chatStore.isStreaming" class="thinking-flow" aria-live="polite">
-        <span class="thinking-shimmer-text">正在思考</span>
+        <span v-if="chatStore.pendingQuestion">等待回答</span>
+        <span v-else class="thinking-shimmer-text">正在思考</span>
       </div>
       <ContextCompressionStatus
         v-if="chatStore.compressionStatus !== 'idle'"
@@ -1068,8 +1069,8 @@ function handleChangeUpdated(event: CustomEvent<AgentChangeSnapshot>) {
       <ChatInput
         :page="props.mode === 'page' || props.mobileMain"
         :conversation-key="`${activeSessionId || 'draft'}:${newConversationRevision}`"
-        :disabled="!userId"
-        :centered="!hasMessages && !chatStore.isStreaming"
+        :disabled="!userId || Boolean(chatStore.pendingQuestion)"
+        :centered="!hasMessages && !chatStore.isStreaming && !chatStore.pendingQuestion"
         :compact="props.mode === 'panel'"
         :web-search-enabled="settingsStore.profile.webSearchEnabled"
         :model-label="modelConfigLabel"
@@ -1078,7 +1079,11 @@ function handleChangeUpdated(event: CustomEvent<AgentChangeSnapshot>) {
         :attachments="chatStore.pendingAttachments"
         :context-tokens="chatStore.contextUsage?.current_tokens ?? 0"
         :max-context-tokens="displayedMaxContextTokens"
-        :is-streaming="chatStore.isStreaming"
+        :is-streaming="chatStore.isStreaming || Boolean(chatStore.pendingQuestion)"
+        :question-request="chatStore.pendingQuestion"
+        :question-submitting="chatStore.questionSubmitting"
+        :question-error="chatStore.questionError"
+        @answer-question="chatStore.submitQuestionAnswers"
         @send="sendMessage"
         @toggle-web-search="handleToggleWebSearch"
         @configure-model="openModelSettings"

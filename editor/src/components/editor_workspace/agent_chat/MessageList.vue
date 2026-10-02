@@ -43,11 +43,15 @@ const isPinnedToBottom = ref(true)
 const isThinkingActive = computed(() => Boolean(props.isStreaming))
 const undoingSnapshotId = ref('')
 let scrollRafId = 0
+let contentScrollRafId = 0
 let layoutScrollRafId = 0
 let layoutScrollTimeoutId = 0
 let followsSubmittedPrompt = false
 let userScrollRevision = 0
 const MESSAGE_TIME_SEPARATOR_MS = 30 * 60 * 1000
+/** Stable empty props let Vue skip completed bubbles during body updates. */
+const emptyCitationMap: Record<string, SourceItem> = {}
+const emptyKnowledgeSources: SourceItem[] = []
 
 function mergeConsecutiveSameNode(messages: AgentChatMessage[]) {
   return messages.filter((message) => message.role !== 'system').reduce<AgentChatMessage[]>((acc, message) => {
@@ -145,13 +149,16 @@ function handleUserScrollIntent() {
   userScrollRevision += 1
 }
 
+/** Reads the streamed body's new height once per frame after Vue has patched it. */
 function scheduleScrollIfNeeded() {
-  const shouldAutoScroll = isPinnedToBottom.value || isNearBottom()
-  void nextTick(() => {
-    if (shouldAutoScroll) {
-      scrollToBottom()
-      setPinnedToBottom(true)
-    }
+  if (contentScrollRafId !== 0 || !(isPinnedToBottom.value || isNearBottom())) return
+  const scheduledRevision = userScrollRevision
+  contentScrollRafId = window.requestAnimationFrame(() => {
+    contentScrollRafId = 0
+    // A pending body update must not pull the user away from history inspection.
+    if (scheduledRevision !== userScrollRevision || !(isPinnedToBottom.value || isNearBottom())) return
+    scrollToBottom()
+    setPinnedToBottom(true)
   })
 }
 
@@ -265,7 +272,7 @@ function extractCitationIds(content: string) {
 
 function citationMapForMessage(message: AgentChatMessage, messageIndex = -1): Record<string, SourceItem> {
   if (isThinkingActive.value || !isCompletedAssistantContentMessage(message)) {
-    return {}
+    return emptyCitationMap
   }
   const persisted = asSourceMap(message.metadata?.citation_map)
   if (Object.keys(persisted).length > 0 || messageIndex < 0) return persisted
@@ -401,6 +408,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   if (scrollRafId !== 0) window.cancelAnimationFrame(scrollRafId)
+  if (contentScrollRafId !== 0) window.cancelAnimationFrame(contentScrollRafId)
   if (layoutScrollRafId !== 0) window.cancelAnimationFrame(layoutScrollRafId)
   if (layoutScrollTimeoutId !== 0) window.clearTimeout(layoutScrollTimeoutId)
 })
@@ -429,8 +437,8 @@ defineExpose({
         :agent-avatar="agentAvatar"
         :show-avatar="shouldShowAvatar(message, index)"
         :show-actions="shouldShowActions(message, index)"
-        :knowledge-sources="[]"
-        :citation-map="message.role === 'assistant' ? citationMapForMessage(message, index) : {}"
+        :knowledge-sources="emptyKnowledgeSources"
+        :citation-map="message.role === 'assistant' ? citationMapForMessage(message, index) : emptyCitationMap"
         :change-snapshot="message.node === 'action' ? changeSnapshotForAction(index) : changeSnapshotForMessage(message)"
       />
       <AgentSearchResultBlocks

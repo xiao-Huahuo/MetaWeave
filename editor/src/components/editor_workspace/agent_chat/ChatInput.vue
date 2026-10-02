@@ -15,8 +15,9 @@ import { promptStarters, samplePromptStarters, type PromptStarter } from './prom
 import IcIcon from '@/components/common/IcIcon.vue'
 import AttachmentBlocks from '@/components/editor_workspace/agent_chat/AttachmentBlocks.vue'
 import ContextProgress from '@/components/editor_workspace/agent_chat/ContextProgress.vue'
+import AgentQuestionBox from './AgentQuestionBox.vue'
 import { checkModelDisk, fetchModelStatus } from '@/api/settings'
-import type { AgentAccessMode } from '@/api/agent'
+import type { AgentAccessMode, AgentQuestionAnswer, AgentQuestionRequest } from '@/api/agent'
 import type { AgentUploadedAttachment } from '@/stores/chat'
 
 const props = defineProps<{
@@ -35,6 +36,9 @@ const props = defineProps<{
   contextTokens?: number
   maxContextTokens?: number
   isStreaming?: boolean
+  questionRequest?: AgentQuestionRequest | null
+  questionSubmitting?: boolean
+  questionError?: string
 }>()
 
 const emit = defineEmits<{
@@ -47,6 +51,7 @@ const emit = defineEmits<{
   'file-select': [file: File]
   'cancel-stream': []
   'create-task-list': [title: string, items: string[]]
+  'answer-question': [answers: Record<string, AgentQuestionAnswer>]
 }>()
 
 const text = ref('')
@@ -358,8 +363,13 @@ function handleFileChange(event: Event) {
 
 <template>
   <div class="chat-input-wrap" :class="{ centered, compact }">
+    <Transition name="settings-disclosure">
+      <div v-if="questionRequest" :key="questionRequest.request_id" class="question-extension">
+        <AgentQuestionBox :request="questionRequest" :submitting="questionSubmitting" :error="questionError" @answer="emit('answer-question', $event)" />
+      </div>
+    </Transition>
     <AttachmentBlocks
-      v-if="!centered && attachments?.length"
+      v-if="!centered && !questionRequest && attachments?.length"
       class="input-attachments"
       :attachments="attachments"
       align="left"
@@ -568,6 +578,7 @@ function handleFileChange(event: Event) {
 </template>
 
 <style scoped>
+.question-extension { --settings-slide-offset: 8px; position: absolute; inset-inline: 0; bottom: calc(100% + var(--space-8)); }
 .chat-input-wrap {
   position: absolute;
   left: 50%;
@@ -1547,3 +1558,4 @@ function handleFileChange(event: Event) {
   border-color: var(--color-primary);
 }
 </style>
+<style src="../../common/settings-disclosure-motion.css" scoped></style>

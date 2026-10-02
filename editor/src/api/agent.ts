@@ -22,6 +22,45 @@ export interface AgentStreamChunk {
   context_request?: AgentModelRequestSnapshot
   context_snapshots?: AgentModelRequestSnapshot[]
   visualization?: MarkdownHtmlVisualizationPayload
+  question_request?: AgentQuestionRequest
+}
+
+/** Backend-owned synchronous question contract; the editor only holds unsent drafts. */
+export interface AgentQuestion {
+  id: string
+  question: string
+  options: string[]
+  multi_select: boolean
+  allow_text: boolean
+}
+export interface AgentQuestionAnswer {
+  selected_options: string[]
+  text: string
+}
+export interface AgentQuestionRequest {
+  request_id: string
+  user_id: string
+  session_id: string
+  run_id: string
+  status: 'pending' | 'answered' | 'cancelled' | 'timed_out' | 'failed'
+  questions: AgentQuestion[]
+}
+
+/** Restore active waiters after switching sessions or reopening a chat surface. */
+export function fetchAgentQuestions(userId: string, sessionId: string): Promise<{ requests: AgentQuestionRequest[] }> {
+  return apiGet(API_ROUTES.AGENT_QUESTIONS, { user_id: userId, session_id: sessionId })
+}
+
+/** Submit all answers in one request; success means the backend has persisted them. */
+export function answerAgentQuestion(request: AgentQuestionRequest, answers: Record<string, AgentQuestionAnswer>): Promise<{ request: AgentQuestionRequest }> {
+  return apiPost(`${API_ROUTES.AGENT_QUESTIONS}/${encodeURIComponent(request.request_id)}/answer`, {
+    user_id: request.user_id, session_id: request.session_id, answers,
+  })
+}
+
+/** Explicitly stop a waiting backend graph, including restored chats without an SSE reader. */
+export function cancelAgentSession(sessionId: string): Promise<{ ok: boolean }> {
+  return apiPost(API_ROUTES.AGENT_CANCEL, { session_id: sessionId })
 }
 
 /** Exact secret-free request submitted to one model call. */

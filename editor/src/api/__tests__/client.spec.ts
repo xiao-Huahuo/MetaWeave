@@ -10,6 +10,7 @@ import { ApiError, apiGet, streamLines } from '../client'
 describe('streamLines scheduling', () => {
   afterEach(() => {
     vi.unstubAllGlobals()
+    vi.restoreAllMocks()
   })
 
   it('yields to renderer tasks while consuming one buffered SSE burst', async () => {
@@ -40,6 +41,34 @@ describe('streamLines scheduling', () => {
 
     expect(received.length).toBeGreaterThan(0)
     expect(received.length).toBeLessThan(18)
+  })
+
+  it('releases the abort listener when the server finishes the stream', async () => {
+    const controller = new AbortController()
+    const removeListener = vi.spyOn(controller.signal, 'removeEventListener')
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('data: [DONE]\n\n')))
+    const stream = streamLines('/agent/stream', { signal: controller.signal })
+    await expect(stream.next()).resolves.toMatchObject({ done: true })
+    expect(removeListener).toHaveBeenCalledWith('abort', expect.any(Function))
+  })
+
+  it('settles cancellation when fetch has already errored its readable body', async () => {
+    const abortController = new AbortController()
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode('data: {"content":"保留前缀"}\n\n'))
+        abortController.signal.addEventListener('abort', () => {
+          controller.error(new DOMException('Aborted', 'AbortError'))
+        }, { once: true })
+      },
+    })
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(body)))
+    const stream = streamLines('/agent/stream', { signal: abortController.signal })
+    await expect(stream.next()).resolves.toMatchObject({ value: { content: '保留前缀' } })
+    abortController.abort()
+    await expect(stream.next()).resolves.toMatchObject({ done: true })
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    expect(body.locked).toBe(false)
   })
 
   it('uses an independent timeout signal for each management request', async () => {

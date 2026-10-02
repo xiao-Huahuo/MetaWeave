@@ -27,6 +27,7 @@ from agent_service.api.rest.deps import (
 from agent_service.core.agent_config import DEFAULT_BUSINESS_LIMITS
 from agent_service.services.editor_context.service import editor_context_service
 from agent_service.services.task_suggestion.service import TaskSuggestionService
+from agent_service.schemas.user_question import UserQuestionSubmission
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -450,6 +451,32 @@ async def update_child_agent(run_id: str, body: dict[str, Any]) -> dict[str, Any
     agent = _require_agent()
     agent.update_child_agent(run_id, body)
     return {"run_id": run_id, "ok": True}
+
+@router.get("/agent/questions")
+async def agent_questions(
+    user_id: str = Query(..., min_length=DEFAULT_BUSINESS_LIMITS.nonempty_min_length),
+    session_id: str = Query(..., min_length=DEFAULT_BUSINESS_LIMITS.nonempty_min_length),
+) -> dict[str, Any]:
+    """恢复指定用户会话内仍在等待的同步提问。"""
+    requests = _require_agent().user_question_service.list_pending(user_id=user_id, session_id=session_id)
+    return {"requests": requests}
+
+
+@router.post("/agent/questions/{request_id}/answer")
+async def answer_agent_question(request_id: str, body: UserQuestionSubmission) -> dict[str, Any]:
+    """通过服务层确认回答已保存后唤醒当前 Agent；等待不占用事件循环。"""
+    try:
+        result = await run_in_threadpool(_require_agent().user_question_service.submit,
+                                        request_id=request_id, **body.model_dump(exclude={"answers"}), answers=body.answers)
+        return {"request": result}
+    except KeyError as exc:
+        raise HTTPException(status_code=404, detail=str(exc)) from exc
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
+    except (RuntimeError, TimeoutError) as exc:
+        raise HTTPException(status_code=409, detail=str(exc) or "回答确认超时，请刷新提问状态") from exc
 
 
 @router.post("/agent/children/{run_id}/claim-wakeup")

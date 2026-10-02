@@ -192,11 +192,15 @@ export async function* streamLines(
   let eventsSinceYield = 0
 
   const signal = options.signal
+  /** Fetch may error the body before its abort listener cancels the reader. */
+  const cancelReader = () => reader.cancel().catch(() => {
+    // Cancellation of an already errored body rejects; the read loop owns errors.
+  })
   if (signal) {
     if (signal.aborted) {
-      await reader.cancel()
+      await cancelReader()
     } else {
-      signal.addEventListener('abort', () => void reader.cancel(), { once: true })
+      signal.addEventListener('abort', cancelReader, { once: true })
     }
   }
 
@@ -245,6 +249,7 @@ export async function* streamLines(
     }
     throw error
   } finally {
+    signal?.removeEventListener('abort', cancelReader)
     reader.releaseLock()
   }
 }

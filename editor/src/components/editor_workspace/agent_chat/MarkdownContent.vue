@@ -14,6 +14,7 @@ import { marked } from 'marked'
 import { hljs, isHighlightableLanguage } from '../codeHighlight'
 import { renderMathInHtml } from '../mathRender'
 import { decorateMarkdownLinks } from './markdownLinkIcons'
+import { patchMarkdownDom } from './patchMarkdownDom'
 
 import { useWorkspaceStore } from '@/stores/workspace'
 import { useFavoritesStore } from '@/stores/favorites'
@@ -203,10 +204,10 @@ function renderStreamingContent() {
   if (!root) return
   if (!streamBoundary || !props.content.startsWith(streamedSource)) resetStreamingState(root)
 
-  clearActiveNodes()
   const delta = props.content.slice(streamedSource.length)
   const completedBlocks = consumeStreamingDelta(delta)
   if (completedBlocks.length > 0) {
+    clearActiveNodes()
     // One parser/sanitizer pass per draft tick prevents a buffered network
     // burst containing many paragraphs from becoming one long main-thread task.
     root.insertBefore(createMarkdownFragment(completedBlocks.join('')), streamBoundary)
@@ -215,9 +216,8 @@ function renderStreamingContent() {
   const activeTail = pendingBlock + pendingLine
   if (activeTail) {
     const fragment = createMarkdownFragment(activeTail)
-    activeNodes = Array.from(fragment.childNodes)
-    root.appendChild(fragment)
-  }
+    activeNodes = patchMarkdownDom(root, activeNodes, Array.from(fragment.childNodes))
+  } else clearActiveNodes()
 }
 
 /** Final output is reparsed once as a whole to guarantee exact Markdown semantics. */

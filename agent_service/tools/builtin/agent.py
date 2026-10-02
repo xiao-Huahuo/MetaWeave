@@ -85,6 +85,14 @@ def wait_for_child_agents(
     )
 
 
+def request_user_input(questions: list[dict[str, Any]]) -> str:
+    """同步询问用户；当前 Agent 暂停，收到真实回答后才继续思考。"""
+    runtime = get_tool_runtime()
+    if runtime.user_question_asker is None:
+        return "当前 Agent 运行时未启用同步提问能力。"
+    return runtime.user_question_asker(questions=questions)
+
+
 def continue_child_agent(
     run_id: str,
     prompt: str,

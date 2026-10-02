@@ -50,9 +50,5 @@ function freeze(element: Element) { (element as HTMLElement).style.height = `${e
 .settings-disclosure-trigger:focus-visible { outline: 2px solid var(--color-primary); outline-offset: 3px; }
 .settings-disclosure-panel { min-width: 0; }
 .settings-disclosure-content { min-width: 0; padding-block: var(--space-4); }
-/* Match management menu easing, opacity and -4px movement; measure height for arbitrary slot contents. */
-.settings-disclosure-enter-active, .settings-disclosure-leave-active { overflow: hidden; transition: height 220ms ease, opacity 180ms ease, transform 180ms ease; transform-origin: top left; }
-.settings-disclosure-enter-from, .settings-disclosure-leave-to { opacity: 0; transform: translateY(-4px); }
-.settings-disclosure-enter-to, .settings-disclosure-leave-from { opacity: 1; transform: translateY(0); }
-@media (prefers-reduced-motion: reduce) { .settings-disclosure-enter-active, .settings-disclosure-leave-active { transition: none; } }
 </style>
+<style src="./settings-disclosure-motion.css" scoped></style>

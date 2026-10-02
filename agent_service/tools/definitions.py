@@ -60,6 +60,7 @@ from agent_service.tools.builtin import (
     rename_knowledge_file,
     run_terminal_command,
     spawn_child_agent,
+    request_user_input,
     save_uploaded_attachment_to_knowledge,
     understand_image,
     search_knowledge,
@@ -842,6 +843,29 @@ TASK_LIST_TOOL_DEFINITIONS: list[BuiltinToolDefinition] = [
 
 
 CHILD_AGENT_TOOL_DEFINITIONS: list[BuiltinToolDefinition] = [
+    BuiltinToolDefinition(
+        name="request_user_input",
+        display_name="询问用户",
+        description=("当需要用户补充信息或选择方案时使用。一次可提出多个问题和任意数量选项。"
+                     "调用会同步暂停当前 Agent，收到用户真实回答后才继续；不得替用户选择答案。"
+                     "每题默认单选；multi_select=true 允许多选，allow_text=true 允许手动输入。"
+                     "取消或超时返回对应状态，不能将其视为用户回答。"),
+        args_schema={
+            "type": "object",
+            "properties": {"questions": {
+                "type": "array", "minItems": 1,
+                "items": {"type": "object", "properties": {
+                    "id": {"type": "string", "description": "题目唯一 ID，省略时自动编号。"},
+                    "question": {"type": "string", "description": "顶部显示的问题。"},
+                    "options": {"type": "array", "items": {"type": "string"}},
+                    "multi_select": {"type": "boolean", "default": False},
+                    "allow_text": {"type": "boolean", "default": False},
+                }, "required": ["question"]},
+            }},
+            "required": ["questions"],
+        },
+        function=request_user_input,
+    ),
     BuiltinToolDefinition(
         name="spawn_child_agent",
         display_name="召唤子 Agent",

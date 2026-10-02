@@ -1,0 +1,50 @@
+[
+  {
+    "case": "330-item list",
+    "frames": 57,
+    "p95": 16.700000000000273,
+    "max": 16.799999999999727,
+    "maxLongTask": 0,
+    "control": 14.300000004470348,
+    "updates": 60,
+    "shimmerStates": 12,
+    "scanStates": 12,
+    "prefixReplacements": 0
+  },
+  {
+    "case": "56000-char prose",
+    "frames": 63,
+    "p95": 33.400000000000546,
+    "max": 66.69999999999982,
+    "maxLongTask": 53,
+    "control": 21.100000001490116,
+    "updates": 29,
+    "shimmerStates": 17,
+    "scanStates": 17,
+    "prefixReplacements": 0
+  },
+  {
+    "case": "330-row table",
+    "frames": 59,
+    "p95": 16.800000000000182,
+    "max": 16.800000000000182,
+    "maxLongTask": 0,
+    "control": 15.5,
+    "updates": 60,
+    "shimmerStates": 12,
+    "scanStates": 12,
+    "prefixReplacements": 0
+  },
+  {
+    "case": "280-line Python",
+    "frames": 57,
+    "p95": 16.800000000000182,
+    "max": 33.40000000000009,
+    "maxLongTask": 0,
+    "control": 11.300000004470348,
+    "updates": 149,
+    "shimmerStates": 12,
+    "scanStates": 12,
+    "prefixReplacements": 0
+  }
+]
