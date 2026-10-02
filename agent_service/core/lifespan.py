@@ -33,6 +33,16 @@ async def agent_service_lifespan(app: FastAPI) -> AsyncIterator[None]:
     app.state.services = services
     app.state.grpc_runtime = grpc_runtime
     try:
+        services.mcp_client_service.start()
+        import asyncio
+        services.mcp_server_service.runtime.loop = asyncio.get_running_loop()
+        from sqlmodel import Session, select
+        from agent_service.models.user_settings import UserSettingsRecord
+        with Session(database_engine) as db:
+            mcp_users = [r.user_id for r in db.exec(select(UserSettingsRecord)).all() if r.mcp_settings]
+        for user_id in mcp_users:
+            server_config = services.settings_service.get_mcp_settings(user_id=user_id, role="server")["config"]
+            await services.mcp_server_service.runtime.apply(user_id, server_config)
         services.start_background_services()
         logger.info("SettingsService 初始化完成")
         grpc_runtime.start(services)
@@ -47,6 +57,8 @@ async def agent_service_lifespan(app: FastAPI) -> AsyncIterator[None]:
         logger.info("AgentService 正在关闭...")
         services.shutdown_background_services()
         grpc_runtime.stop()
+        await services.mcp_server_service.runtime.shutdown()
+        services.mcp_client_service.shutdown()
         app.state.services = None
         app.state.grpc_runtime = None
         logger.info("AgentService 已关闭")

@@ -261,6 +261,7 @@ class LLMTaskRuntimeMixin:
         self,
         *,
         tool_names: list[str],
+        tool_definitions: list[dict[str, Any]] | None = None,
         temperature: float | None,
         timeout_seconds: float,
         model_tier: str,
@@ -283,7 +284,12 @@ class LLMTaskRuntimeMixin:
             small_base_url=small_base_url,
             small_model_name=small_model_name,
         )
+        # Include schemas: changing a remote tool cannot reuse an older model binding.
+        schema_fingerprint = tuple((name, repr(self._get_tool_registry().get(name).args_schema))
+                                   for name in sorted(tool_names) if self._get_tool_registry().get(name))
         cache_key = (
+            schema_fingerprint,
+            json.dumps(tool_definitions or [], sort_keys=True),
             model_tier,
             model_name,
             tuple(sorted(tool_names)),
@@ -316,8 +322,9 @@ class LLMTaskRuntimeMixin:
                 tools = [
                     tool
                     for tool in tool_registry.to_langchain_tools()
-                    if tool.name in set(tool_names)
+                    if tool.name in set(tool_names) and tool.name not in {d["function"]["name"] for d in tool_definitions or []}
                 ]
+                tools.extend(d for d in tool_definitions or [] if d["function"]["name"] in set(tool_names))
                 if tools:
                     model = model.bind_tools(tools)
             self._model_cache[cache_key] = model
@@ -395,6 +402,7 @@ class LLMTaskRuntimeMixin:
         *,
         messages: list[BaseMessage],
         tool_names: list[str] | None,
+        tool_definitions: list[dict[str, Any]] | None = None,
         model_tier: str,
         api_key: str | None = None,
         base_url: str | None = None,
@@ -454,8 +462,12 @@ class LLMTaskRuntimeMixin:
         selected_tools = [
             tool
             for tool in self._get_tool_registry().to_langchain_tools()
-            if tool.name in selected_name_set
+            if tool.name in selected_name_set and tool.name not in {d["function"]["name"] for d in tool_definitions or []}
         ]
+        from types import SimpleNamespace
+        selected_tools.extend(SimpleNamespace(name=d["function"]["name"], description=d["function"].get("description", ""),
+                              args_schema=d["function"]["parameters"]) for d in tool_definitions or []
+                              if d["function"]["name"] in selected_name_set)
         tool_definition_tokens = ContextBuilder.estimate_tool_definition_tokens(
             selected_tools,
             model_name=resolved_model,
@@ -602,11 +614,18 @@ class LLMTaskRuntimeMixin:
     def _get_tool_registry(self) -> Any:
         """懒加载工具注册表,避免在模块导入阶段引入环依赖。"""
 
+        from agent_service.tools.runtime_context import get_tool_runtime
+        try:
+            turn_registry = get_tool_runtime().tool_registry
+        except RuntimeError:
+            turn_registry = None
+        if turn_registry is not None:
+            return turn_registry
         if self._tool_registry is not None:
             return self._tool_registry
         from agent_service.tools.tool_registry import ToolRegistry
 
-        self._tool_registry = ToolRegistry.with_builtin_tools(config=self.config)
+        self._tool_registry = ToolRegistry.with_builtin_tools()
         return self._tool_registry
 
     def _run_with_retries(self, task: ScheduledLLMTask) -> Any:

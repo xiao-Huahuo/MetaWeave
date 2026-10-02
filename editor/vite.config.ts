@@ -79,6 +79,7 @@ export default defineConfig({
       '/literature-reading': DEV_PROXY_TARGET,
       '/structured-generation': DEV_PROXY_TARGET,
       '/sessions': DEV_PROXY_TARGET,
+      // MCP management shares the /settings proxy; real external listeners use their own configured port.
       '/settings': DEV_PROXY_TARGET,
       '/skills': DEV_PROXY_TARGET,
       '/downloads': DEV_PROXY_TARGET,

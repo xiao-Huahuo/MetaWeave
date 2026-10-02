@@ -54,6 +54,8 @@ class GrpcRuntime:
             latex_service=services.latex_service,
             model_management_service=services.model_management_service,
             attachment_service=services.attachment_service,
+            mcp_client_service=services.mcp_client_service,
+            mcp_server_service=services.mcp_server_service,
         )
         grpc_host = services.config.server.grpc_host
         if grpc_host == "[::]" and sys.platform == "win32":

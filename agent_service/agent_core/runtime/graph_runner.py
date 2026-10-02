@@ -580,12 +580,31 @@ class GraphRunnerMixin:
         runtime_config = {"configurable": {"thread_id": effective_run_id}}
         active_graph = graph or self.graphs.get(agent_mode) or self.graph
         effective_access_mode = normalize_agent_access_mode(agent_access_mode)
+        cancel_event = self.cancellation_runtime.register(session_id)
+        inputs["cancel_event"] = cancel_event
+        try:
+            turn_registry = self.tool_registry
+            mcp_client = getattr(self, "mcp_client_service", None)
+            from agent_service.tools.runtime_context import get_child_tool_scope
+            child_scope = get_child_tool_scope()
+            if (mcp_client is not None or child_scope is not None) and turn_registry is not None:
+                turn_registry = ToolRegistry()
+                for definition in self.tool_registry.definitions.values():
+                    if child_scope is None or definition.name in child_scope:
+                        turn_registry.register(definition)
+                for definition in mcp_client.tool_snapshot(user_id, effective_access_mode, cancel_event=cancel_event) if mcp_client else []:
+                    if child_scope is None or definition.name in child_scope:
+                        turn_registry.register(definition)
+                inputs["tool_registry"] = turn_registry
+                inputs["tool_executor"] = ToolExecutor(registry=turn_registry)
+                inputs["available_tool_names"] = list(turn_registry.definitions)
+                inputs["context_tool_tokens"] = ContextBuilder.estimate_tool_definition_tokens(turn_registry.to_langchain_tools())
+        except BaseException:
+            self.cancellation_runtime.clear(session_id, cancel_event)
+            raise
         retrieval_service = None
         if self.context_builder is not None:
             retrieval_service = self.context_builder.retrieval_service
-
-        cancel_event = self.cancellation_runtime.register(session_id)
-        inputs["cancel_event"] = cancel_event
 
         token_queue: queue_module.Queue[dict[str, Any]] = queue_module.Queue()
         _streamed_content: list[str] = [""]
@@ -738,65 +757,67 @@ class GraphRunnerMixin:
 
         def run_graph() -> None:
             nonlocal graph_error
-            set_tool_runtime(
-                config=self.config,
-                user_id=user_id,
-                session_id=session_id,
-                run_id=effective_run_id,
-                retrieval_service=retrieval_service,
-                unified_search_service=self.unified_search_service,
-                task_list_service=self.task_list_service,
-                change_service=self.change_service,
-                skill_service=self.skill_service,
-                settings_service=self.settings_service,
-                tool_services=self.tool_services,
-                message_service=message_service,
-                database_engine=getattr(self.settings_service, "engine", None),
-                citation_map=_citation_map,
-                agent_access_mode=effective_access_mode,
-                long_term_memory_enabled=long_term_memory_enabled,
-                child_agent_spawner=(
-                    None
-                    if not allow_child_spawn
-                    else lambda **kwargs: self._spawn_child_from_runtime(
-                        parent_run_id=effective_run_id,
-                        user_id=user_id,
-                        session_id=session_id,
-                        parent_access_mode=effective_access_mode,
-                        **kwargs,
-                    )
-                ),
-                child_agent_waiter=(
-                    None
-                    if not allow_child_spawn
-                    else lambda **kwargs: self._wait_child_agents_from_runtime(
-                        parent_run_id=effective_run_id,
-                        session_id=session_id,
-                        **kwargs,
-                    )
-                ),
-                child_agent_continuation=(
-                    None
-                    if not allow_child_spawn
-                    else lambda **kwargs: self._continue_child_from_runtime(
-                        parent_run_id=effective_run_id,
-                        user_id=user_id,
-                        session_id=session_id,
-                        **kwargs,
-                    )
-                ),
-            )
-            set_agent_token_callback(on_token)
-            set_agent_thinking_callback(on_thinking)
-            set_tool_trace_callback(on_tool_trace)
-            set_planner_content_callback(on_planner_content)
-            set_observation_content_callback(on_observation_content)
-            set_context_mirror_callback(on_context_mirror)
-            set_context_compression_callback(on_context_compression)
-            set_task_list_callback(on_task_list_update)
-            set_markdown_html_visualization_callback(on_markdown_html_visualization)
-            set_plan_state(initial_plan)
             try:
+                set_tool_runtime(
+                    config=self.config,
+                    user_id=user_id,
+                    session_id=session_id,
+                    run_id=effective_run_id,
+                    retrieval_service=retrieval_service,
+                    unified_search_service=self.unified_search_service,
+                    task_list_service=self.task_list_service,
+                    change_service=self.change_service,
+                    skill_service=self.skill_service,
+                    settings_service=self.settings_service,
+                    tool_services=self.tool_services,
+                    tool_registry=turn_registry,
+                    cancellation_event=cancel_event,
+                    message_service=message_service,
+                    database_engine=getattr(self.settings_service, "engine", None),
+                    citation_map=_citation_map,
+                    agent_access_mode=effective_access_mode,
+                    long_term_memory_enabled=long_term_memory_enabled,
+                    child_agent_spawner=(
+                        None
+                        if not allow_child_spawn
+                        else lambda **kwargs: self._spawn_child_from_runtime(
+                            parent_run_id=effective_run_id,
+                            user_id=user_id,
+                            session_id=session_id,
+                            parent_access_mode=effective_access_mode,
+                            **kwargs,
+                        )
+                    ),
+                    child_agent_waiter=(
+                        None
+                        if not allow_child_spawn
+                        else lambda **kwargs: self._wait_child_agents_from_runtime(
+                            parent_run_id=effective_run_id,
+                            session_id=session_id,
+                            **kwargs,
+                        )
+                    ),
+                    child_agent_continuation=(
+                        None
+                        if not allow_child_spawn
+                        else lambda **kwargs: self._continue_child_from_runtime(
+                            parent_run_id=effective_run_id,
+                            user_id=user_id,
+                            session_id=session_id,
+                            **kwargs,
+                        )
+                    ),
+                )
+                set_agent_token_callback(on_token)
+                set_agent_thinking_callback(on_thinking)
+                set_tool_trace_callback(on_tool_trace)
+                set_planner_content_callback(on_planner_content)
+                set_observation_content_callback(on_observation_content)
+                set_context_mirror_callback(on_context_mirror)
+                set_context_compression_callback(on_context_compression)
+                set_task_list_callback(on_task_list_update)
+                set_markdown_html_visualization_callback(on_markdown_html_visualization)
+                set_plan_state(initial_plan)
                 for event in active_graph.stream(inputs, config=runtime_config, stream_mode="updates"):
                     if cancel_event.is_set():
                         break
@@ -1136,7 +1157,7 @@ class GraphRunnerMixin:
             raise
         finally:
             cancel_event.set()
-            self.cancellation_runtime.clear(session_id)
+            self.cancellation_runtime.clear(session_id, cancel_event)
             clear_agent_token_callback()
             clear_tool_trace_callback()
             clear_planner_content_callback()

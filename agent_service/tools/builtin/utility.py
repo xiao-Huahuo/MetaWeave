@@ -34,7 +34,7 @@ def list_available_tools() -> str:
     from agent_service.tools.tool_registry import ToolRegistry
 
     runtime = get_tool_runtime()
-    registry = ToolRegistry.with_builtin_tools(config=runtime.config)
+    registry = runtime.tool_registry or ToolRegistry.with_builtin_tools()
     if not registry.definitions:
         return "当前没有可用工具。"
     lines = []

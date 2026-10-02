@@ -11,22 +11,22 @@ import IcIcon from '@/components/common/IcIcon.vue'
 
 export type SettingsTabKey = 'basic' | 'appearance' | 'llm' | 'vlm' | 'tools' | 'terminal' | 'web' | 'memory' | 'graph' | 'safety' | 'storage' | 'floating' | 'skills' | 'mcp'
 
-/** Semantic icons remain local through the shared DSH + morphicons registry. */
+/** Feature icons and protocol marks use downloaded local SVGs through IcIcon. */
 const TAB_ICONS: Record<SettingsTabKey, string> = {
   basic: 'settings',
-  appearance: 'visibility',
-  llm: 'psychology',
-  vlm: 'visibility',
+  appearance: 'appearance',
+  llm: 'llm',
+  vlm: 'ocr',
   tools: 'build',
-  terminal: 'code',
+  terminal: 'terminal',
   web: 'language',
-  memory: 'book',
+  memory: 'memory',
   graph: 'hub',
   safety: 'shield',
   storage: 'ingest',
-  floating: 'open-in-full',
-  skills: 'auto-awesome',
-  mcp: 'build',
+  floating: 'floating-window',
+  skills: 'skills',
+  mcp: 'mcp',
 }
 
 const props = defineProps<{

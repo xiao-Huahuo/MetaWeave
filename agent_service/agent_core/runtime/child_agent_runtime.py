@@ -414,9 +414,14 @@ class ChildAgentRuntimeMixin:
                 raise ValueError("DSH 子 Agent必须提供 workspace_root")
         effective_category = "dsh" if provider == "dsh" and not (category or "").strip() else (category or "")
         effective_name = (name or "").strip() or self._auto_child_agent_name(parent_run_id, effective_category)
+        from agent_service.tools.runtime_context import get_tool_runtime, child_tool_scope
+        try:
+            parent_registry = get_tool_runtime().tool_registry or self.tool_registry
+        except RuntimeError:
+            parent_registry = self.tool_registry
         parent_tools = frozenset(
             definition.name
-            for definition in (self.tool_registry.definitions.values() if self.tool_registry else [])
+            for definition in (parent_registry.definitions.values() if parent_registry else [])
             if definition.name not in {"spawn_child_agent", "wait_for_child_agents", "continue_child_agent"}
         )
         if provider == "dsh":
@@ -455,33 +460,34 @@ class ChildAgentRuntimeMixin:
             prompt = f"{template}\n\n{context.goal}" if template else context.goal
             if context.workspace_root:
                 prompt = f"{prompt}\n\n工作区绝对路径: {context.workspace_root}"
-            if self.session_service is None:
-                result = self.run_once(
+            with child_tool_scope(context.allowed_tools):
+                if self.session_service is None:
+                    result = self.run_once(
+                        prompt=prompt,
+                        user_id=context.user_id,
+                        session_id=SessionService.child_agent_session_id(context.session_id, context.run_id),
+                        agent_mode=context.agent_mode,
+                        agent_access_mode=context.access_mode,
+                        allow_child_spawn=False,
+                    )
+                    context.raise_if_stopped()
+                    return str(result.get("final_output") or "")
+                child_session = self.session_service.create_child_agent_session(
+                    user_id=context.user_id,
+                    parent_session_id=context.session_id,
+                    run_id=context.run_id,
+                    session_name=context.name or context.goal,
+                )
+                result = self.run_session_prompt(
                     prompt=prompt,
                     user_id=context.user_id,
-                    session_id=SessionService.child_agent_session_id(context.session_id, context.run_id),
+                    session_id=child_session.session_id,
                     agent_mode=context.agent_mode,
                     agent_access_mode=context.access_mode,
                     allow_child_spawn=False,
                 )
                 context.raise_if_stopped()
                 return str(result.get("final_output") or "")
-            child_session = self.session_service.create_child_agent_session(
-                user_id=context.user_id,
-                parent_session_id=context.session_id,
-                run_id=context.run_id,
-                session_name=context.name or context.goal,
-            )
-            result = self.run_session_prompt(
-                prompt=prompt,
-                user_id=context.user_id,
-                session_id=child_session.session_id,
-                agent_mode=context.agent_mode,
-                agent_access_mode=context.access_mode,
-                allow_child_spawn=False,
-            )
-            context.raise_if_stopped()
-            return str(result.get("final_output") or "")
 
         executor = execute_child
         if provider == "dsh":

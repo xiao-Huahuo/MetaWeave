@@ -18,7 +18,7 @@ Redis Stream 调度后端模块。
 
 from __future__ import annotations
 
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 import json
 import time
 from typing import Any
@@ -60,6 +60,8 @@ class SerializedChatRequest:
     small_model_name: str | None = None
     context_window_tokens: int | None = None
     max_output_tokens: int | None = None
+    # Complete remote schemas cross worker/Redis boundaries; callable credentials never enter this DTO.
+    tool_definitions: list[dict[str, Any]] = field(default_factory=list)
 
     @classmethod
     def from_messages(
@@ -85,7 +87,20 @@ class SerializedChatRequest:
     ) -> "SerializedChatRequest":
         """从 LangChain messages 构造可序列化请求。"""
 
+        from agent_service.tools.runtime_context import get_tool_runtime
+        try:
+            registry = get_tool_runtime().tool_registry
+        except RuntimeError:
+            registry = None
+        definitions = []
+        if registry is not None:
+            for name in tool_names or []:
+                definition = registry.get(name)
+                if definition is not None and name.startswith("mcp__"):
+                    definitions.append({"type": "function", "function": {"name": name,
+                        "description": definition.description, "parameters": definition.args_schema}})
         return cls(
+            tool_definitions=json.loads(json.dumps(definitions)),
             task_id=task_id,
             task_type=task_type,
             messages_json=messages_to_dict(messages),
@@ -118,6 +133,7 @@ class SerializedChatRequest:
             "task_type": self.task_type,
             "messages_json": self.messages_json,
             "tool_names": self.tool_names,
+            **({"tool_definitions": self.tool_definitions} if self.tool_definitions else {}),
             "timeout_seconds": self.timeout_seconds,
             "max_retries": self.max_retries,
             "dedup_key": self.dedup_key,
@@ -144,6 +160,7 @@ class SerializedChatRequest:
             task_type=str(payload["task_type"]),
             messages_json=list(payload["messages_json"]),
             tool_names=[str(name) for name in payload.get("tool_names", [])],
+            tool_definitions=list(payload.get("tool_definitions", [])),
             timeout_seconds=float(payload["timeout_seconds"]),
             max_retries=int(payload["max_retries"]),
             dedup_key=str(payload["dedup_key"]) if payload.get("dedup_key") else None,

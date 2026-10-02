@@ -64,6 +64,8 @@ class UserSettingsRecord(SQLModel, table=True):
     long_term_memory_enabled: bool = Field(default=True)
     knowledge_ignore_patterns: str = Field(default=DEFAULT_VIDEO_IGNORE_PATTERNS, sa_column=Column(Text))
     disabled_tools: str = Field(default="", sa_column=Column(Text))
+    # MCP user overrides; empty fields inherit process defaults.
+    mcp_settings: str = Field(default="", sa_column=Column(Text))
     terminal_sandbox_config: str = Field(default="", sa_column=Column(Text))
     ui_font_families: str = Field(default="", sa_column=Column(Text))
     text_font_families: str = Field(default="", sa_column=Column(Text))

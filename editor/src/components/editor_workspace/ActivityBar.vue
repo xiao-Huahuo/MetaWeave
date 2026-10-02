@@ -9,6 +9,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 import IcIcon from '@/components/common/IcIcon.vue'
+import DisclosureChevron from '@/components/common/DisclosureChevron.vue'
 import ThemeToggleButton from '@/components/common/ThemeToggleButton.vue'
 import lightLogo from '@/assets/images/亮色无底图标.png'
 import darkLogo from '@/assets/images/暗色无底图标.png'
@@ -251,7 +252,7 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', closeActivityM
       >
         <IcIcon name="book" :size="18" />
         <span class="activity-label">库</span>
-        <IcIcon class="knowledge-chevron" :class="{ 'is-open': activeMenu === 'knowledge' }" name="chevron-right" :size="14" />
+        <DisclosureChevron class="knowledge-chevron" :open="activeMenu === 'knowledge'" />
       </button>
       <Transition name="knowledge-submenu">
         <div
@@ -370,9 +371,9 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', closeActivityM
         @mousedown="handleRipple"
         @click.stop="toggleActivityMenu('scanner')"
       >
-        <IcIcon name="center-focus" :size="18" />
+        <IcIcon name="scanner" :size="18" />
         <span class="activity-label">扫描</span>
-        <IcIcon class="knowledge-chevron" :class="{ 'is-open': activeMenu === 'scanner' }" name="chevron-right" :size="14" />
+        <DisclosureChevron class="knowledge-chevron" :open="activeMenu === 'scanner'" />
       </button>
       <Transition name="knowledge-submenu">
         <div
@@ -402,7 +403,7 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', closeActivityM
             @mousedown.prevent="handleRipple"
             @click="emit('openScanner'); closeActivityMenu()"
           >
-            <IcIcon name="center-focus" :size="18" />
+            <IcIcon name="scanner" :size="18" />
             <span class="activity-label">扫描器</span>
           </button>
           <button
@@ -481,7 +482,7 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', closeActivityM
       >
         <IcIcon name="auto-awesome" :size="18" />
         <span class="activity-label">娱乐功能</span>
-        <IcIcon class="knowledge-chevron" :class="{ 'is-open': activeMenu === 'entertainment' }" name="chevron-right" :size="14" />
+        <DisclosureChevron class="knowledge-chevron" :open="activeMenu === 'entertainment'" />
       </button>
       <Transition name="knowledge-submenu">
         <div
@@ -567,7 +568,7 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', closeActivityM
         >
           <IcIcon name="group" :size="18" />
           <span class="activity-label">我的</span>
-          <IcIcon class="knowledge-chevron" :class="{ 'is-open': activeMenu === 'mine' }" name="chevron-right" :size="14" />
+          <DisclosureChevron class="knowledge-chevron" :open="activeMenu === 'mine'" />
         </button>
         <Transition name="knowledge-submenu">
           <div
@@ -781,17 +782,13 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', closeActivityM
   width: 14px;
   height: 14px;
   margin-left: auto;
-  transform: translateY(-50%);
-  transition: transform 180ms ease;
+  --disclosure-chevron-offset: -50%;
 }
 
 .activity-bar.management .knowledge-button .knowledge-chevron {
   display: block;
 }
 
-.knowledge-button .knowledge-chevron.is-open {
-  transform: translateY(-50%) rotate(90deg);
-}
 
 .knowledge-submenu {
   position: absolute;

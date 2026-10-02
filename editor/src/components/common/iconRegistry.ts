@@ -103,6 +103,19 @@ import {
   type IconNode,
 } from 'lucide'
 
+/** Downloaded protocol marks and feature SVGs; provenance is recorded beside the assets. */
+export const FEATURE_ICON_FILES: Record<string, string> = {
+  skills: 'skills.svg',
+  mcp: 'mcp.svg',
+  ocr: 'ocr.svg',
+  llm: 'llm.svg',
+  memory: 'memory.svg',
+  'floating-window': 'floating-window.svg',
+  scanner: 'scanner.svg',
+  appearance: 'appearance.svg',
+  terminal: 'terminal.svg',
+}
+
 /** Exact semantic matches available in the DSH icon source. */
 export const DSH_ICON_FILES: Record<string, string> = {
   search: 'search-outline16.svg',

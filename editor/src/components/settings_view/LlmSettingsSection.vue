@@ -194,7 +194,7 @@ function clearModelDraft(target: 'large' | 'small' | 'vision') {
           :title="config.label || config.model_name || '未命名配置'"
           :model="config.model_name"
           :endpoint="config.base_url"
-          icon="psychology"
+          icon="llm"
         >
           <template #actions>
             <button type="button" @click="$emit('importSavedConfig', config, 'large')">导入大模型</button>

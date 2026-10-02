@@ -125,34 +125,10 @@ def write_long_term_memory(
     """
 
     runtime = get_tool_runtime()
-    _supersede_prior_entries(
-        runtime=runtime,
-        user_id=runtime.user_id,
-        memory_type=memory_type,
-    )
-    embedding = runtime.embedding_service.embed_text(content) if runtime.embedding_service else []
-    now = datetime.now(timezone.utc)
-    create_dto = LongTermMemorySpecCreate(
-        user_id=runtime.user_id,
-        session_id=runtime.session_id,
-        tag=runtime.config.constants.memory_tag,
-        memory_type=memory_type,
-        content=content,
-        source_type="manual_write",
-        source_id=None,
-        source_uri="manual",
-        confidence=1.0,
-        importance=importance,
-        authority=authority,
-        embedding_model=runtime.config.model.embedding_model_name or None,
-        embedding_vector_json=embedding,
-        metadata_json={
-            "fact_status": "active",
-            "fact": {"namespace": "general", "key": memory_type, "value": content},
-        },
-    )
-
-    memory = runtime.memory_service.create_memory(create_dto)
+    from agent_service.services.memory.manual_write import write_manual_memory
+    write_manual_memory(config=runtime.config, memory_service=runtime.memory_service,
+        embedding_service=runtime.embedding_service, user_id=runtime.user_id, session_id=runtime.session_id,
+        content=content, memory_type=memory_type, importance=importance, authority=authority)
     return f"已记住: {content}"
 def delete_long_term_memory(content: str) -> str:
     """

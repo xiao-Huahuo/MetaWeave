@@ -48,7 +48,10 @@ def _with_default_video_ignore_patterns(patterns: str | None) -> str:
     return "\n".join(lines)
 
 
-class SettingsService:
+from agent_service.services.settings.mcp_settings import McpSettingsMixin, selected_library
+
+
+class SettingsService(McpSettingsMixin):
     """用户设置服务 — 系统提示词条目 + 自定义长期记忆管理。"""
 
     def __init__(
@@ -90,7 +93,17 @@ class SettingsService:
                 db.refresh(record)
             active_library = self._ensure_active_library(db=db, record=record)
             self._migrate_managed_directories(db=db, user_id=normalized_user_id, library=active_library)
-            return self._serialize_user_profile(record)
+            profile = self._serialize_user_profile(record)
+            selection = selected_library.get()
+            if selection is not None:
+                owner, library_id = selection
+                if owner != normalized_user_id:
+                    raise PermissionError("知识库身份不匹配")
+                library = next((item for item in profile["knowledge_libraries"] if item["library_id"] == library_id), None)
+                if library is None:
+                    raise PermissionError("知识库无访问权限")
+                profile.update(active_knowledge_library=library, active_library_id=library_id, knowledge_dir=library["knowledge_dir"])
+            return profile
 
     def update_knowledge_dir(self, *, user_id: str, knowledge_dir: str, name: str | None = None) -> dict:
         """

@@ -80,7 +80,7 @@ a = Analysis(
         _required_dsh_sdk_bundle(),
         *_paddlex_config_data,
     ],
-    hiddenimports=['xlrd', *_paddlex_hiddenimports],
+    hiddenimports=['xlrd', *collect_submodules('mcp'), *_paddlex_hiddenimports],
     hookspath=[],
     hooksconfig={},
     runtime_hooks=[],

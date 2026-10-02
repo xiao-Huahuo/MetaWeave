@@ -187,7 +187,7 @@ class ModelDecisionNode:
         user_id = state.get("user_id")
 
         # 从 state 或数据库读取已关闭的工具列表
-        active_tool_names: list[str] = list(self.tool_names)
+        active_tool_names: list[str] = list(state.get("available_tool_names", self.tool_names))
         _disabled_tools_state = state.get("disabled_tools")
         if isinstance(_disabled_tools_state, list):
             disabled_set = set(str(t) for t in _disabled_tools_state)

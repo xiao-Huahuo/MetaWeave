@@ -9,6 +9,7 @@
 import { onBeforeUnmount, onMounted, nextTick, ref } from 'vue'
 
 import IcIcon from '@/components/common/IcIcon.vue'
+import CreativeCheckbox from '@/components/common/CreativeCheckbox.vue'
 import { useTodoStore } from '@/stores/todo'
 
 const todoStore = useTodoStore()
@@ -349,22 +350,8 @@ function getAutomationPrompt(todoId: string): string {
         <span v-if="item.category === 'automation'" class="todo-automation-icon" title="自动化任务">
           <IcIcon name="schedule" :size="16" />
         </span>
-        <label v-else class="creative-checkbox" :title="item.done ? '标记未完成' : '标记完成'">
-          <input
-            type="checkbox"
-            :checked="item.done"
-            @change="todoStore.toggleTodo(item.id)"
-          />
-          <div class="checkbox-box">
-            <svg viewBox="0 0 44 44" xmlns="http://www.w3.org/2000/svg">
-              <path
-                class="box-path"
-                d="M12,4 H32 A8,8 0 0 1 40,12 V32 A8,8 0 0 1 32,40 H12 A8,8 0 0 1 4,32 V12 A8,8 0 0 1 12,4 Z"
-              />
-              <path class="check-path" d="M14,23 L19,28 L30,15" />
-            </svg>
-          </div>
-        </label>
+        <CreativeCheckbox v-else :model-value="item.done" :label="item.done ? '标记未完成' : '标记完成'"
+          @update:model-value="todoStore.toggleTodo(item.id)" />
 
         <div class="todo-body">
           <div class="todo-title-row">

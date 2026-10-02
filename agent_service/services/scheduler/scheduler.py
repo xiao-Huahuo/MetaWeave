@@ -821,6 +821,7 @@ class LLMTaskScheduler(LLMTaskRuntimeMixin):
         messages, _context_budget = self.prepare_messages_for_model(
             messages=request.restore_messages(),
             tool_names=request.tool_names,
+            **({"tool_definitions": request.tool_definitions} if request.tool_definitions else {}),
             model_tier=request.model_tier,
             api_key=request.api_key,
             base_url=request.base_url,
@@ -833,6 +834,7 @@ class LLMTaskScheduler(LLMTaskRuntimeMixin):
         )
         model = self._get_chat_model(
             tool_names=request.tool_names,
+            **({"tool_definitions": request.tool_definitions} if request.tool_definitions else {}),
             temperature=request.temperature,
             timeout_seconds=request.timeout_seconds,
             model_tier=request.model_tier,
@@ -866,6 +868,7 @@ class LLMTaskScheduler(LLMTaskRuntimeMixin):
         messages, _context_budget = self.prepare_messages_for_model(
             messages=request.restore_messages(),
             tool_names=request.tool_names,
+            **({"tool_definitions": request.tool_definitions} if request.tool_definitions else {}),
             model_tier=request.model_tier,
             api_key=request.api_key,
             base_url=request.base_url,
@@ -878,6 +881,7 @@ class LLMTaskScheduler(LLMTaskRuntimeMixin):
         )
         model = self._get_chat_model(
             tool_names=request.tool_names,
+            **({"tool_definitions": request.tool_definitions} if request.tool_definitions else {}),
             temperature=request.temperature,
             timeout_seconds=request.timeout_seconds,
             model_tier=request.model_tier,

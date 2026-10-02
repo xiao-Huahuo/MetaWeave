@@ -5,6 +5,5 @@
 ### TODOs
 - [ ] 修DSH
 ### IDEAs
-- [ ] mcp前端页面
 
 ### BUGs

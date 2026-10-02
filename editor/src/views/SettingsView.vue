@@ -25,6 +25,12 @@ import { DEFAULT_TAG_COLORS, useSettingsStore } from '@/stores/settings'
 import { useWorkspaceStore } from '@/stores/workspace'
 import type { ThemeMode } from '@/types/settings'
 
+const mcpSection = ref<InstanceType<typeof McpSettingsSection> | null>(null)
+/** Preserve unsaved MCP drafts and one-time credentials when switching settings sections. */
+function selectSettingsTab(tab: SettingsTabKey) {
+  if (activeTab.value === "mcp" && tab !== "mcp" && mcpSection.value && !mcpSection.value.canLeave()) return
+  activeTab.value = tab
+}
 const settingsStore = useSettingsStore()
 const workspaceStore = useWorkspaceStore()
 
@@ -60,7 +66,7 @@ function handleExternalSettingsTab(event: Event) {
   const requestedTab = (event as CustomEvent<string>).detail
   const tab = requestedTab === 'browser' ? 'web' : requestedTab
   if (tabs.some((item) => item.key === tab)) {
-    activeTab.value = tab as SettingsTabKey
+    selectSettingsTab(tab as SettingsTabKey)
   }
 }
 /* ---- Basic settings ---- */
@@ -817,7 +823,7 @@ onBeforeUnmount(() => {
     <SettingsSidebar
       :active-tab="activeTab"
       :tabs="tabs"
-      @select="activeTab = $event"
+      @select="selectSettingsTab"
     />
 
     <div class="settings-body" :class="{ 'settings-body-skills': activeTab === 'skills' }">
@@ -985,7 +991,7 @@ onBeforeUnmount(() => {
             v-if="activeTab === 'floating'"
           />
           <SkillView v-if="activeTab === 'skills'" />
-          <McpSettingsSection v-if="activeTab === 'mcp'" />
+          <McpSettingsSection ref="mcpSection" v-show="activeTab === 'mcp'" :active="activeTab === 'mcp'" />
         </div>
       </FormHeightTransition>
     </div>

@@ -27,6 +27,9 @@ logger = logging.getLogger(__name__)
 
 BASELINE_REVISION = "20260829_0001"
 POST_BASELINE_TABLES = {
+    "mcp_connections",
+    "mcp_credentials",
+    "mcp_access_records",
     "component_library_metadata",
     "knowledge_graph_section_cache",
     "knowledge_graph_dedup_decisions",

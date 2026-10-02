@@ -35,7 +35,6 @@ class AgentServiceStub(object):
     - SessionService 的 5 个 CRUD 方法
     ---------------------------------------------------------------------------
 
-    ---- Agent 调用 ----
     """
 
     def __init__(self, channel):
@@ -44,6 +43,81 @@ class AgentServiceStub(object):
         Args:
             channel: A grpc.Channel.
         """
+        self.GetMcpClient = channel.unary_unary(
+                '/agent_service.AgentService/GetMcpClient',
+                request_serializer=google_dot_protobuf_dot_struct__pb2.Struct.SerializeToString,
+                response_deserializer=google_dot_protobuf_dot_struct__pb2.Struct.FromString,
+                _registered_method=True)
+        self.SaveMcpClient = channel.unary_unary(
+                '/agent_service.AgentService/SaveMcpClient',
+                request_serializer=google_dot_protobuf_dot_struct__pb2.Struct.SerializeToString,
+                response_deserializer=google_dot_protobuf_dot_struct__pb2.Struct.FromString,
+                _registered_method=True)
+        self.CreateMcpConnection = channel.unary_unary(
+                '/agent_service.AgentService/CreateMcpConnection',
+                request_serializer=google_dot_protobuf_dot_struct__pb2.Struct.SerializeToString,
+                response_deserializer=google_dot_protobuf_dot_struct__pb2.Struct.FromString,
+                _registered_method=True)
+        self.UpdateMcpConnection = channel.unary_unary(
+                '/agent_service.AgentService/UpdateMcpConnection',
+                request_serializer=google_dot_protobuf_dot_struct__pb2.Struct.SerializeToString,
+                response_deserializer=google_dot_protobuf_dot_struct__pb2.Struct.FromString,
+                _registered_method=True)
+        self.DeleteMcpConnection = channel.unary_unary(
+                '/agent_service.AgentService/DeleteMcpConnection',
+                request_serializer=google_dot_protobuf_dot_struct__pb2.Struct.SerializeToString,
+                response_deserializer=google_dot_protobuf_dot_struct__pb2.Struct.FromString,
+                _registered_method=True)
+        self.ReconnectMcpConnection = channel.unary_unary(
+                '/agent_service.AgentService/ReconnectMcpConnection',
+                request_serializer=google_dot_protobuf_dot_struct__pb2.Struct.SerializeToString,
+                response_deserializer=google_dot_protobuf_dot_struct__pb2.Struct.FromString,
+                _registered_method=True)
+        self.TestMcpConnection = channel.unary_unary(
+                '/agent_service.AgentService/TestMcpConnection',
+                request_serializer=google_dot_protobuf_dot_struct__pb2.Struct.SerializeToString,
+                response_deserializer=google_dot_protobuf_dot_struct__pb2.Struct.FromString,
+                _registered_method=True)
+        self.ExportMcpConnections = channel.unary_unary(
+                '/agent_service.AgentService/ExportMcpConnections',
+                request_serializer=google_dot_protobuf_dot_struct__pb2.Struct.SerializeToString,
+                response_deserializer=google_dot_protobuf_dot_struct__pb2.Struct.FromString,
+                _registered_method=True)
+        self.PreviewMcpImport = channel.unary_unary(
+                '/agent_service.AgentService/PreviewMcpImport',
+                request_serializer=google_dot_protobuf_dot_struct__pb2.Struct.SerializeToString,
+                response_deserializer=google_dot_protobuf_dot_struct__pb2.Struct.FromString,
+                _registered_method=True)
+        self.GetMcpServer = channel.unary_unary(
+                '/agent_service.AgentService/GetMcpServer',
+                request_serializer=google_dot_protobuf_dot_struct__pb2.Struct.SerializeToString,
+                response_deserializer=google_dot_protobuf_dot_struct__pb2.Struct.FromString,
+                _registered_method=True)
+        self.SaveMcpServer = channel.unary_unary(
+                '/agent_service.AgentService/SaveMcpServer',
+                request_serializer=google_dot_protobuf_dot_struct__pb2.Struct.SerializeToString,
+                response_deserializer=google_dot_protobuf_dot_struct__pb2.Struct.FromString,
+                _registered_method=True)
+        self.CreateMcpCredential = channel.unary_unary(
+                '/agent_service.AgentService/CreateMcpCredential',
+                request_serializer=google_dot_protobuf_dot_struct__pb2.Struct.SerializeToString,
+                response_deserializer=google_dot_protobuf_dot_struct__pb2.Struct.FromString,
+                _registered_method=True)
+        self.RevokeMcpCredential = channel.unary_unary(
+                '/agent_service.AgentService/RevokeMcpCredential',
+                request_serializer=google_dot_protobuf_dot_struct__pb2.Struct.SerializeToString,
+                response_deserializer=google_dot_protobuf_dot_struct__pb2.Struct.FromString,
+                _registered_method=True)
+        self.RotateMcpCredential = channel.unary_unary(
+                '/agent_service.AgentService/RotateMcpCredential',
+                request_serializer=google_dot_protobuf_dot_struct__pb2.Struct.SerializeToString,
+                response_deserializer=google_dot_protobuf_dot_struct__pb2.Struct.FromString,
+                _registered_method=True)
+        self.GetMcpAccessRecords = channel.unary_unary(
+                '/agent_service.AgentService/GetMcpAccessRecords',
+                request_serializer=google_dot_protobuf_dot_struct__pb2.Struct.SerializeToString,
+                response_deserializer=google_dot_protobuf_dot_struct__pb2.Struct.FromString,
+                _registered_method=True)
         self.StreamRun = channel.unary_stream(
                 '/agent_service.AgentService/StreamRun',
                 request_serializer=agent__service__pb2.RunRequest.SerializeToString,
@@ -745,11 +819,103 @@ class AgentServiceServicer(object):
     - SessionService 的 5 个 CRUD 方法
     ---------------------------------------------------------------------------
 
-    ---- Agent 调用 ----
     """
 
+    def GetMcpClient(self, request, context):
+        """MCP management uses validated user-scoped config DTOs, matching REST.
+        """
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def SaveMcpClient(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def CreateMcpConnection(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def UpdateMcpConnection(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def DeleteMcpConnection(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def ReconnectMcpConnection(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def TestMcpConnection(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def ExportMcpConnections(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def PreviewMcpImport(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def GetMcpServer(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def SaveMcpServer(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def CreateMcpCredential(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def RevokeMcpCredential(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def RotateMcpCredential(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
+    def GetMcpAccessRecords(self, request, context):
+        """Missing associated documentation comment in .proto file."""
+        context.set_code(grpc.StatusCode.UNIMPLEMENTED)
+        context.set_details('Method not implemented!')
+        raise NotImplementedError('Method not implemented!')
+
     def StreamRun(self, request, context):
-        """无状态流式运行（无长期记忆 / 知识库召回）。
+        """---- Agent 调用 ----
+
+        无状态流式运行（无长期记忆 / 知识库召回）。
         """
         context.set_code(grpc.StatusCode.UNIMPLEMENTED)
         context.set_details('Method not implemented!')
@@ -1612,6 +1778,81 @@ class AgentServiceServicer(object):
 
 def add_AgentServiceServicer_to_server(servicer, server):
     rpc_method_handlers = {
+            'GetMcpClient': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetMcpClient,
+                    request_deserializer=google_dot_protobuf_dot_struct__pb2.Struct.FromString,
+                    response_serializer=google_dot_protobuf_dot_struct__pb2.Struct.SerializeToString,
+            ),
+            'SaveMcpClient': grpc.unary_unary_rpc_method_handler(
+                    servicer.SaveMcpClient,
+                    request_deserializer=google_dot_protobuf_dot_struct__pb2.Struct.FromString,
+                    response_serializer=google_dot_protobuf_dot_struct__pb2.Struct.SerializeToString,
+            ),
+            'CreateMcpConnection': grpc.unary_unary_rpc_method_handler(
+                    servicer.CreateMcpConnection,
+                    request_deserializer=google_dot_protobuf_dot_struct__pb2.Struct.FromString,
+                    response_serializer=google_dot_protobuf_dot_struct__pb2.Struct.SerializeToString,
+            ),
+            'UpdateMcpConnection': grpc.unary_unary_rpc_method_handler(
+                    servicer.UpdateMcpConnection,
+                    request_deserializer=google_dot_protobuf_dot_struct__pb2.Struct.FromString,
+                    response_serializer=google_dot_protobuf_dot_struct__pb2.Struct.SerializeToString,
+            ),
+            'DeleteMcpConnection': grpc.unary_unary_rpc_method_handler(
+                    servicer.DeleteMcpConnection,
+                    request_deserializer=google_dot_protobuf_dot_struct__pb2.Struct.FromString,
+                    response_serializer=google_dot_protobuf_dot_struct__pb2.Struct.SerializeToString,
+            ),
+            'ReconnectMcpConnection': grpc.unary_unary_rpc_method_handler(
+                    servicer.ReconnectMcpConnection,
+                    request_deserializer=google_dot_protobuf_dot_struct__pb2.Struct.FromString,
+                    response_serializer=google_dot_protobuf_dot_struct__pb2.Struct.SerializeToString,
+            ),
+            'TestMcpConnection': grpc.unary_unary_rpc_method_handler(
+                    servicer.TestMcpConnection,
+                    request_deserializer=google_dot_protobuf_dot_struct__pb2.Struct.FromString,
+                    response_serializer=google_dot_protobuf_dot_struct__pb2.Struct.SerializeToString,
+            ),
+            'ExportMcpConnections': grpc.unary_unary_rpc_method_handler(
+                    servicer.ExportMcpConnections,
+                    request_deserializer=google_dot_protobuf_dot_struct__pb2.Struct.FromString,
+                    response_serializer=google_dot_protobuf_dot_struct__pb2.Struct.SerializeToString,
+            ),
+            'PreviewMcpImport': grpc.unary_unary_rpc_method_handler(
+                    servicer.PreviewMcpImport,
+                    request_deserializer=google_dot_protobuf_dot_struct__pb2.Struct.FromString,
+                    response_serializer=google_dot_protobuf_dot_struct__pb2.Struct.SerializeToString,
+            ),
+            'GetMcpServer': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetMcpServer,
+                    request_deserializer=google_dot_protobuf_dot_struct__pb2.Struct.FromString,
+                    response_serializer=google_dot_protobuf_dot_struct__pb2.Struct.SerializeToString,
+            ),
+            'SaveMcpServer': grpc.unary_unary_rpc_method_handler(
+                    servicer.SaveMcpServer,
+                    request_deserializer=google_dot_protobuf_dot_struct__pb2.Struct.FromString,
+                    response_serializer=google_dot_protobuf_dot_struct__pb2.Struct.SerializeToString,
+            ),
+            'CreateMcpCredential': grpc.unary_unary_rpc_method_handler(
+                    servicer.CreateMcpCredential,
+                    request_deserializer=google_dot_protobuf_dot_struct__pb2.Struct.FromString,
+                    response_serializer=google_dot_protobuf_dot_struct__pb2.Struct.SerializeToString,
+            ),
+            'RevokeMcpCredential': grpc.unary_unary_rpc_method_handler(
+                    servicer.RevokeMcpCredential,
+                    request_deserializer=google_dot_protobuf_dot_struct__pb2.Struct.FromString,
+                    response_serializer=google_dot_protobuf_dot_struct__pb2.Struct.SerializeToString,
+            ),
+            'RotateMcpCredential': grpc.unary_unary_rpc_method_handler(
+                    servicer.RotateMcpCredential,
+                    request_deserializer=google_dot_protobuf_dot_struct__pb2.Struct.FromString,
+                    response_serializer=google_dot_protobuf_dot_struct__pb2.Struct.SerializeToString,
+            ),
+            'GetMcpAccessRecords': grpc.unary_unary_rpc_method_handler(
+                    servicer.GetMcpAccessRecords,
+                    request_deserializer=google_dot_protobuf_dot_struct__pb2.Struct.FromString,
+                    response_serializer=google_dot_protobuf_dot_struct__pb2.Struct.SerializeToString,
+            ),
             'StreamRun': grpc.unary_stream_rpc_method_handler(
                     servicer.StreamRun,
                     request_deserializer=agent__service__pb2.RunRequest.FromString,
@@ -2319,8 +2560,412 @@ class AgentService(object):
     - SessionService 的 5 个 CRUD 方法
     ---------------------------------------------------------------------------
 
-    ---- Agent 调用 ----
     """
+
+    @staticmethod
+    def GetMcpClient(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/agent_service.AgentService/GetMcpClient',
+            google_dot_protobuf_dot_struct__pb2.Struct.SerializeToString,
+            google_dot_protobuf_dot_struct__pb2.Struct.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def SaveMcpClient(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/agent_service.AgentService/SaveMcpClient',
+            google_dot_protobuf_dot_struct__pb2.Struct.SerializeToString,
+            google_dot_protobuf_dot_struct__pb2.Struct.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def CreateMcpConnection(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/agent_service.AgentService/CreateMcpConnection',
+            google_dot_protobuf_dot_struct__pb2.Struct.SerializeToString,
+            google_dot_protobuf_dot_struct__pb2.Struct.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def UpdateMcpConnection(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/agent_service.AgentService/UpdateMcpConnection',
+            google_dot_protobuf_dot_struct__pb2.Struct.SerializeToString,
+            google_dot_protobuf_dot_struct__pb2.Struct.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def DeleteMcpConnection(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/agent_service.AgentService/DeleteMcpConnection',
+            google_dot_protobuf_dot_struct__pb2.Struct.SerializeToString,
+            google_dot_protobuf_dot_struct__pb2.Struct.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def ReconnectMcpConnection(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/agent_service.AgentService/ReconnectMcpConnection',
+            google_dot_protobuf_dot_struct__pb2.Struct.SerializeToString,
+            google_dot_protobuf_dot_struct__pb2.Struct.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def TestMcpConnection(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/agent_service.AgentService/TestMcpConnection',
+            google_dot_protobuf_dot_struct__pb2.Struct.SerializeToString,
+            google_dot_protobuf_dot_struct__pb2.Struct.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def ExportMcpConnections(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/agent_service.AgentService/ExportMcpConnections',
+            google_dot_protobuf_dot_struct__pb2.Struct.SerializeToString,
+            google_dot_protobuf_dot_struct__pb2.Struct.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def PreviewMcpImport(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/agent_service.AgentService/PreviewMcpImport',
+            google_dot_protobuf_dot_struct__pb2.Struct.SerializeToString,
+            google_dot_protobuf_dot_struct__pb2.Struct.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetMcpServer(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/agent_service.AgentService/GetMcpServer',
+            google_dot_protobuf_dot_struct__pb2.Struct.SerializeToString,
+            google_dot_protobuf_dot_struct__pb2.Struct.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def SaveMcpServer(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/agent_service.AgentService/SaveMcpServer',
+            google_dot_protobuf_dot_struct__pb2.Struct.SerializeToString,
+            google_dot_protobuf_dot_struct__pb2.Struct.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def CreateMcpCredential(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/agent_service.AgentService/CreateMcpCredential',
+            google_dot_protobuf_dot_struct__pb2.Struct.SerializeToString,
+            google_dot_protobuf_dot_struct__pb2.Struct.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def RevokeMcpCredential(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/agent_service.AgentService/RevokeMcpCredential',
+            google_dot_protobuf_dot_struct__pb2.Struct.SerializeToString,
+            google_dot_protobuf_dot_struct__pb2.Struct.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def RotateMcpCredential(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/agent_service.AgentService/RotateMcpCredential',
+            google_dot_protobuf_dot_struct__pb2.Struct.SerializeToString,
+            google_dot_protobuf_dot_struct__pb2.Struct.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
+
+    @staticmethod
+    def GetMcpAccessRecords(request,
+            target,
+            options=(),
+            channel_credentials=None,
+            call_credentials=None,
+            insecure=False,
+            compression=None,
+            wait_for_ready=None,
+            timeout=None,
+            metadata=None):
+        return grpc.experimental.unary_unary(
+            request,
+            target,
+            '/agent_service.AgentService/GetMcpAccessRecords',
+            google_dot_protobuf_dot_struct__pb2.Struct.SerializeToString,
+            google_dot_protobuf_dot_struct__pb2.Struct.FromString,
+            options,
+            channel_credentials,
+            insecure,
+            call_credentials,
+            compression,
+            wait_for_ready,
+            timeout,
+            metadata,
+            _registered_method=True)
 
     @staticmethod
     def StreamRun(request,

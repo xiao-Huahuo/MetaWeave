@@ -8,7 +8,7 @@ import { mount } from '@vue/test-utils'
 import { describe, expect, it } from 'vitest'
 
 import IcIcon from '@/components/common/IcIcon.vue'
-import { DSH_ICON_FILES, MORPH_ICONS } from '@/components/common/iconRegistry'
+import { DSH_ICON_FILES, FEATURE_ICON_FILES, MORPH_ICONS } from '@/components/common/iconRegistry'
 
 const DSH_ASSETS = import.meta.glob('@/assets/icons/svg/dsh/*.svg', {
   query: '?raw',
@@ -35,6 +35,20 @@ const EXPECTED_ICON_NAMES = [
 ] as const
 
 describe('IcIcon', () => {
+  it.each(['skills', 'mcp', 'ocr', 'llm', 'memory', 'floating-window', 'scanner', 'appearance', 'terminal'])(
+    'renders downloaded %s artwork instead of a fallback tool icon', (name) => {
+      const wrapper = mount(IcIcon, { props: { name, size: 16 } })
+      const svg = wrapper.get('svg')
+      expect(FEATURE_ICON_FILES[name]).toBeDefined()
+      expect(svg.attributes('data-icon-source')).toBe('feature')
+      expect(svg.attributes('data-icon-name')).toBe(name)
+      expect(svg.findAll('path, rect, circle, polygon').length).toBeGreaterThan(0)
+      expect(svg.get('g').attributes('fill')).toBe('none')
+      expect(svg.html()).not.toMatch(/<(script|image|foreignObject)\b|https?:\/\/(?!www.w3.org)/u)
+      wrapper.unmount()
+    },
+  )
+
   it('covers all 99 existing semantic icon names with local morph data', () => {
     expect(Object.keys(MORPH_ICONS).sort()).toEqual([...EXPECTED_ICON_NAMES].sort())
   })

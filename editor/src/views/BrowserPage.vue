@@ -201,7 +201,8 @@ onBeforeUnmount(() => {
   height: 100%;
   min-width: 0;
   min-height: 0;
-  padding: var(--space-10);
+  padding: 0;
+  border-radius: var(--workspace-card-radius);
   overflow: hidden;
   background:
     radial-gradient(circle at 50% -20%, var(--color-primary-softer), transparent 44%),
@@ -209,8 +210,7 @@ onBeforeUnmount(() => {
 }
 
 .browser-sidebar-page {
-  padding: var(--space-8);
-  padding-left: var(--space-10);
+  border-radius: 0;
   background: var(--color-bg-app);
 }
 </style>

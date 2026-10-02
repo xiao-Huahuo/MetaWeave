@@ -53,3 +53,7 @@ class AgentState(TypedDict):
     context_overhead_tokens: int
     context_tool_tokens: int
     bound_tool_names: NotRequired[list[str]]
+    # Runtime-only objects, never persisted in session history.
+    tool_registry: NotRequired[Any]
+    tool_executor: NotRequired[Any]
+    available_tool_names: NotRequired[list[str]]

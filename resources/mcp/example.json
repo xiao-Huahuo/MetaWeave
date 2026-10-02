@@ -3,13 +3,13 @@
     "server_id": "filesystem",
     "command": "npx",
     "args": ["-y", "@modelcontextprotocol/server-filesystem", "/tmp"],
-    "enabled": true
+    "enabled": false
   },
   {
     "server_id": "custom-server",
     "command": "python",
     "args": ["-m", "my_mcp_server"],
-    "enabled": true,
+    "enabled": false,
     "env": {
       "API_KEY": "your-api-key-here"
     }

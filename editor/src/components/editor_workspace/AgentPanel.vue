@@ -905,7 +905,7 @@ function handleChangeUpdated(event: CustomEvent<AgentChangeSnapshot>) {
         @click="toggleMemory"
       >
         <span v-if="memoryLoading" class="capsule-status-dot loading"></span>
-        <span v-else class="capsule-status-dot" :class="memoryEnabled ? 'on' : ''"></span>
+        <IcIcon v-else class="capsule-memory-icon" name="memory" :size="14" :class="{ on: memoryEnabled }" />
         <span class="capsule-status-label">记忆</span>
       </button>
       <span class="topbar-title">{{ sessionTitle }}</span>
@@ -924,7 +924,7 @@ function handleChangeUpdated(event: CustomEvent<AgentChangeSnapshot>) {
         <DropdownMenu v-model:open="skillMenuOpen">
           <DropdownMenuTrigger as-child>
             <button class="topbar-skill-trigger topbar-menu-trigger v1-icon-button" type="button" title="Skill" aria-label="Skill" :disabled="!userId">
-              <IcIcon name="auto-awesome" :size="16" />
+              <IcIcon name="skills" :size="16" />
               <span class="topbar-menu-copy" aria-hidden="true">
                 <span>Skill</span>
                 <IcIcon class="topbar-filter-chevron" name="chevron-down" :size="14" />
@@ -1454,9 +1454,8 @@ function handleChangeUpdated(event: CustomEvent<AgentChangeSnapshot>) {
   color: var(--color-text-primary);
 }
 
-.capsule-memory-btn .capsule-status-dot.on {
-  background: var(--color-primary);
-  box-shadow: 0 0 4px color-mix(in srgb, var(--color-primary) 52%, transparent);
+.capsule-memory-icon.on {
+  color: var(--color-primary);
 }
 
 .capsule-status-dot.loading {

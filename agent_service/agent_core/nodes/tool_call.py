@@ -176,7 +176,7 @@ class ToolCallNode:
                     content = "长期记忆功能已关闭,当前工具不可用。"
                     failed = True
                 else:
-                    content = self.tool_executor.execute(tool_name, arguments)
+                    content = state.get("tool_executor", self.tool_executor).execute(tool_name, arguments)
             except Exception as exc:
                 content = f"工具 {tool_name} 执行失败: {exc}"
                 failed = True
@@ -275,6 +275,14 @@ class ToolCallNode:
 
     def _lookup_display_name(self, tool_name: str) -> str:
         """从工具执行器的注册表中查找工具的 display_name，找不到则回退到 tool_name。"""
+        try:
+            registry = get_tool_runtime().tool_registry
+        except RuntimeError:
+            registry = None
+        if registry is not None:
+            definition = registry.get(tool_name)
+            if definition is not None and definition.display_name:
+                return definition.display_name
         if self.tool_executor is not None:
             definition = self.tool_executor.registry.get(tool_name)
             if definition is not None and definition.display_name:

@@ -1,0 +1,11 @@
+{
+  "skills": "https://raw.githubusercontent.com/agentskills/agentskills/main/docs/favicon.svg",
+  "mcp": "https://raw.githubusercontent.com/modelcontextprotocol/docs/main/favicon.svg",
+  "ocr": "https://raw.githubusercontent.com/tabler/tabler-icons/main/icons/outline/text-recognition.svg",
+  "llm": "https://raw.githubusercontent.com/tabler/tabler-icons/main/icons/outline/ai.svg",
+  "memory": "https://raw.githubusercontent.com/tabler/tabler-icons/main/icons/outline/brain.svg",
+  "floating-window": "https://raw.githubusercontent.com/tabler/tabler-icons/main/icons/outline/picture-in-picture.svg",
+  "scanner": "https://raw.githubusercontent.com/tabler/tabler-icons/main/icons/outline/scan.svg",
+  "appearance": "https://raw.githubusercontent.com/tabler/tabler-icons/main/icons/outline/palette.svg",
+  "terminal": "https://raw.githubusercontent.com/tabler/tabler-icons/main/icons/outline/terminal-2.svg"
+}

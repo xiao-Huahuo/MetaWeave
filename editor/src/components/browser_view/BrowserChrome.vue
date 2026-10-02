@@ -36,7 +36,12 @@ const shortTitle = computed(() => props.state.title?.trim() || '新标签页')
 function reportBounds() {
   const rect = surface.value?.getBoundingClientRect()
   if (!rect || rect.width < 1 || rect.height < 1) return
-  emit('bounds', { x: rect.x, y: rect.y, width: rect.width, height: rect.height })
+  const frame = surface.value?.closest<HTMLElement>('.browser-frame')
+  if (!frame) return
+  emit('bounds', {
+    x: rect.x, y: rect.y, width: rect.width, height: rect.height,
+    borderRadius: Number.parseFloat(getComputedStyle(frame).borderBottomLeftRadius) || 0,
+  })
 }
 
 /** Navigate from the address field without imposing URL syntax on the user. */
@@ -156,11 +161,8 @@ onBeforeUnmount(() => {
   min-width: 0;
   min-height: 0;
   overflow: hidden;
-  border-radius: 12px;
+  border-radius: inherit;
   background: var(--color-surface);
-  box-shadow:
-    0 0 0 1px color-mix(in srgb, var(--color-border) 72%, transparent),
-    0 18px 46px color-mix(in srgb, #10131c 24%, transparent);
 }
 
 .tabs-head {

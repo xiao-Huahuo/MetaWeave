@@ -36,8 +36,16 @@ class CancellationRuntime:
         event.set()
         return True
 
-    def clear(self, session_id: str) -> None:
+    def clear(self, session_id: str, owner_event: threading.Event | None = None) -> None:
         """在运行结束后移除会话事件。"""
 
         with self._lock:
-            self._events.pop(session_id, None)
+            if owner_event is None or self._events.get(session_id) is owner_event:
+                self._events.pop(session_id, None)
+
+    def cancel_all(self) -> None:
+        """Signal owned turns before shutting down MCP connections or model workers."""
+        with self._lock:
+            events = list(self._events.values())
+        for event in events:
+            event.set()

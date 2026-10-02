@@ -850,6 +850,15 @@ class AgentConfig:
 
         enabled: bool = False
         tool_name_prefix: str = "mcp"
+        # Application-owned MCP listener and bounded runtime defaults.
+        server_host: str = "127.0.0.1"
+        server_port: int = 8766
+        timeout_seconds: int = 30
+        shutdown_timeout_seconds: int = 10
+        max_connections: int = 32
+        max_server_calls: int = 8
+        access_record_limit: int = 100
+        secret_key_file: str = "mcp-secret.key"
         servers: list[dict[str, Any]] = field(default_factory=list)
 
     @dataclass(slots=True)
@@ -1908,6 +1917,10 @@ class AgentConfig:
                 "small_model_max_concurrency",
                 int,
             ),
+            "AGENT_MCP_SERVER_HOST": ("mcp", "server_host", str),
+            "AGENT_MCP_SERVER_PORT": ("mcp", "server_port", int),
+            "AGENT_MCP_TIMEOUT_SECONDS": ("mcp", "timeout_seconds", int),
+            "AGENT_MCP_MAX_CONNECTIONS": ("mcp", "max_connections", int),
             "AGENT_MCP_ENABLED": ("mcp", "enabled", AgentConfig._parse_bool),
             "AGENT_MCP_TOOL_NAME_PREFIX": ("mcp", "tool_name_prefix", str),
             "AGENT_MCP_SERVERS_JSON": ("mcp", "servers", AgentConfig._parse_json),

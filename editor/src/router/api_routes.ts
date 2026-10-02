@@ -7,6 +7,19 @@
  */
 
 export const API_ROUTES = {
+  MCP_CLIENT: '/settings/mcp/client',
+  MCP_CONNECTIONS: '/settings/mcp/client/connections',
+  MCP_CONNECTION: (id: string) => '/settings/mcp/client/connections/' + encodeURIComponent(id),
+  MCP_RECONNECT: (id: string) => '/settings/mcp/client/connections/' + encodeURIComponent(id) + '/reconnect',
+  MCP_TEST: '/settings/mcp/client/test',
+  MCP_EXPORT: '/settings/mcp/client/export',
+  MCP_IMPORT_PREVIEW: '/settings/mcp/client/import/preview',
+  MCP_SERVER: '/settings/mcp/server',
+  MCP_CREDENTIALS: '/settings/mcp/server/credentials',
+  MCP_CREDENTIAL: (id: string) => '/settings/mcp/server/credentials/' + encodeURIComponent(id),
+  MCP_ROTATE: (id: string) => '/settings/mcp/server/credentials/' + encodeURIComponent(id) + '/rotate',
+  MCP_RECORDS: '/settings/mcp/server/records',
+  MCP_VERIFY: '/settings/mcp/server/verify',
   SETTINGS_PROFILE: '/settings/profile',
   SETTINGS_KNOWLEDGE_DIR: '/settings/profile/knowledge-dir',
   SETTINGS_FONT_CONFIG: '/settings/appearance/font',

@@ -41,6 +41,8 @@ router.include_router(git_router)
 router.include_router(library_router)
 router.include_router(component_library_router)
 router.include_router(vault_router)
+from agent_service.api.rest.mcp import router as mcp_router
+router.include_router(mcp_router)
 router.include_router(settings_router)
 router.include_router(skills_router)
 router.include_router(task_lists_router)

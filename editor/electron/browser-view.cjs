@@ -126,6 +126,7 @@ function registerBrowserViewIpc(ipcMain, getMainWindow) {
       width: Math.max(1, Math.round(Number(bounds.width) || 1)),
       height: Math.max(1, Math.round(Number(bounds.height) || 1)),
     })
+    view.setBorderRadius(Math.max(0, Math.round(Number(bounds.borderRadius) || 0)))
     view.setVisible(true)
     if (!view.webContents.getURL()) void loadBrowserUrl(view, homeUrl)
     emitState()
@@ -140,6 +141,7 @@ function registerBrowserViewIpc(ipcMain, getMainWindow) {
       width: Math.max(1, Math.round(Number(bounds?.width) || 1)),
       height: Math.max(1, Math.round(Number(bounds?.height) || 1)),
     })
+    browserView.setBorderRadius(Math.max(0, Math.round(Number(bounds?.borderRadius) || 0)))
     return true
   })
 

@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
+from typing import Any
 
 from sqlalchemy.engine import Engine
 
@@ -99,6 +100,8 @@ class ApplicationServices:
     agent_queue_scheduler: AgentQueueScheduler
     vision_service: VisionModelService
     database_engine: Engine
+    mcp_client_service: Any = None
+    mcp_server_service: Any = None
 
     def start_background_services(self) -> None:
         """按原启动顺序启动 Agent 队列和自动化调度器。"""
@@ -255,7 +258,7 @@ def create_application_services(config: AgentConfig, *, database_engine: Engine)
         "vision": vision_service,
         "session_attachment": attachment_service,
     }
-    return ApplicationServices(
+    services = ApplicationServices(
         config=config,
         agent=agent,
         session_service=session_service,
@@ -295,3 +298,12 @@ def create_application_services(config: AgentConfig, *, database_engine: Engine)
         vision_service=vision_service,
         database_engine=database_engine,
     )
+    from agent_service.services.mcp_client.service import McpClientService
+    from agent_service.services.mcp_server.service import McpServerService
+    from agent_service.api.mcp.server import McpServerRuntime
+    services.mcp_client_service = McpClientService(config=config, settings_service=settings_service, engine=database_engine)
+    services.mcp_server_service = McpServerService(config=config, settings_service=settings_service, engine=database_engine)
+    services.mcp_server_service.services = services
+    services.mcp_server_service.runtime = McpServerRuntime(services.mcp_server_service)
+    agent.mcp_client_service = services.mcp_client_service
+    return services

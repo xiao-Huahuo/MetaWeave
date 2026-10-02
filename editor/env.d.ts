@@ -57,6 +57,8 @@ interface BrowserViewBounds {
   y: number
   width: number
   height: number
+  /** Shared workspace corner radius, applied to the native Chromium surface. */
+  borderRadius?: number
 }
 
 /** Navigation state mirrored from the isolated browser WebContents. */

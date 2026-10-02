@@ -10,9 +10,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
+from contextlib import contextmanager
+from contextvars import ContextVar
 from threading import local
 from typing import TYPE_CHECKING, Any
-from collections.abc import Callable
+from collections.abc import Callable, Iterator
 
 from agent_service.core.agent_config import AgentConfig
 from agent_service.services.memory.retrieval_service import MemoryRetrievalService
@@ -61,6 +63,9 @@ class ToolRuntimeState:
     settings_service: SettingsService | None = None
     tool_services: dict[str, Any] = field(default_factory=dict)
     message_service: Any = None
+    # Stable catalogue owned by this Agent turn, shared with scheduler model binding.
+    tool_registry: Any = None
+    cancellation_event: Any = None
     database_engine: Engine | None = None
     agent_access_mode: str = AGENT_ACCESS_SANDBOX
     long_term_memory_enabled: bool = True
@@ -74,6 +79,22 @@ class ToolRuntimeState:
 
 
 _TOOL_RUNTIME = local()
+_CHILD_TOOL_SCOPE: ContextVar[frozenset[str] | None] = ContextVar("child_tool_scope", default=None)
+
+
+@contextmanager
+def child_tool_scope(names: frozenset[str]) -> Iterator[None]:
+    """Carry a native child's explicit grants to graph setup without changing shared Agent state."""
+    token = _CHILD_TOOL_SCOPE.set(names)
+    try:
+        yield
+    finally:
+        _CHILD_TOOL_SCOPE.reset(token)
+
+
+def get_child_tool_scope() -> frozenset[str] | None:
+    """Return the inherited tool scope during child graph preparation."""
+    return _CHILD_TOOL_SCOPE.get()
 
 
 def set_tool_runtime(
@@ -92,6 +113,8 @@ def set_tool_runtime(
     settings_service: Any = None,
     tool_services: dict[str, Any] | None = None,
     message_service: Any = None,
+    tool_registry: Any = None,
+    cancellation_event: Any = None,
     database_engine: Any = None,
     citation_map: dict[str, dict[str, Any]] | None = None,
     agent_access_mode: str = AGENT_ACCESS_SANDBOX,
@@ -131,6 +154,8 @@ def set_tool_runtime(
         settings_service=settings_service,
         tool_services=dict(tool_services or {}),
         message_service=message_service,
+        tool_registry=tool_registry,
+        cancellation_event=cancellation_event,
         database_engine=database_engine or getattr(resolved_memory_service, "engine", None),
         agent_access_mode=normalize_agent_access_mode(agent_access_mode),
         long_term_memory_enabled=bool(long_term_memory_enabled),

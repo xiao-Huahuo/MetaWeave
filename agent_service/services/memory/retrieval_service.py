@@ -299,6 +299,13 @@ class MemoryRetrievalService:
         user_id: 请求中的知识库归属用户;如果该用户还没有自己的切片,回退到 system 默认知识库。
         """
 
+        from agent_service.services.settings.mcp_settings import selected_library
+        selection = selected_library.get()
+        if selection is not None:
+            owner, library_id = selection
+            if owner != user_id:
+                raise PermissionError("知识库身份不匹配")
+            return SettingsService.build_knowledge_owner_id(user_id=owner, library_id=library_id)
         normalized_user_id = user_id.strip() or "system"
         if normalized_user_id == "system":
             return "system"

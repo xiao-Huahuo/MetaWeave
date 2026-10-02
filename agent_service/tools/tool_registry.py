@@ -84,7 +84,7 @@ class ToolRegistry:
             func=definition.function,
             name=definition.name,
             description=definition.description,
-            args_schema=self._build_args_model(definition),
+            args_schema=definition.args_schema if definition.name.startswith("mcp__") else self._build_args_model(definition),
         )
 
     @staticmethod

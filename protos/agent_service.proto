@@ -13,6 +13,23 @@ import "google/protobuf/struct.proto";
 // ---------------------------------------------------------------------------
 
 service AgentService {
+  // MCP management uses validated user-scoped config DTOs, matching REST.
+  rpc GetMcpClient(google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc SaveMcpClient(google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc CreateMcpConnection(google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc UpdateMcpConnection(google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc DeleteMcpConnection(google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc ReconnectMcpConnection(google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc TestMcpConnection(google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc ExportMcpConnections(google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc PreviewMcpImport(google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc GetMcpServer(google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc SaveMcpServer(google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc CreateMcpCredential(google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc RevokeMcpCredential(google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc RotateMcpCredential(google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc GetMcpAccessRecords(google.protobuf.Struct) returns (google.protobuf.Struct);
+
   // ---- Agent 调用 ----
 
   // 无状态流式运行（无长期记忆 / 知识库召回）。

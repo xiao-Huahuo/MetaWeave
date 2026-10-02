@@ -170,7 +170,7 @@ class AgentCore(ChildAgentRuntimeMixin, GraphRunnerMixin, SessionRuntimeMixin, M
             config=config,
             event_callback=self._on_child_agent_event,
         )
-        self.tool_registry = ToolRegistry.with_builtin_tools(config=config) if tools is None else None
+        self.tool_registry = ToolRegistry.with_builtin_tools() if tools is None else None
         self.tool_executor = ToolExecutor(registry=self.tool_registry) if self.tool_registry is not None else None
         self.cancellation_runtime = CancellationRuntime()
         self._session_state_lock = threading.Lock()
@@ -245,6 +245,7 @@ class AgentCore(ChildAgentRuntimeMixin, GraphRunnerMixin, SessionRuntimeMixin, M
         """释放 AgentCore 持有的调度器等资源。"""
 
         logger.info("AgentCore 正在释放调度器资源...")
+        self.cancellation_runtime.cancel_all()
         self.child_agent_manager.close()
         self.task_scheduler.shutdown()
         logger.info("AgentCore 资源释放完成")

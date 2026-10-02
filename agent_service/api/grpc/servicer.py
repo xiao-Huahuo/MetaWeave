@@ -186,7 +186,9 @@ from agent_service.api.grpc.mappers.responses import (
     _llm_config_to_response, _privacy_to_response, _to_iso,
 )
 
-class AgentServiceServicer(GrpcErrorMapperMixin, GrpcResponseMapperMixin, AgentGrpcHandlerMixin, AgentQueueGrpcHandlerMixin, AutomationGrpcHandlerMixin, ComponentLibraryGrpcHandlerMixin, GitGrpcHandlerMixin, KnowledgeGrpcHandlerMixin, LatexGrpcHandlerMixin, SessionsGrpcHandlerMixin, SettingsGrpcHandlerMixin, SmartFormsGrpcHandlerMixin, UserDataGrpcHandlerMixin, VaultGrpcHandlerMixin, BaseServicer):
+from agent_service.api.grpc.handlers.mcp import McpGrpcHandlerMixin
+
+class AgentServiceServicer(McpGrpcHandlerMixin, GrpcErrorMapperMixin, GrpcResponseMapperMixin, AgentGrpcHandlerMixin, AgentQueueGrpcHandlerMixin, AutomationGrpcHandlerMixin, ComponentLibraryGrpcHandlerMixin, GitGrpcHandlerMixin, KnowledgeGrpcHandlerMixin, LatexGrpcHandlerMixin, SessionsGrpcHandlerMixin, SettingsGrpcHandlerMixin, SmartFormsGrpcHandlerMixin, UserDataGrpcHandlerMixin, VaultGrpcHandlerMixin, BaseServicer):
     """AgentService gRPC Servicer。"""
 
     def __init__(
@@ -213,7 +215,11 @@ class AgentServiceServicer(GrpcErrorMapperMixin, GrpcResponseMapperMixin, AgentG
         latex_service: LatexService | None = None,
         model_management_service: ModelManagementService | None = None,
         attachment_service: SessionAttachmentService | None = None,
+        mcp_client_service: Any = None,
+        mcp_server_service: Any = None,
     ) -> None:
+        self._mcp_client_service = mcp_client_service
+        self._mcp_server_service = mcp_server_service
         self._agent = agent
         self._limits = getattr(getattr(agent, "config", None), "limits", DEFAULT_BUSINESS_LIMITS)
         self._session_service = session_service

@@ -182,7 +182,7 @@ onMounted(load)
         <h3>已保存的配置</h3>
         <p v-if="!presets.length" class="empty-hint">暂无已保存的 VLM 模型配置。</p>
         <div v-else class="saved-model-grid">
-          <SavedModelConfigRow v-for="config in presets" :key="config.config_id" :title="config.label" :model="config.model" endpoint="MinerU 精准 API" :detail="`${Math.round(config.max_file_bytes / 1024 / 1024)} MB · ${config.max_pages} 页 · 并发 ${config.max_concurrency}`" icon="visibility">
+          <SavedModelConfigRow v-for="config in presets" :key="config.config_id" :title="config.label" :model="config.model" endpoint="MinerU 精准 API" :detail="`${Math.round(config.max_file_bytes / 1024 / 1024)} MB · ${config.max_pages} 页 · 并发 ${config.max_concurrency}`" icon="ocr">
             <template #actions><button type="button" @click="importPreset(config)">加载</button><button class="danger" type="button" @click="removePreset(config)">删除</button></template>
           </SavedModelConfigRow>
         </div>

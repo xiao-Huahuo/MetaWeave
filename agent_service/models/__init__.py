@@ -21,6 +21,7 @@ from agent_service.models.knowledge_ingestion_job import KnowledgeIngestionJobRe
 from agent_service.models.scanner import ScannerRecord
 from agent_service.models.knowledge_graph import KnowledgeGraphDedupDecision, KnowledgeGraphDocumentStatus, KnowledgeGraphEdge, KnowledgeGraphNode, KnowledgeGraphSectionCache
 from agent_service.models.library import LibraryAsset, LibraryItem, LibraryItemTag, LibraryTag
+from agent_service.models.mcp import McpConnectionRecord, McpCredentialRecord, McpAccessRecord
 from agent_service.models.message import MessageBase, MessageRecord
 from agent_service.models.session import SessionBase, SessionRecord
 from agent_service.models.smart_form import LiteratureReadingStateRecord, SmartFormCellRecord, SmartFormColumnRecord, SmartFormRecord, SmartFormRowRecord

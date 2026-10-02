@@ -2,8 +2,8 @@
 MCP 客户端模块。
 
 功能说明:
-本文件实现 `MCPClient` 最小异步客户端,用于让 AgentService 作为 MCP Client 连接外部
-MCP Server。当前第一版只覆盖最核心的四个能力:
+本文件实现 `MCPClient` 异步协议客户端,由应用运行时持有连接。
+支持本地 stdio 与远程 Streamable HTTP，统一处理以下能力:
 
 1. 连接 stdio 型 MCP Server
 2. 初始化 MCP Session
@@ -60,10 +60,15 @@ class MCPServerConfig:
     encoding: 与 stdio 交互时使用的文本编码。
     """
 
-    command: str
+    command: str = ""
     args: list[str] = field(default_factory=list)
     env: dict[str, str] | None = None
     encoding: str = "utf-8"
+    transport: str = "stdio"
+    url: str = ""
+    headers: dict[str, str] = field(default_factory=dict)
+    cwd: str | None = None
+    timeout_seconds: int = 30
 
 
 @dataclass(slots=True)
@@ -79,6 +84,8 @@ class MCPToolInfo:
     name: str
     description: str
     input_schema: dict[str, Any]
+    annotations: dict[str, Any] = field(default_factory=dict)
+    title: str = ""
 
 
 @dataclass(slots=True)
@@ -141,15 +148,29 @@ class MCPClient:
             args=self.config.args,
             env=self.config.env,
             encoding=self.config.encoding,
+            cwd=self.config.cwd,
         )
         exit_stack = AsyncExitStack()
         try:
-            read_stream, write_stream = await exit_stack.enter_async_context(
-                sdk.stdio_client(server_parameters)
-            )
-            session = await exit_stack.enter_async_context(sdk.ClientSession(read_stream, write_stream))
+            if self.config.transport == "http":
+                import httpx
+                http_client = await exit_stack.enter_async_context(httpx.AsyncClient(
+                    headers=self.config.headers, timeout=self.config.timeout_seconds,
+                    trust_env=False,
+                ))
+                streams = await exit_stack.enter_async_context(
+                    sdk.streamable_http_client(self.config.url, http_client=http_client)
+                )
+                read_stream, write_stream = streams[:2]
+            else:
+                read_stream, write_stream = await exit_stack.enter_async_context(
+                    sdk.stdio_client(server_parameters)
+                )
+            from datetime import timedelta
+            session_kwargs = {"read_timeout_seconds": timedelta(seconds=self.config.timeout_seconds)} if getattr(sdk, "supports_timeout", False) else {}
+            session = await exit_stack.enter_async_context(sdk.ClientSession(read_stream, write_stream, **session_kwargs))
             await session.initialize()
-        except Exception:
+        except BaseException:
             await exit_stack.aclose()
             raise
         self._exit_stack = exit_stack
@@ -185,9 +206,16 @@ class MCPClient:
                     name=str(self._read_attribute(tool, "name")),
                     description=str(self._read_attribute(tool, "description") or ""),
                     input_schema=input_schema,
+                    annotations=self._annotation_dict(self._read_attribute(tool, "annotations")),
+                    title=str(self._read_attribute(tool, "title") or ""),
                 )
             )
         return tools
+
+    @staticmethod
+    def _annotation_dict(value: Any) -> dict[str, Any]:
+        """Preserve read-only/destructive hints for Agent-side permission filtering."""
+        return value.model_dump(exclude_none=True) if hasattr(value, "model_dump") else dict(value or {})
 
     async def call_tool(self, name: str, arguments: dict[str, Any] | None = None) -> MCPCallResult:
         """
@@ -268,6 +296,7 @@ class MCPClient:
         try:
             from mcp import ClientSession, StdioServerParameters
             from mcp.client.stdio import stdio_client
+            from mcp.client.streamable_http import streamable_http_client
         except ImportError as exc:  # pragma: no cover
             raise RuntimeError(
                 "当前环境未安装 MCP Python SDK。请先安装 `mcp` 包后再使用 MCPClient。"
@@ -276,4 +305,6 @@ class MCPClient:
             ClientSession=ClientSession,
             StdioServerParameters=StdioServerParameters,
             stdio_client=stdio_client,
+            streamable_http_client=streamable_http_client,
+            supports_timeout=True,
         )
