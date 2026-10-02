@@ -204,7 +204,14 @@ async function copyText(value: string, label: string): Promise<void> {
 }
 
 watch(() => [props.record.scan_id, variant.value, props.record.updated_at], syncDrafts, { immediate: true })
-watch(() => [props.record.scan_id, variant.value], () => {
+// Compare preview inputs individually so history polling cannot clear an unchanged preview.
+watch([
+  () => props.record.scan_id,
+  () => variant.value,
+  () => props.record.source_path,
+  () => props.record.ocr_preview_path,
+  sourceEditable,
+], () => {
   hoveredBlockId.value = ''
   lockedBlockId.value = ''
   void loadSourcePreview()

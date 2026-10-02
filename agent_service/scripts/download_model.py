@@ -12,13 +12,14 @@
 python -m agent_service.scripts.download_model \
   --embedding-model-name "BAAI/bge-small-zh-v1.5" \
   --embedding-model-dir "D:/Projects/Python/AgentService/runtime/models/embedding" \
-  --rerank-model-name "BAAI/bge-reranker-v2-m3" \
+  --rerank-model-name "BAAI/bge-reranker-base" \
   --rerank-model-dir "D:/Projects/Python/AgentService/runtime/models/rerank"
 """
 
 from __future__ import annotations
 
 import argparse
+from fnmatch import fnmatch
 import json
 import logging
 import os
@@ -121,6 +122,7 @@ def _tracked_hf_download(
     model_name: str,
     target_dir: Path,
     model_type: str,
+    allow_patterns: list[str] | None = None,
 ) -> None:
     """从 Hugging Face 下载模型并按文件数估算进度。"""
 
@@ -129,7 +131,12 @@ def _tracked_hf_download(
     total_bytes: int | None = None
     try:
         info = HfApi().model_info(model_name, files_metadata=True)
-        sibling_sizes = [int(item.size) for item in (info.siblings or []) if item.size is not None]
+        sibling_sizes = [
+            int(item.size) for item in (info.siblings or [])
+            if item.size is not None and (allow_patterns is None or any(
+                fnmatch(item.rfilename, pattern) for pattern in allow_patterns
+            ))
+        ]
         if sibling_sizes:
             total_bytes = sum(sibling_sizes)
     except Exception:
@@ -163,6 +170,7 @@ def _tracked_hf_download(
             repo_id=model_name,
             local_dir=str(target_dir),
             local_dir_use_symlinks=False,
+            **({"allow_patterns": allow_patterns} if allow_patterns is not None else {}),
         )
         (target_dir / MODEL_MARKER_FILE).write_text(model_name, encoding="utf-8")
     except Exception:
@@ -257,23 +265,28 @@ def restore_partial_download_progress(model_type: str, target_dir: Path) -> dict
     return get_download_progress(model_type)
 
 
-def ensure_model(model_name: str, model_dir: Path | str, model_type: str | None = None) -> Path | None:
+def ensure_model(model_name: str, model_dir: Path | str, model_type: str | None = None, *, allow_patterns: list[str] | None = None) -> Path | None:
     """
     检查指定模型是否已经存在,不存在时从 Hugging Face 下载。
 
     model_name: Hugging Face 模型名称,例如 BAAI/bge-small-zh-v1.5。
     model_dir: 该类模型的本地缓存根目录。
+    allow_patterns: 下载文件白名单；未传入时消费全局模型默认配置。
     """
 
     if not model_name:
         return None
 
+    if allow_patterns is None:
+        from agent_service.core.agent_config import AgentConfig
+
+        allow_patterns = AgentConfig.ModelConfig().model_download_allow_patterns.get(model_name)
     target_dir = model_target_dir(model_name, model_dir)
     if is_model_available(target_dir):
         logger.info("模型已存在,跳过下载: %s | 路径: %s", model_name, target_dir)
         return target_dir
 
-    _download_from_huggingface(model_name, target_dir, model_type=model_type)
+    _download_from_huggingface(model_name, target_dir, model_type=model_type, allow_patterns=allow_patterns)
     if not is_model_available(target_dir):
         raise RuntimeError(f"模型下载后仍不完整: {target_dir}")
     return target_dir
@@ -285,6 +298,7 @@ def ensure_models(
     embedding_model_dir: Path | str,
     rerank_model_name: str,
     rerank_model_dir: Path | str,
+    download_allow_patterns: dict[str, list[str]] | None = None,
 ) -> None:
     """
     检查 Embedding 与 ReRank 模型,缺失时分别下载到对应目录。
@@ -293,10 +307,12 @@ def ensure_models(
     embedding_model_dir: Embedding 模型本地缓存根目录。
     rerank_model_name: ReRank 模型名称。
     rerank_model_dir: ReRank 模型本地缓存根目录。
+    download_allow_patterns: 全局配置提供的各模型下载白名单。
     """
 
-    ensure_model(embedding_model_name, embedding_model_dir)
-    ensure_model(rerank_model_name, rerank_model_dir)
+    patterns = download_allow_patterns or {}
+    ensure_model(embedding_model_name, embedding_model_dir, allow_patterns=patterns.get(embedding_model_name))
+    ensure_model(rerank_model_name, rerank_model_dir, allow_patterns=patterns.get(rerank_model_name))
 
 
 def ensure_paddleocr_models(
@@ -495,11 +511,11 @@ def is_model_available(target_dir: Path) -> bool:
     return has_marker and has_config and has_weight and has_tokenizer
 
 
-def _download_from_huggingface(model_name: str, target_dir: Path, model_type: str | None = None) -> None:
+def _download_from_huggingface(model_name: str, target_dir: Path, model_type: str | None = None, *, allow_patterns: list[str] | None = None) -> None:
     """调用 huggingface_hub 下载模型快照。"""
 
     if model_type:
-        _tracked_hf_download(model_name, target_dir, model_type)
+        _tracked_hf_download(model_name, target_dir, model_type, allow_patterns)
         return
 
     try:
@@ -517,6 +533,7 @@ def _download_from_huggingface(model_name: str, target_dir: Path, model_type: st
         repo_id=model_name,
         local_dir=str(target_dir),
         local_dir_use_symlinks=False,
+        **({"allow_patterns": allow_patterns} if allow_patterns is not None else {}),
     )
     (target_dir / MODEL_MARKER_FILE).write_text(model_name, encoding="utf-8")
     logger.info(banner)

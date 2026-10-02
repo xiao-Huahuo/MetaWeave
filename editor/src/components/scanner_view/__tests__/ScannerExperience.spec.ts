@@ -77,7 +77,7 @@ describe('scanner experience contracts', () => {
   it('uses the OCR-preprocessed image whenever source overlay boxes are visible', () => {
     expect(resultSource).toContain('const sourceOverlayBlocks = computed(() => props.record.ocr_preview_path ? previewBlocks.value : [])')
     expect(resultSource).toContain("variant.value === 'ocr' && props.record.ocr_preview_path")
-    expect(resultSource).toContain("watch(() => [props.record.scan_id, variant.value]")
+    expect(resultSource).toContain("() => props.record.ocr_preview_path,")
   })
 
   it('shows backend stage text and one-decimal progress without inventing client progress', () => {

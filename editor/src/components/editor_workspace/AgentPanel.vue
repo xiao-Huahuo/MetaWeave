@@ -143,6 +143,8 @@ function useActiveSessionChat(sessionId: string) {
 const isDark = computed(() => settingsStore.isDark)
 const welcomeTitleSrc = computed(() => isDark.value ? darkTitle : lightTitle)
 const logoSrc = computed(() => isDark.value ? darkLogo : lightLogo)
+/** Counts explicit blank-draft requests, including repeated clicks before the first message. */
+const newConversationRevision = ref(0)
 const hasMessages = computed(() => chatStore.value.messages.filter((m) => m.role !== 'system').length > 0)
 const hasStreamingContent = computed(() => !!chatStore.value.lastMessage?.content)
 const isAttachmentDropActive = computed(() => dragDepth.value > 0)
@@ -234,6 +236,7 @@ async function reloadSessions() {
 /** Enters an unpersisted blank draft; the first user bubble creates its session. */
 function startNewConversationDraft() {
   if (props.sessionId) return
+  newConversationRevision.value += 1
   sessionStore.clearSelection()
   chatStore.value = useChatStore()
   chatStore.value.clear()
@@ -1057,6 +1060,8 @@ function handleChangeUpdated(event: CustomEvent<AgentChangeSnapshot>) {
         :failed="chatStore.compressionStatus === 'failed'"
       />
       <ChatInput
+        :page="props.mode === 'page' || props.mobileMain"
+        :conversation-key="`${activeSessionId || 'draft'}:${newConversationRevision}`"
         :disabled="!userId"
         :centered="!hasMessages && !chatStore.isStreaming"
         :compact="props.mode === 'panel'"

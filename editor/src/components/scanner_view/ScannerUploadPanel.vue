@@ -162,8 +162,8 @@ onBeforeUnmount(() => {
 <template>
   <section v-if="running || busy" class="scanner-running" :class="{ embedded }" aria-live="polite">
     <PixelLoader class="scanner-pixel-loader" />
-    <strong>{{ running ? '解析中' : '正在创建' }}</strong>
-    <span v-if="running">{{ running.stage_label }}</span>
+    <strong><IcIcon v-if="running" name="spinner" :size="18" class="scanner-status-spinner" />{{ running ? '解析中' : '正在创建' }}</strong>
+    <span v-if="running" class="thinking-shimmer-text">{{ running.stage_label }}</span>
     <span v-else>{{ busyLabel }}</span>
     <div v-if="running && running.parser_engine !== 'mineru'" class="scanner-progress" role="progressbar" :aria-valuenow="running.progress" aria-valuemin="0" aria-valuemax="100">
       <i :style="{ transform: `scaleX(${running.progress / 100})` }"></i>
@@ -264,7 +264,10 @@ onBeforeUnmount(() => {
 .scanner-running { position: absolute; inset: 0; display: grid; place-items: center; align-content: center; min-height: 0; color: var(--color-text); }
 .scanner-running.embedded { position:relative; inset:auto; height:min(620px,calc(100dvh - 96px)); }
 .scanner-pixel-loader { transform: scale(1.7); margin-bottom: 28px; }
-.scanner-running strong { font-family: 'MinecraftAE Pixel', var(--font-ui); font-size: calc(18px * var(--font-scale)); }
+/* Keep the shared spinner aligned to the parsing label without affecting the stage text. */
+.scanner-status-spinner { animation: scanner-status-spin 900ms linear infinite; }
+@keyframes scanner-status-spin { to { transform: rotate(360deg); } }
+.scanner-running strong { display: inline-flex; align-items: center; gap: 8px; font-family: 'MinecraftAE Pixel', var(--font-ui); font-size: calc(18px * var(--font-scale)); }
 .scanner-running span { margin-top: 8px; color: var(--color-text-muted); font-size: calc(12px * var(--font-scale)); }
 .scanner-progress { position: relative; width: min(360px, 70vw); height: 7px; margin-top: 18px; overflow: hidden; border-radius: 4px; background: var(--color-border); }
 .scanner-progress i { position: absolute; inset: 0; background: var(--color-primary); transform-origin: left; transition: transform 260ms ease; }
@@ -284,5 +287,5 @@ onBeforeUnmount(() => {
 .scanner-url-dialog footer .primary { border-color: var(--color-primary); background: var(--color-primary); color: white; }
 @media (max-width: 768px) { .scanner-start { grid-template-rows: minmax(210px,3fr) minmax(180px,2fr); padding: 12px; } }
 @media (max-width: 480px) { .scanner-start { gap: 10px; padding: 8px; } .scanner-start.embedded { height:calc(100dvh - 80px); }.scanner-running.embedded { height:calc(100dvh - 80px); }.scanner-drop-title { top: 12px; left: 14px; } .scanner-upload-actions { gap: 6px; } .scanner-upload-actions button { padding: 0 10px; } .scanner-drop-zone p { display: none; } .scanner-example-copy { min-height: 50px; padding: 6px 9px; } }
-@media (prefers-reduced-motion: reduce) { .scanner-drop-zone,.scanner-example,.scanner-example-image img,.scanner-progress i,.scanner-carousel-enter-active,.scanner-carousel-leave-active { transition: none; } .scanner-example:hover,.scanner-example:hover img { transform: none; } }
+@media (prefers-reduced-motion: reduce) { .scanner-status-spinner { animation: none; } .scanner-drop-zone,.scanner-example,.scanner-example-image img,.scanner-progress i,.scanner-carousel-enter-active,.scanner-carousel-leave-active { transition: none; } .scanner-example:hover,.scanner-example:hover img { transform: none; } }
 </style>

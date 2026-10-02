@@ -9,6 +9,9 @@
 <script setup lang="ts">
 import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
+import { AGENT_STARTER_COLORS } from '@/stores/settings'
+import { promptStarters, samplePromptStarters, type PromptStarter } from './promptStarters'
+
 import IcIcon from '@/components/common/IcIcon.vue'
 import AttachmentBlocks from '@/components/editor_workspace/agent_chat/AttachmentBlocks.vue'
 import ContextProgress from '@/components/editor_workspace/agent_chat/ContextProgress.vue'
@@ -20,6 +23,10 @@ const props = defineProps<{
   disabled?: boolean
   centered?: boolean
   compact?: boolean
+  /** Full Agent page keeps starters available even in its mobile panel layout. */
+  page?: boolean
+  /** Changes when a conversation is selected or a new blank draft is requested. */
+  conversationKey?: string
   webSearchEnabled?: boolean
   modelLabel?: string
   agentAccessMode?: AgentAccessMode
@@ -53,60 +60,8 @@ const menuVisible = ref(false)
 const menuStyle = ref<Record<string, string>>({})
 const activeStarterPrefix = ref('')
 
-type PromptStarter = {
-  prefix: string
-  title: string
-  icon: string
-  suggestions: string[]
-}
-
-const promptStarters: PromptStarter[] = [
-  {
-    prefix: '探索',
-    title: '探索并理解代码',
-    icon: 'manage-search',
-    suggestions: [
-      '探索并了解功能的工作原理',
-      '探索当前代码库的模块结构',
-      '探索这个文件和相关依赖的关系',
-      '探索一个入口请求的完整执行流程',
-    ],
-  },
-  {
-    prefix: '构建',
-    title: '构建新功能应用或工具',
-    icon: 'build',
-    suggestions: [
-      '构建一个新功能并接入现有界面',
-      '构建一个可复用的工具组件',
-      '构建一条完整的前后端功能链路',
-      '构建一个最小可用版本并补充验证',
-    ],
-  },
-  {
-    prefix: '审查',
-    title: '审查代码并提出修改建议',
-    icon: 'fact-check',
-    suggestions: [
-      '审查当前改动并指出潜在问题',
-      '审查这段实现是否符合项目规范',
-      '审查代码结构并给出必要修改建议',
-      '审查测试覆盖是否能防止回归',
-    ],
-  },
-  {
-    prefix: '修复',
-    title: '修复问题和失败',
-    icon: 'bug',
-    suggestions: [
-      '修复这个报错并解释根因',
-      '修复失败的测试并保持行为一致',
-      '修复页面交互异常和样式错位',
-      '修复接口调用失败并补充验证',
-    ],
-  },
-]
-
+/** Discardable UI selection, owned by this input and reset for each new draft. */
+const selectedPromptStarters = ref(samplePromptStarters())
 const accessModeOptions: Array<{ value: AgentAccessMode; label: string; hint: string }> = [
   { value: 'readonly', label: '只读', hint: '全目录只读' },
   { value: 'sandbox', label: '沙盒', hint: '知识库内写' },
@@ -135,20 +90,30 @@ const matchedPromptSuggestions = computed(() => {
   return activeStarter.value.suggestions.filter((suggestion) => suggestion.startsWith(input))
 })
 const showPromptStarters = computed(() => {
-  return !props.compact && props.centered && !promptInput.value && !props.reference && !props.attachments?.length
+  return (!props.compact || props.page) && props.centered && !promptInput.value && !props.reference && !props.attachments?.length
 })
 const showPromptWaterfall = computed(() => {
-  return !props.compact && props.centered && matchedPromptSuggestions.value.length > 0 && !props.reference && !props.attachments?.length
+  return (!props.compact || props.page) && props.centered && matchedPromptSuggestions.value.length > 0 && !props.reference && !props.attachments?.length
 })
-const viewportWidth = ref(0)
+const availableWidth = ref(920)
+let starterResizeObserver: ResizeObserver | undefined
 const visiblePromptStarters = computed(() => {
-  const available = Math.min(920, (viewportWidth.value || 1200) - 48)
-  const count = Math.floor((available + 12) / 222)
-  return promptStarters.slice(0, Math.min(4, Math.max(1, count)))
+  const count = Math.floor((availableWidth.value + 12) / 222)
+  return selectedPromptStarters.value.slice(0, Math.min(4, Math.max(1, count)))
 })
+/** Measure the actual conversation column, including sidebars and ultra-narrow layouts. */
 function handleViewportResize() {
-  viewportWidth.value = window.innerWidth
+  const column = inputContainer.value?.parentElement?.parentElement
+  availableWidth.value = Math.max(1, Math.min(920, (column?.clientWidth || window.innerWidth) - 48))
 }
+
+/** Resample only for conversation entry/reset; typing and resizing preserve the draw. */
+watch(() => props.conversationKey, () => {
+  if (!props.centered) return
+  selectedPromptStarters.value = samplePromptStarters()
+  activeStarterPrefix.value = ''
+  text.value = ''
+})
 
 function matchesPromptStarter(starter: PromptStarter, input: string) {
   return starter.prefix.startsWith(input) ||
@@ -363,11 +328,17 @@ function handleInputMouseMove(e: MouseEvent) {
 
 onMounted(() => {
   handleViewportResize()
+  const column = inputContainer.value?.parentElement?.parentElement
+  if (column && typeof ResizeObserver !== 'undefined') {
+    starterResizeObserver = new ResizeObserver(handleViewportResize)
+    starterResizeObserver.observe(column)
+  }
   document.addEventListener('mousemove', handleInputMouseMove)
   window.addEventListener('resize', handleViewportResize)
 })
 
 onBeforeUnmount(() => {
+  starterResizeObserver?.disconnect()
   document.removeEventListener('mousemove', handleInputMouseMove)
   window.removeEventListener('resize', handleViewportResize)
   document.removeEventListener('click', handleOutsideClick, true)
@@ -501,11 +472,12 @@ function handleFileChange(event: Event) {
       </div>
     </div>
     <Transition name="starter-grid-panel">
-      <div v-if="showPromptStarters" class="prompt-starter-grid" aria-label="Agent 快捷提示">
+      <div v-if="showPromptStarters" class="prompt-starter-grid" :style="{ maxWidth: availableWidth + 'px' }" aria-label="Agent 快捷提示">
         <button
           v-for="starter in visiblePromptStarters"
           :key="starter.prefix"
           class="prompt-starter-card"
+          :style="{ '--starter-color': AGENT_STARTER_COLORS[starter.color] }"
           type="button"
           :disabled="disabled"
           @click="applyPromptStarter(starter)"
@@ -523,11 +495,11 @@ function handleFileChange(event: Event) {
           class="prompt-waterfall-item"
           type="button"
           :disabled="disabled"
-          :style="{ '--waterfall-index': String(index) }"
+          :style="{ '--waterfall-index': String(index), '--starter-color': activeStarter ? AGENT_STARTER_COLORS[activeStarter.color] : undefined }"
           @click="applyPromptSuggestion(suggestion)"
         >
           <IcIcon
-            :name="activeStarter?.icon"
+            :name="activeStarter?.icon || 'manage-search'"
             class="prompt-waterfall-icon"
             :size="15"
             aria-hidden="true"
@@ -657,7 +629,8 @@ function handleFileChange(event: Event) {
   align-items: start;
   justify-content: space-between;
   gap: var(--space-16);
-  flex: 0 0 210px;
+  flex: 0 1 210px;
+  width: 210px;
   min-width: 0;
   min-height: 124px;
   padding: var(--space-16);
@@ -706,23 +679,7 @@ function handleFileChange(event: Event) {
 
 .prompt-starter-icon {
   flex: 0 0 auto;
-  color: var(--color-primary);
-}
-
-.prompt-starter-card:nth-child(1) .prompt-starter-icon {
-  color: #5b8def;
-}
-
-.prompt-starter-card:nth-child(2) .prompt-starter-icon {
-  color: #d18b45;
-}
-
-.prompt-starter-card:nth-child(3) .prompt-starter-icon {
-  color: #48a868;
-}
-
-.prompt-starter-card:nth-child(4) .prompt-starter-icon {
-  color: #d85a7f;
+  color: var(--starter-color);
 }
 
 .prompt-starter-title {
@@ -732,8 +689,7 @@ function handleFileChange(event: Event) {
   font-size: calc(13px * var(--font-scale));
   font-weight: 650;
   line-height: 1.35;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 .prompt-waterfall-list {
@@ -747,7 +703,7 @@ function handleFileChange(event: Event) {
   gap: var(--space-8);
   width: 100%;
   min-height: 34px;
-  padding: 0 var(--space-12);
+  padding: var(--space-6) var(--space-12);
   border: 0;
   border-radius: var(--radius-sm);
   background: transparent;
@@ -777,14 +733,12 @@ function handleFileChange(event: Event) {
 .prompt-waterfall-icon {
   flex: 0 0 18px;
   width: 18px;
-  color: var(--color-primary);
+  color: var(--starter-color);
 }
 
 .prompt-waterfall-item span {
-  overflow: hidden;
   min-width: 0;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 .starter-panel-enter-active,

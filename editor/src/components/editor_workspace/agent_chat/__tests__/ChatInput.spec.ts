@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it } from 'vitest'
 
 import { mount } from '@vue/test-utils'
 import { nextTick } from 'vue'
+import { promptStarters } from '../promptStarters'
 
 import ChatInput from '../ChatInput.vue'
 
@@ -62,12 +63,12 @@ describe('ChatInput references', () => {
 
     const starter = wrapper
       .findAll('.prompt-starter-card')
-      .find((button) => button.text().includes('探索并理解代码'))
+      .at(0)
 
     expect(starter).toBeTruthy()
     await starter?.trigger('click')
 
-    expect((wrapper.get('textarea').element as HTMLTextAreaElement).value).toBe('探索')
+    expect((wrapper.get('textarea').element as HTMLTextAreaElement).value).toBe(promptStarters.find((entry) => entry.title === starter?.text())?.prefix)
     expect(wrapper.emitted('send')).toBeFalsy()
     expect(wrapper.findAll('.prompt-starter-card')).toHaveLength(0)
     expect(wrapper.findAll('.prompt-waterfall-item')).toHaveLength(4)
@@ -80,19 +81,20 @@ describe('ChatInput references', () => {
       },
     })
 
+    await wrapper.get('textarea').setValue('撰写')
     const buildStarter = wrapper
       .findAll('.prompt-starter-card')
-      .find((button) => button.text().includes('构建新功能应用或工具'))
+      .find((button) => button.text().includes('撰写文档'))
 
     await buildStarter?.trigger('click')
     const suggestion = wrapper
       .findAll('.prompt-waterfall-item')
-      .find((button) => button.text().includes('构建一个新功能并接入现有界面'))
+      .find((button) => button.text().includes('撰写一份基于知识库资料的主题综述，并注明来源'))
 
     expect(suggestion).toBeTruthy()
     await suggestion?.trigger('click')
 
-    expect((wrapper.get('textarea').element as HTMLTextAreaElement).value).toBe('构建一个新功能并接入现有界面')
+    expect((wrapper.get('textarea').element as HTMLTextAreaElement).value).toBe('撰写一份基于知识库资料的主题综述，并注明来源')
     expect(wrapper.emitted('send')).toBeFalsy()
     expect(wrapper.findAll('.prompt-waterfall-item')).toHaveLength(1)
   })
@@ -106,7 +108,7 @@ describe('ChatInput references', () => {
 
     const fixStarter = wrapper
       .findAll('.prompt-starter-card')
-      .find((button) => button.text().includes('修复问题和失败'))
+      .at(0)
 
     await fixStarter?.trigger('click')
     expect(wrapper.findAll('.prompt-waterfall-item')).toHaveLength(4)
@@ -130,6 +132,50 @@ describe('ChatInput references', () => {
     await wrapper.get('textarea').setValue('探索')
 
     expect(wrapper.findAll('.prompt-waterfall-item')).toHaveLength(0)
+  })
+
+  it('matches all eight functions even when their cards are outside the random draw', async () => {
+    const wrapper = mount(ChatInput, { props: { centered: true } })
+    expect(new Set(promptStarters.map((entry) => entry.icon)).size).toBe(8)
+    expect(new Set(promptStarters.map((entry) => entry.color)).size).toBe(8)
+    for (const entry of promptStarters) {
+      await wrapper.get('textarea').setValue(entry.prefix)
+      const rows = wrapper.findAll('.prompt-waterfall-item')
+      expect(rows.map((row) => row.text())).toEqual(entry.suggestions)
+      expect(rows[0]?.attributes('style')).toContain('--starter-color')
+      await rows[0]?.trigger('click')
+      expect((wrapper.get('textarea').element as HTMLTextAreaElement).value).toBe(entry.suggestions[0])
+    }
+    expect(wrapper.emitted('send')).toBeFalsy()
+    wrapper.unmount()
+  })
+
+  it('keeps the draw while editing and resets on repeated new draft requests', async () => {
+    const wrapper = mount(ChatInput, { props: { centered: true, conversationKey: 'draft:0' } })
+    const titles = wrapper.findAll('.prompt-starter-card').map((card) => card.text())
+    expect(new Set(titles).size).toBe(4)
+    await wrapper.get('textarea').setValue('检索')
+    await wrapper.get('textarea').setValue('')
+    expect(wrapper.findAll('.prompt-starter-card').map((card) => card.text())).toEqual(titles)
+    await wrapper.get('textarea').setValue('阅读')
+    await wrapper.setProps({ conversationKey: 'draft:1' })
+    expect((wrapper.get('textarea').element as HTMLTextAreaElement).value).toBe('')
+    expect(wrapper.findAll('.prompt-starter-card')).toHaveLength(4)
+    wrapper.unmount()
+  })
+
+  it('preserves the next prompt when the first sent message receives a session ID', async () => {
+    const wrapper = mount(ChatInput, { props: { centered: false, conversationKey: 'draft:0' } })
+    await wrapper.get('textarea').setValue('接着分析这份资料')
+    await wrapper.setProps({ conversationKey: 'saved-session:0' })
+    expect((wrapper.get('textarea').element as HTMLTextAreaElement).value).toBe('接着分析这份资料')
+    wrapper.unmount()
+  })
+
+  it('shows starters on the full mobile Agent page while keeping compact sidebars quiet', () => {
+    const wrapper = mount(ChatInput, { props: { centered: true, compact: true, page: true } })
+    expect(wrapper.findAll('.prompt-starter-card')).toHaveLength(4)
+    wrapper.unmount()
   })
 
   it('keeps the draft field editable while sending actions are unavailable', async () => {

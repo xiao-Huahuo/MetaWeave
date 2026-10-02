@@ -294,7 +294,14 @@ class AgentConfig:
         vision_max_output_tokens: int = 1024
         streaming_sanitize_min_chars: int = 20
         embedding_model_name: str = "BAAI/bge-small-zh-v1.5"
-        rerank_model_name: str = "BAAI/bge-reranker-v2-m3"
+        rerank_model_name: str = "BAAI/bge-reranker-base"
+        # Download only the Transformers runtime files; alternate weights duplicate storage.
+        model_download_allow_patterns: dict[str, list[str]] = field(default_factory=lambda: {
+            "BAAI/bge-reranker-base": [
+                "config.json", "model.safetensors", "sentencepiece.bpe.model",
+                "special_tokens_map.json", "tokenizer.json", "tokenizer_config.json",
+            ],
+        })
 
         def resolve_primary_temperature(self, requested_temperature: float | None = None) -> float:
             """
@@ -1609,6 +1616,7 @@ class AgentConfig:
             embedding_model_dir=self.storage.embedding_model_dir,
             rerank_model_name=self.model.rerank_model_name,
             rerank_model_dir=self.storage.rerank_model_dir,
+            download_allow_patterns=self.model.model_download_allow_patterns,
         )
 
     @classmethod

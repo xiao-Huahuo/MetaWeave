@@ -6,12 +6,12 @@
 
 from __future__ import annotations
 
+import errno
 import io
 import json
 import os
 import threading
 import time
-import uuid
 import zipfile
 from collections import deque
 from contextlib import contextmanager
@@ -99,7 +99,7 @@ class MinerUClient:
     ) -> MinerUParseResult:
         """在用户配置的并发槽位内执行本地文件精准解析。"""
 
-        with self._process_slot():
+        with self._process_slot(progress_callback):
             return self._parse_file(
                 source_path,
                 ocr_enabled=ocr_enabled,
@@ -174,7 +174,7 @@ class MinerUClient:
     ) -> MinerUParseResult:
         """在用户配置的并发槽位内执行 URL 精准解析。"""
 
-        with self._process_slot():
+        with self._process_slot(progress_callback):
             return self._parse_url(
                 url,
                 source_path=source_path,
@@ -230,40 +230,38 @@ class MinerUClient:
         return parsed
 
     @contextmanager
-    def _process_slot(self) -> Iterator[None]:
-        """通过有界文件租约在扫描器与灌库进程之间共享并发容量。"""
+    def _process_slot(self, progress_callback: Callable[[dict[str, Any]], None] | None = None) -> Iterator[None]:
+        """Hold one OS-owned slot; worker death releases it without lease cleanup."""
 
         capacity = max(1, int(self.config.get("max_concurrency") or 2))
         slot_root = Path(str(self.config.get("slot_dir") or Path.cwd() / "runtime" / "locks" / "mineru"))
         slot_root.mkdir(parents=True, exist_ok=True)
         deadline = time.monotonic() + self.timeout
-        lease_ttl = self.timeout * 4 + 60
-        token = f"{os.getpid()}:{uuid.uuid4().hex}"
+        waiting_reported = False
         while time.monotonic() < deadline:
             for index in range(capacity):
-                lease = slot_root / f"slot-{index}.lease"
-                try:
-                    descriptor = os.open(str(lease), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
-                except FileExistsError:
+                # Keep the file inode stable: closing releases the lock, deleting can split owners.
+                with (slot_root / f"slot-{index}.lock").open("a+b") as slot:
                     try:
-                        if time.time() - lease.stat().st_mtime > lease_ttl:
-                            lease.unlink(missing_ok=True)
-                    except OSError:
-                        pass
-                    continue
-                try:
-                    os.write(descriptor, token.encode("ascii"))
-                finally:
-                    os.close(descriptor)
-                try:
+                        if os.name == "nt":
+                            import msvcrt
+
+                            slot.seek(0)
+                            msvcrt.locking(slot.fileno(), msvcrt.LK_NBLCK, 1)
+                        else:
+                            import fcntl
+
+                            fcntl.flock(slot.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+                    except OSError as exc:
+                        if exc.errno not in {errno.EACCES, errno.EAGAIN}:
+                            raise
+                        continue
+                    self._emit(progress_callback, "vlm_connect", "正在连接 MinerU")
                     yield
-                finally:
-                    try:
-                        if lease.read_text(encoding="ascii") == token:
-                            lease.unlink(missing_ok=True)
-                    except OSError:
-                        pass
-                return
+                    return
+            if not waiting_reported:
+                self._emit(progress_callback, "vlm_wait_slot", "等待 MinerU 解析空位")
+                waiting_reported = True
             time.sleep(0.1)
         raise MinerUNetworkError("等待 MinerU 并发槽位超时")
 

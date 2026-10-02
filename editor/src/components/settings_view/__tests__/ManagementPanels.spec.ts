@@ -160,7 +160,7 @@ describe('management panels', () => {
       key: 'rerank',
       label: 'ReRank 模型',
       role: '知识检索结果重排',
-      name: 'BAAI/bge-reranker-v2-m3',
+      name: 'BAAI/bge-reranker-base',
       path: 'D:/models/rerank',
       base_path: 'D:/models',
       size_bytes: percent,

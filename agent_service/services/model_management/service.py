@@ -194,7 +194,8 @@ class ModelManagementService:
             from agent_service.scripts.download_model import ensure_model
 
             name, base_path = self._hf_model_config(model)
-            ensure_model(name, base_path, model_type=model)
+            patterns = getattr(self.config.model, "model_download_allow_patterns", {})
+            ensure_model(name, base_path, model_type=model, allow_patterns=patterns.get(name))
         if not self._model_is_available(model):
             raise RuntimeError(f"模型下载后仍不完整: {self._model_path(model)}")
         set_model_state(model, ModelState.DOWNLOADED)

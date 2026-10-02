@@ -34,6 +34,11 @@ const DEFAULT_TEXT_FONT_STACK = 'var(--font-text-default)'
 const DEFAULT_THEME_PRIMARY_COLOR = '#476bf7'
 const DEFAULT_THEME_SOFT_COLOR = '#476bf7'
 export const DEFAULT_TAG_COLORS = ['#d85c6f', '#28a7a1', '#2f8fda', '#4e6fe8', '#7064d8', '#9a5fc4'] as const
+/** Function identity colors for Agent starter cards and their matching completion rows. */
+export const AGENT_STARTER_COLORS = {
+  search: '#4777cf', organize: '#ad7938', read: '#43865c', extract: '#328a91',
+  connect: '#8268b5', write: '#b05c79', visualize: '#bd6848', plan: '#777f3c',
+} as const
 const APPEARANCE_PREVIEW_EVENT = 'metaweave:appearance-preview'
 
 const DEFAULT_PROFILE: UserSettingsProfile = {
