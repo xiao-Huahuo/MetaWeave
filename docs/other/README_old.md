@@ -41,22 +41,22 @@ Agent 框架不能消除模型幻觉。MetaWeave 因此优先提供检索、引�
 
 ## 核心文档
 ### 启动与开发
-- 启动,构建与部署: [DEVELOPMENT.md](DEVELOPMENT.md)
-- 开发规范: [开发规范.md](../开发规范.md)
+- 启动,构建与部署: [DEVELOPMENT.md](../DEVELOPMENT.md)
+- 开发规范: [开发规范.md](../../开发规范.md)
 ### 系统设计
-- 总体架构设计: [ARCHITECTURE.md](ARCHITECTURE.md)
+- 总体架构设计: [ARCHITECTURE.md](../ARCHITECTURE.md)
 ##### 后端
-- 部分业务工作流流程图: [WORKFLOW.md](WORKFLOW.md)
-- AGENT工具明细: [TOOLS.md](TOOLS.md)
+- 部分业务工作流流程图: [WORKFLOW.md](../WORKFLOW.md)
+- AGENT工具明细: [TOOLS.md](../TOOLS.md)
 ##### 前端
-- 前端UI/UX设计规范: [DESIGN.md](DESIGN.md)
+- 前端UI/UX设计规范: [DESIGN.md](../DESIGN.md)
 ### 变更
-- TODO: [TODO.md](../TODO.md)
-- 变更历史: [change_history/](change_history/README.md)
+- TODO: [TODO.md](../../TODO.md)
+- 变更历史: [change_history/](../change_history/README.md)
 ### 接口与扩展
 - OPENAPI文档: [metaweave.openapi.json](api/metaweave.openapi.json)
-- MCP 接入: [MCP.md](MCP.md)
-- gRPC: [agent_service.proto](../protos/agent_service.proto)
+- MCP 接入: [MCP.md](../MCP.md)
+- gRPC: [agent_service.proto](../../protos/agent_service.proto)
 
 ## 技术与环境
 ### 环境要求
@@ -273,7 +273,7 @@ runtime/                                   # 应用运行时数据根目录
 
 ## 详细功能设计
 
-以下是 MetaWeave(元织) 的核心功能,部分业务工作流流程图可见[WORKFLOW.md](WORKFLOW.md).
+以下是 MetaWeave(元织) 的核心功能,部分业务工作流流程图可见[WORKFLOW.md](../WORKFLOW.md).
 
 ### 六类知识库
 
