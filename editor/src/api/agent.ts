@@ -28,9 +28,12 @@ export interface AgentStreamChunk {
 /** Backend-owned synchronous question contract; the editor only holds unsent drafts. */
 export interface AgentQuestion {
   id: string
+  /** Each question uses either choices or a text field; the two cannot be combined. */
+  type: 'select' | 'input'
   question: string
   options: string[]
   multi_select: boolean
+  /** Derived backend compatibility flag; rendering uses type. */
   allow_text: boolean
 }
 export interface AgentQuestionAnswer {

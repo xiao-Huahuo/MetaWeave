@@ -21,6 +21,8 @@ const props = defineProps<{
   selected: boolean
   multiSelect: boolean
   readonly?: boolean
+  /** Original owning library for history/search cards; regular library cards use the active scope. */
+  libraryId?: string
 }>()
 
 const emit = defineEmits<{
@@ -52,7 +54,7 @@ watch(() => props.item, (item) => {
   if (!descriptionEditing.value) editDescription.value = item.description
 }, { deep: true })
 const isCollection = computed(() => props.item.item_type === 'collection')
-const isPrivate = computed(() => privacyStore.loading || privacyStore.isPrivate('library_item', props.item.item_id))
+const isPrivate = computed(() => privacyStore.loading || privacyStore.isPrivate('library_item', props.item.item_id, props.libraryId))
 const fileIcon = computed(() => materialFileIconForNode({
   name: props.item.source_name || props.item.display_title,
   path: props.item.source_path || props.item.source_name,
@@ -67,6 +69,7 @@ const coverUrl = computed(() => {
     return buildApiUrl('/knowledge/files/raw', {
       user_id: props.item.user_id,
       path: props.item.source_path,
+      library_id: props.libraryId,
     })
   }
   return ''
@@ -185,8 +188,8 @@ function handleDrop(event: DragEvent) {
     @drop="handleDrop"
   >
     <section class="cover" :class="{ 'image-cover': coverUrl }">
-      <PrivacyButton class="library-privacy" target-type="library_item" :target-id="item.item_id" />
-      <FavoriteButton class="library-favorite" target-type="library_item" :target-id="item.item_id" />
+      <PrivacyButton class="library-privacy" target-type="library_item" :target-id="item.item_id" :library-id="libraryId" />
+      <FavoriteButton class="library-favorite" target-type="library_item" :target-id="item.item_id" :library-id="libraryId" />
       <button
         v-if="multiSelect"
         class="select-button"

@@ -1,5 +1,5 @@
 /*
- * Markdown source-link regression tests.
+ * Markdown source-link, table scrolling, and streaming regression tests.
  *
  * Verifies that local document names in assistant answers remain clickable even
  * when the final message does not carry a local citation_map entry.
@@ -325,7 +325,46 @@ describe('MarkdownContent streaming code highlight', () => {
     expect(code.element.innerHTML).not.toContain('<span')
   })
 
-  it('renders growing lists, tables, and code without transient DOM wrappers', async () => {
+  it('wraps a table for local scrolling while preserving its native headings and rows', () => {
+    const wrapper = mount(MarkdownContent, {
+      props: { content: '正文\n\n| 名称 | 状态 |\n| --- | --- |\n| 图谱 | 抽取中 |\n| 索引 | 已完成 |' },
+    })
+
+    expect(wrapper.findAll('.markdown-table-scroll')).toHaveLength(1)
+    const table = wrapper.get('.markdown-table-scroll > table')
+    expect(table.findAll('thead th').map((cell) => cell.text())).toEqual(['名称', '状态'])
+    expect(table.findAll('tbody tr')).toHaveLength(2)
+    expect(table.findAll('tbody td').map((cell) => cell.text())).toEqual(['图谱', '抽取中', '索引', '已完成'])
+    expect(wrapper.get('.markdown-body > p').text()).toBe('正文')
+    wrapper.unmount()
+  })
+
+  it('retains the local table scroll container while rows stream and wraps the final table once', async () => {
+    const prefix = '| 名称 | 状态 |\n| --- | --- |\n| 图谱 | 抽取中 |'
+    const wrapper = mount(MarkdownContent, {
+      props: { content: prefix, isStreaming: true },
+    })
+    const scroll = wrapper.get('.markdown-table-scroll').element
+    const firstRow = wrapper.get('tbody tr').element
+    scroll.scrollLeft = 24
+
+    await wrapper.setProps({ content: prefix + '\n| 索引 | 已完成 |' })
+
+    expect(wrapper.get('.markdown-table-scroll').element).toBe(scroll)
+    expect(wrapper.get('tbody tr').element).toBe(firstRow)
+    expect(scroll.scrollLeft).toBe(24)
+    expect(wrapper.findAll('tbody tr')).toHaveLength(2)
+
+    await wrapper.setProps({ isStreaming: false })
+
+    expect(wrapper.findAll('.markdown-table-scroll')).toHaveLength(1)
+    expect(wrapper.findAll('.markdown-table-scroll > table')).toHaveLength(1)
+    expect(wrapper.findAll('thead th')).toHaveLength(2)
+    expect(wrapper.findAll('tbody tr')).toHaveLength(2)
+    wrapper.unmount()
+  })
+
+  it('renders growing lists, tables, and code without transient streaming wrappers', async () => {
     const wrapper = mount(MarkdownContent, {
       props: {
         content: '- 第一项',

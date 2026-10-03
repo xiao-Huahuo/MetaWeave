@@ -67,7 +67,7 @@ const mountedSearchResults = {
   },
 }
 
-async function mockWorkspace(page: Page): Promise<void> {
+async function mockWorkspace(page: Page, mountKnowledge = false): Promise<void> {
   let streamCompleted = false
   await page.route('**/*', async (route) => {
     const request = route.request()
@@ -76,7 +76,10 @@ async function mockWorkspace(page: Page): Promise<void> {
       streamCompleted = true
       const event = {
         node: 'agent',
-        content: `四库来源：[K1] [K2] [K3] [K4]\n\n📄 [打开《${mountedFileName}》](/knowledge/files/raw?user_id=e2e-user&path=${encodeURIComponent(mountedFilePath)})`,
+        content: `四库来源：[K1] [K2] [K3] [K4]\n\n📄 [打开《${mountedFileName}》](/knowledge/files/raw?user_id=e2e-user&path=${encodeURIComponent(mountedFilePath)})`
+          + (mountKnowledge ? Object.values(mountedSearchResults).filter(({ search_result }) => search_result.source !== 'files').map(({ search_result }) => (
+            `\n\n[${search_result.title}](/knowledge/resolve?source=${search_result.source}&id=${encodeURIComponent(search_result.id)}&user_id=e2e-user&library_id=default)`
+          )).join('') : ''),
         tool_calls: [],
         trace: [],
         metadata: {
@@ -104,6 +107,13 @@ async function mockWorkspace(page: Page): Promise<void> {
       })
       return
     }
+    if (url.pathname === '/knowledge/resolve') {
+      const result = Object.values(mountedSearchResults).find(({ search_result }) => (
+        search_result.source === url.searchParams.get('source') && search_result.id === url.searchParams.get('id')
+      ))?.search_result
+      await route.fulfill({ status: result ? 200 : 404, contentType: 'application/json', body: JSON.stringify(result ?? { detail: 'missing' }) })
+      return
+    }
     if (url.pathname === '/health') {
       await route.fulfill({ status: 200, body: 'ok' })
       return
@@ -114,6 +124,17 @@ async function mockWorkspace(page: Page): Promise<void> {
     }
     if (url.pathname === '/settings/models/status') {
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ embedding: 'ready', rerank: 'ready' }) })
+      return
+    }
+    if (url.pathname === '/settings/models/management' || url.pathname === '/agent/children' || url.pathname === '/library/tags') {
+      const body = url.pathname === '/agent/children' ? { children: [] } : url.pathname === '/library/tags' ? { tags: [] } : { models: [] }
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) })
+      return
+    }
+    if (url.pathname === '/knowledge/files/content' || url.pathname === '/knowledge/files/preview') {
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({
+        path: url.searchParams.get('path'), content: '# 文件正文', text: '# 文件正文', kind: 'text', mtime: '', size: 16, extension: 'md', readonly: false,
+      }) })
       return
     }
     if (url.pathname === '/knowledge/files') {
@@ -186,6 +207,7 @@ async function mockWorkspace(page: Page): Promise<void> {
   })
 
   await page.addInitScript(() => {
+    if (window.top !== window) return
     localStorage.setItem('agent_editor_profile', JSON.stringify({
       userId: 'e2e-user', knowledgeDir: 'D:/Knowledge', activeLibraryId: 'default',
       knowledgeLibraries: [{ libraryId: 'default', name: 'Default', knowledgeDir: 'D:/Knowledge', isActive: true }],
@@ -208,13 +230,9 @@ test('renders and opens an encoded Agent file block', async ({ page }, testInfo)
   await expect(block.locator('.agent-mounted-file__status')).toHaveCount(4)
   await expect(block).toContainText(`D:/Knowledge/${mountedFilePath}`)
 
-  const mountedSections = page.locator('.agent-page-mode .agent-search-result-section')
-  await expect(mountedSections).toHaveCount(4)
-  expect(await mountedSections.evaluateAll((sections) => sections.map((section) => section.getAttribute('data-source')))).toEqual([
-    'files', 'library', 'components', 'literature',
-  ])
-  const sectionY = await mountedSections.evaluateAll((sections) => sections.map((section) => section.getBoundingClientRect().y))
-  expect(sectionY).toEqual([...sectionY].sort((left, right) => left - right))
+  // K references remain source citations; only explicit knowledge URLs mount cards.
+  await expect(page.locator('.agent-search-result-section')).toHaveCount(0)
+  await expect(page.locator('.agent-knowledge-block')).toHaveCount(0)
 
   const summary = page.locator('.agent-page-mode .final-turn-summary')
   await summary.getByRole('button', { name: '来源' }).click()
@@ -270,6 +288,47 @@ test('opens four-library inline K citations in their native right sidebars', asy
     }
     await page.getByRole('button', { name: '关闭编辑区侧边栏' }).click()
   }
+})
+
+test('mounts only explicitly linked native knowledge blocks at responsive widths', async ({ page }, testInfo) => {
+  await mockWorkspace(page, true)
+  await page.setViewportSize({ width: 1440, height: 1100 })
+  await page.goto('/')
+  await page.getByRole('button', { name: 'Agent', exact: true }).click()
+  await page.getByPlaceholder('输入消息...').fill('单独展示选择的知识块')
+  await page.getByRole('button', { name: '发送' }).click()
+  const blocks = page.locator('.agent-knowledge-block')
+  await expect(blocks).toHaveCount(3)
+  await expect(page.locator('.agent-mounted-file')).toHaveCount(1)
+  await expect(page.locator('.agent-search-result-section, .file-medium-grid')).toHaveCount(0)
+  await expect(blocks.locator('.library-card')).toHaveCount(1)
+  await expect(blocks.locator('.component-card')).toHaveCount(1)
+  await expect(blocks.locator('.literature-card')).toHaveCount(1)
+
+  for (const width of [1024, 768, 480, 320]) {
+    await page.setViewportSize({ width, height: 1100 })
+    for (const block of await blocks.all()) {
+      await block.scrollIntoViewIfNeeded()
+      await expect(block).toBeVisible()
+      const geometry = await block.evaluate((element) => {
+        const bounds = element.getBoundingClientRect()
+        const parent = element.parentElement!.getBoundingClientRect()
+        return { left: bounds.left, right: bounds.right, parentRight: parent.right, client: element.clientWidth, scroll: element.scrollWidth }
+      })
+      expect(geometry.left).toBeGreaterThanOrEqual(0)
+      expect(geometry.right).toBeLessThanOrEqual(width + 1)
+      expect(geometry.right).toBeLessThanOrEqual(geometry.parentRight + 1)
+      expect(geometry.scroll).toBeLessThanOrEqual(geometry.client + 1)
+    }
+    await page.screenshot({ path: testInfo.outputPath(`knowledge-blocks-${width}.png`), fullPage: true })
+  }
+  await page.setViewportSize({ width: 1440, height: 1100 })
+  await blocks.locator('.component-card .detail-button').click()
+  await expect(page.locator('.editor-sidebar-content .search-result-sidebar[data-source="components"]')).toBeVisible()
+  await expect(page.locator('.agent-page-mode')).toBeVisible()
+  await page.getByRole('button', { name: '关闭编辑区侧边栏' }).click()
+  await blocks.locator('.literature-card').click()
+  await expect(page.locator('.editor-sidebar-content .search-result-sidebar[data-source="literature"]')).toBeVisible()
 })
 
 test('keeps mounted files, changes, and input controls compact in Agent sidebar mode', async ({ page }, testInfo) => {
@@ -377,7 +436,7 @@ test('keeps mounted files, changes, and input controls compact in Agent sidebar 
 
   await block.click()
   await expect(page.locator('.editor-sidebar-content')).toHaveAttribute('aria-hidden', 'true')
-  await expect(page.locator('.main-shell .editor-panel .tab-title')).toHaveText(mountedFileName)
+  await expect(page.locator('.main-shell .editor-panel .editor-pane-tab-title')).toHaveText(mountedFileName)
 })
 
 test('reveals all asynchronous follow-up suggestions below the Agent output', async ({ page }, testInfo) => {

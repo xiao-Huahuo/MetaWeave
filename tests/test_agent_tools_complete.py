@@ -90,9 +90,17 @@ def test_all_registered_tools_build_langchain_schemas() -> None:
     registry = ToolRegistry.with_builtin_tools()
     converted = registry.to_langchain_tools()
 
-    assert len(registry.definitions) == 106
+    assert "request_user_input" in registry.definitions
+    assert len(converted) == len(registry.definitions)
     assert {tool.name for tool in converted} == set(registry.definitions)
     assert all(callable(definition.function) for definition in registry.definitions.values())
+    question_tool = next(tool for tool in converted if tool.name == "request_user_input")
+    # 完整嵌套合同必须保留到实际模型绑定，避免退化为无题型信息的裸 list。
+    assert question_tool.args_schema == registry.definitions["request_user_input"].args_schema
+    question_schema = question_tool.args_schema["properties"]["questions"]["items"]
+    assert question_schema["properties"]["type"]["enum"] == ["select", "input"]
+    assert "type" in question_schema["required"]
+    assert "allow_text" not in question_schema["properties"]
 
 
 def test_utility_and_child_agent_tools_execute(runtime: SimpleNamespace, monkeypatch: pytest.MonkeyPatch) -> None:
@@ -366,7 +374,8 @@ def test_missing_knowledge_file_adapters_execute(runtime: SimpleNamespace, monke
     assert "b.md" in knowledge.rename_knowledge_file("a.md", "b.md")
     assert "docs" in knowledge.create_knowledge_folder("docs")
     assert "a.md" in knowledge.get_current_viewing_document()
-    assert "/knowledge/files/raw" in knowledge.get_knowledge_file_url("a.md")
+    runtime.unified_search_service = _Recorder({"resolve_knowledge": {"source": "files", "locator": "a.md"}})
+    assert "/knowledge/files/raw" in knowledge.get_knowledge_url(path="a.md")
 
 
 def test_search_and_uploaded_attachment_promotion_execute(runtime: SimpleNamespace, monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:

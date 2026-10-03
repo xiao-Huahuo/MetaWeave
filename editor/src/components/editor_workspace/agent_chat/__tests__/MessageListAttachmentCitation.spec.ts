@@ -168,7 +168,7 @@ describe('MessageList attachment citation recovery', () => {
     expect(wrapper.findAll('.citation-map')[1]?.text()).toContain('image11.png')
   })
 
-  it('mounts only four-library results cited by the final Agent answer', () => {
+  it('does not mount search results merely because the final answer cites them', () => {
     Object.defineProperty(HTMLElement.prototype, 'scrollTo', { value: vi.fn(), configurable: true })
     const wrapper = mount(MessageList, {
       props: {
@@ -205,6 +205,6 @@ describe('MessageList attachment citation recovery', () => {
       },
     })
 
-    expect(wrapper.get('.mounted-results').text()).toBe('cards/a.vue')
+    expect(wrapper.find('.mounted-results').exists()).toBe(false)
   })
 })

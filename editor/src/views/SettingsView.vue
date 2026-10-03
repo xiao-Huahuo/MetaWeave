@@ -2088,14 +2088,7 @@ onBeforeUnmount(() => {
 
 <style>
 /* Normalize every editable settings field while preserving toggle controls. */
-.settings-body input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='color']):not([type='file']):not([type='hidden']),
-.settings-body select {
-  border: 0 !important;
-  border-radius: 999px !important;
-  background: color-mix(in srgb, var(--color-surface) 94%, var(--color-text) 6%) !important;
-  transition: box-shadow var(--transition-fast);
-}
-
+/* Capsule input/select surfaces are shared with Agent questions in ui-system.css. */
 .settings-body textarea {
   border: 0 !important;
   border-radius: 28px !important;
@@ -2146,12 +2139,6 @@ onBeforeUnmount(() => {
 .settings-body .safety-category-card,
 .settings-body .stat-card {
   margin-inline: var(--space-8);
-}
-
-.settings-body input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='color']):not([type='file']):not([type='hidden']):focus,
-.settings-body select:focus,
-.settings-body textarea:focus {
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-border-strong) 50%, transparent) !important;
 }
 
 /* LLM and OCR/VLM forms share one field rhythm, inset, and focus motion. */

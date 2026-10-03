@@ -6,7 +6,7 @@
   debug 注册表检查页共同读取 registry-panel.css。
 -->
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 import IcIcon from '@/components/common/IcIcon.vue'
 import { fetchAgentTools, type AgentToolInfo } from '@/api/tools'
@@ -38,6 +38,8 @@ const errorText = ref('')
 const query = ref('')
 const selectedName = ref('')
 const collapsedCategories = ref<Set<string>>(new Set())
+/** Only the most recent load may update this mounted panel's user-scoped state. */
+let loadRevision = 0
 
 /**
  * 以 Agent 最终运行时注册表为全集,设置分组只负责分类与开关状态。
@@ -120,14 +122,20 @@ function toggleCategory(category: string) {
 }
 
 async function loadTools() {
+  const revision = ++loadRevision
+  const userId = settingsStore.profile.userId || ''
   loading.value = true
   errorText.value = ''
+  agentTools.value = []
+  groupsFromApi.value = []
+  enabledMap.value = {}
   try {
     const [agentPayload, settingsPayload, disabledPayload] = await Promise.all([
       fetchAgentTools(),
-      fetchAvailableTools(settingsStore.profile.userId || ''),
-      fetchDisabledTools(settingsStore.profile.userId || ''),
+      fetchAvailableTools(userId),
+      fetchDisabledTools(userId),
     ])
+    if (revision !== loadRevision) return
     agentTools.value = agentPayload.tools
     groupsFromApi.value = settingsPayload.groups ?? []
     const disabledNames = new Set(disabledPayload.disabled_tools ?? [])
@@ -135,31 +143,35 @@ async function loadTools() {
       agentPayload.tools.map(tool => [tool.name, !disabledNames.has(tool.name)]),
     )
     for (const g of settingsPayload.groups ?? []) {
-      for (const t of g.tools) map[t.name] = t.enabled
+      for (const t of g.tools) {
+        if (Object.prototype.hasOwnProperty.call(map, t.name)) map[t.name] = t.enabled
+      }
     }
     enabledMap.value = map
-    if (!selectedName.value && agentPayload.tools.length > 0) {
-      selectedName.value = agentPayload.tools[0]!.name
-    }
+    if (!agentPayload.tools.some(tool => tool.name === selectedName.value)) selectedName.value = agentPayload.tools[0]?.name ?? ''
   } catch (error) {
+    if (revision !== loadRevision) return
     errorText.value = error instanceof Error ? error.message : '工具注册表加载失败'
   } finally {
-    loading.value = false
+    if (revision === loadRevision) loading.value = false
   }
 }
 
 async function handleToggleTool(toolName: string) {
+  const userId = settingsStore.profile.userId
+  if (!userId) return
+  const revision = loadRevision
   const wasEnabled = enabledMap.value[toolName] !== false
   enabledMap.value = { ...enabledMap.value, [toolName]: !wasEnabled }
   try {
-    const userId = settingsStore.profile.userId
-    if (!userId) return
     const disabled = Object.entries(enabledMap.value)
       .filter(([, enabled]) => !enabled)
       .map(([name]) => name)
     await saveDisabledTools(userId, disabled)
   } catch {
-    enabledMap.value = { ...enabledMap.value, [toolName]: wasEnabled }
+    if (revision === loadRevision && userId === settingsStore.profile.userId) {
+      enabledMap.value = { ...enabledMap.value, [toolName]: wasEnabled }
+    }
   }
 }
 
@@ -167,8 +179,16 @@ function selectTool(tool: AugmentedTool) {
   selectedName.value = tool.name
 }
 
-onMounted(() => {
-  void loadTools()
+/** Re-read the live backend when returning from settings or a backend restart. */
+function refreshOnFocus() {
+  if (!loading.value) void loadTools()
+}
+
+watch(() => settingsStore.profile.userId, () => { void loadTools() }, { immediate: true })
+onMounted(() => window.addEventListener('focus', refreshOnFocus))
+onBeforeUnmount(() => {
+  loadRevision += 1
+  window.removeEventListener('focus', refreshOnFocus)
 })
 </script>
 

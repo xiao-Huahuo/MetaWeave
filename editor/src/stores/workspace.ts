@@ -36,6 +36,7 @@ import {
   writeKnowledgeFile,
 } from '@/api/knowledge'
 import type { KnowledgeIngestionProgressEvent } from '@/api/settings'
+import { updateSettingsKnowledgeDir } from '@/api/settings'
 import { normalizeProgress } from '@/utils/progress'
 import { useSettingsStore } from '@/stores/settings'
 import type {
@@ -1464,8 +1465,55 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     await selectFile(node)
   }
 
+  /** This store owns one bounded library switch; API client timeouts terminate its requests. */
+  let isSearchLibrarySwitching = false
+
+  /** Activate a historical object's owned library before any existing editor reads or writes it. */
+  async function ensureSearchResultLibrary(result: UnifiedSearchResult): Promise<boolean> {
+    const settingsStore = useSettingsStore()
+    if (isSearchLibrarySwitching) {
+      showToast('正在切换知识库，请稍后打开来源')
+      return false
+    }
+    if (!result.library_id || result.library_id === settingsStore.profile.activeLibraryId) return true
+    const library = settingsStore.profile.knowledgeLibraries.find((item) => item.libraryId === result.library_id)
+    if (!library || !settingsStore.profile.userId) {
+      showToast('知识库不存在或不属于当前用户')
+      return false
+    }
+    if (hasDirtyTabs.value) {
+      showToast('请先保存当前知识库的修改，再打开其他知识库来源')
+      return false
+    }
+    isSearchLibrarySwitching = true
+    try {
+      const profile = await updateSettingsKnowledgeDir(settingsStore.profile.userId, library.knowledgeDir)
+      _contentAbort?.abort()
+      _previewAbort?.abort()
+      // Relative file paths and cached tabs belong to the previous root, never the new one.
+      selectedPath.value = ''
+      selectedTreePath.value = ''
+      selectedTreePaths.value = new Set()
+      openTabs.value = []
+      contentByPath.value = {}
+      previewByPath.value = {}
+      tree.value = []
+      fileClipboard.value = null
+      settingsStore.applyBackendProfile(profile)
+      await loadKnowledgeTree()
+      restartFileWatcher()
+      return true
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : '打开原知识库失败')
+      return false
+    } finally {
+      isSearchLibrarySwitching = false
+    }
+  }
+
   /** Open any search result in the existing draggable editor-sidebar column. */
   async function openSearchResultSidebar(result: UnifiedSearchResult) {
+    if (!await ensureSearchResultLibrary(result)) return
     if (result.source === 'files') {
       await openEditorSidebar(result.item as unknown as KnowledgeFileNode)
       return
@@ -1493,6 +1541,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
       await openSearchResultSidebar(result)
       return
     }
+    if (!await ensureSearchResultLibrary(result)) return
     closeEditorSidebar()
     pendingMainSearchResult.value = null
     if (result.source === 'files') {
@@ -2242,7 +2291,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
       '',
       '执行要求:',
       '1. 先确认当前文档上下文；如果当前文档路径已经明确，直接按该路径读取，不要为了确认路径而额外列目录。',
-      '2. 无论任何类型的知识库文档，获取内容都必须调用知识库读取工具；禁止用 run_terminal_command、Python 库、get_knowledge_file_url、download_file 或系统源文件路径自行解析知识库源文件。',
+      '2. 无论任何类型的知识库文档，获取内容都必须调用知识库读取工具；禁止用 run_terminal_command、Python 库、get_knowledge_url、download_file 或系统源文件路径自行解析知识库源文件。',
       '3. 所有支持的源文件与会话附件统一用 read_file 按需读取；知识库文件读取 `.mw/md` Markdown 投影，会话附件首次读取时解析并缓存，再基于返回内容生成 HTML。',
       '4. 只有在对应读取工具调用成功后，才能把“读取文档内容/确认上下文”类任务列表项标记为完成；工具失败时先重试正确 path 或说明失败，不要改走终端解析。',
       '5. 生成完整、可独立打开的 HTML。不要只给 Markdown，不要只描述方案。',

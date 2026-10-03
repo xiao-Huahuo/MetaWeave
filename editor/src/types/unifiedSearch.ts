@@ -12,6 +12,8 @@ export type SearchSource = (typeof SEARCH_SOURCES)[number]
 export type SearchMatchMode = 'title' | 'fulltext' | 'semantic'
 
 export interface UnifiedSearchResult {
+  /** Owning library anchors persisted links when the user's active library changes. */
+  library_id?: string
   /** Stable identifier inside its source library. */
   id: string
   /** Library that owns this result. */

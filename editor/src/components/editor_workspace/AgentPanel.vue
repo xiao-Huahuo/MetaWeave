@@ -1058,9 +1058,8 @@ function handleChangeUpdated(event: CustomEvent<AgentChangeSnapshot>) {
           <path d="M440-800v487L216-537l-56 57 320 320 320-320-56-57-224 224v-487h-80Z"></path>
         </svg>
       </button>
-      <div v-if="chatStore.isStreaming" class="thinking-flow" aria-live="polite">
-        <span v-if="chatStore.pendingQuestion">等待回答</span>
-        <span v-else class="thinking-shimmer-text">正在思考</span>
+      <div v-if="chatStore.isStreaming && !chatStore.pendingQuestion" class="thinking-flow" aria-live="polite">
+        <span class="thinking-shimmer-text">正在思考</span>
       </div>
       <ContextCompressionStatus
         v-if="chatStore.compressionStatus !== 'idle'"

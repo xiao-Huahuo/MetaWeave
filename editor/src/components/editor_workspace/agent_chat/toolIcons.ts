@@ -8,7 +8,7 @@
 /** Groups registered backend tools by the local icon used in Agent rows. */
 const TOOL_ICON_GROUPS: ReadonlyArray<readonly [string, readonly string[]]> = [
   ['build', [
-    'list_available_tools', 'get_current_time', 'run_terminal_command', 'download_file',
+    'list_available_tools', 'read_tool_result', 'get_current_time', 'run_terminal_command', 'download_file',
     'list_components', 'get_component', 'create_component', 'update_component',
     'delete_component', 'validate_component',
   ]],
@@ -29,11 +29,11 @@ const TOOL_ICON_GROUPS: ReadonlyArray<readonly [string, readonly string[]]> = [
   ['manage-search', [
     'get_knowledge_context', 'search_knowledge', 'search_knowledge_graph_nodes',
     'find_knowledge_graph_paths', 'save_uploaded_attachment_to_knowledge',
-    'get_knowledge_file_url',
+    'get_knowledge_url',
   ]],
   ['document', [
     'get_current_viewing_document', 'list_knowledge_files', 'read_file',
-    'read_knowledge_file', 'read_session_attachment',
+    'read_knowledge_file', 'read_session_attachment', 'understand_image',
     'write_knowledge_file', 'patch_knowledge_file',
     'show_markdown_html', 'delete_knowledge_file', 'rename_knowledge_file',
     'create_knowledge_folder', 'get_selected_knowledge_files',
@@ -60,7 +60,7 @@ const TOOL_ICON_GROUPS: ReadonlyArray<readonly [string, readonly string[]]> = [
     'list_user_feedback', 'get_user_feedback', 'create_user_feedback',
     'update_user_feedback', 'delete_user_feedback',
   ]],
-  ['group', ['spawn_child_agent', 'wait_for_child_agents']],
+  ['group', ['spawn_child_agent', 'wait_for_child_agents', 'continue_child_agent', 'request_user_input']],
   ['language', ['web_search', 'web_image_search']],
 ]
 

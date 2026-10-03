@@ -1,0 +1,28 @@
+/* Shared scoped styles for link icons in Agent Markdown and editor previews. */
+:is(.markdown-body, .markdown-preview) :deep(.markdown-link-icon) {
+  position: relative;
+  display: inline-block;
+  width: 1em;
+  height: 1em;
+  margin-inline-end: 0.3em;
+  vertical-align: -0.125em;
+  pointer-events: none;
+  user-select: none;
+}
+
+:is(.markdown-body, .markdown-preview) :deep(.markdown-link-icon > *) {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: 0;
+}
+
+:is(.markdown-body, .markdown-preview) :deep(.markdown-link-icon img) { opacity: 0; }
+:is(.markdown-body, .markdown-preview) :deep(.markdown-link-icon.is-loaded img) { opacity: 1; }
+:is(.markdown-body, .markdown-preview) :deep(.markdown-link-icon.is-loaded > :not(img)) { visibility: hidden; }
+:is(.markdown-body, .markdown-preview) :deep(.markdown-link-icon__fallback) {
+  background: currentColor;
+  mask-size: contain;
+  mask-repeat: no-repeat;
+}

@@ -49,3 +49,30 @@ def test_context_builder_skips_all_fixed_memory_recall_when_disabled() -> None:
 
     assert isinstance(messages[-1], HumanMessage)
     assert messages[-1].content == "hello"
+
+
+def test_context_builder_explains_explicit_knowledge_mounts_and_all_citations() -> None:
+    """真实上下文注入包含四库 URL 挂载规则，避免仍只告诉模型 K/N 与文件 URL。"""
+
+    config = AgentConfig.load_config({}, load_env=False, ensure_directories=False, ensure_models=False)
+    builder = ContextBuilder(
+        config=config,
+        message_service=_MessageServiceStub(),  # type: ignore[arg-type]
+        retrieval_service=_RetrievalServiceMustNotBeCalled(),  # type: ignore[arg-type]
+    )
+    messages = builder.build_messages(
+        user_id="u1",
+        session_id="s1",
+        current_prompt="挂载一个图书条目",
+        long_term_memory_enabled=False,
+    )
+    context = "\n".join(str(message.content) for message in messages[:-1])
+    assert "get_knowledge_url" in context and "citation_id" in context
+    assert "library、components、literature" in context
+    assert "搜索或 K 引用本身不会挂载知识块" in context
+    assert "文件块保持现有样式" in context
+    assert "get_knowledge_file_url" not in context
+    assert "[标题](URL)" in context and "![描述](图片URL)" in context
+    assert "四库知识来源" in context
+    assert "[A1]" in context and "[1]" in context
+    assert "URL 工具只用于展示与打开" in context

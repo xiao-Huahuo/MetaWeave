@@ -613,7 +613,7 @@ export interface AvailableToolsResponse {
 }
 
 export function fetchAvailableTools(userId: string): Promise<AvailableToolsResponse> {
-  return apiGet<AvailableToolsResponse>(API_ROUTES.SETTINGS_AVAILABLE_TOOLS, { user_id: userId })
+  return apiGet<AvailableToolsResponse>(API_ROUTES.SETTINGS_AVAILABLE_TOOLS, { user_id: userId }, { cache: 'no-store' })
 }
 
 export interface DisabledToolsResponse {
@@ -622,7 +622,7 @@ export interface DisabledToolsResponse {
 
 /** 读取当前用户关闭的工具,供运行时新增工具合并开关状态。 */
 export function fetchDisabledTools(userId: string): Promise<DisabledToolsResponse> {
-  return apiGet<DisabledToolsResponse>(API_ROUTES.SETTINGS_DISABLED_TOOLS, { user_id: userId })
+  return apiGet<DisabledToolsResponse>(API_ROUTES.SETTINGS_DISABLED_TOOLS, { user_id: userId }, { cache: 'no-store' })
 }
 
 export function saveDisabledTools(userId: string, toolNames: string[]): Promise<DisabledToolsResponse> {

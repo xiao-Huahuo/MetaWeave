@@ -22,6 +22,8 @@ const props = withDefaults(defineProps<{
   renaming?: boolean
   deleting?: boolean
   readonly?: boolean
+  /** Keep history/search actions in the original library even before its detail view opens. */
+  libraryId?: string
 }>(), {
   renaming: false,
   deleting: false,
@@ -65,6 +67,7 @@ async function copySource(): Promise<void> {
           class="component-favorite"
           target-type="component"
           :target-id="item.component_id"
+          :library-id="libraryId"
           :size="17"
           variant="v1"
         />

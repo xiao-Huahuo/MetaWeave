@@ -34,7 +34,7 @@
   {"tool": "get_long_term_memory", "arguments": {"query": "API audit"}, "phase": "safe"},
   {"tool": "get_knowledge_context", "arguments": {"query": "API audit"}, "phase": "safe"},
   {"tool": "search_knowledge", "arguments": {"query": "API audit"}, "phase": "safe"},
-  {"tool": "get_knowledge_file_url", "arguments": {"path": "audit.md"}, "phase": "safe", "expect": ["/knowledge/files/raw"]},
+  {"tool": "get_knowledge_url", "arguments": {"path": "audit.md"}, "phase": "safe", "expect": ["/knowledge/files/raw"]},
   {"tool": "list_library_tags", "arguments": {}, "phase": "safe"},
   {"tool": "get_current_viewing_document", "arguments": {}, "phase": "safe", "expect": ["audit.md"]},
   {"tool": "list_knowledge_files", "arguments": {}, "phase": "safe"},

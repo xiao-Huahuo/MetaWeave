@@ -31,6 +31,8 @@ class UnifiedSearchResultOut(SQLModel):
 
     id: str
     source: UnifiedSearchSource
+    # 原始知识库身份使显式知识链接在切库和重载会话后仍能正确还原。
+    library_id: str = ""
     title: str
     snippet: str = ""
     locator: str = ""

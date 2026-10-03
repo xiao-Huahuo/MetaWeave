@@ -5,7 +5,8 @@
 active library 的 owner ID 隔离非文件类索引。
 
 使用说明：由应用装配层注入四库服务和 ``MemoryRetrievalService``，API 层调用
-``search`` 并直接返回统一结果与四库分组。
+``search`` 并直接返回统一结果与四库分组；``resolve_knowledge`` 按显式链接中的
+稳定身份读取原生知识块，不依赖搜索缓存，并复用请求级库作用域校验原库归属。
 """
 
 from __future__ import annotations
@@ -18,6 +19,7 @@ from typing import Any, Iterable
 from agent_service.schemas.longterm_memory_spec import LongTermMemorySpecCreate
 from agent_service.services.memory.rag.chunk import chunk_text
 from agent_service.services.settings.service import SettingsService
+from agent_service.services.settings.mcp_settings import use_library
 
 SEARCH_SOURCES = ("files", "library", "components", "literature")
 SEARCH_MODES = ("title", "fulltext", "semantic")
@@ -71,6 +73,43 @@ class UnifiedSearchService:
         self.component_library_service = component_library_service
         self.smart_form_service = smart_form_service
         self.retrieval_service = retrieval_service
+
+    def resolve_knowledge(
+        self, *, user_id: str, source: str, id: str, library_id: str = "",
+    ) -> dict[str, Any]:
+        """按稳定 ID 还原真实原生卡片，并在请求作用域验证原库归属。
+
+        library_id 为空时使用当前库；有值时复用已有库作用域读取原库，不修改用户
+        active library。ID 与原生列表相匹配，不能由模型输入拼造不存在的卡片。
+        """
+
+        normalized_user_id = str(user_id or "").strip()
+        normalized_source = str(source or "").strip().casefold()
+        normalized_id = str(id or "").strip()
+        self._normalize_sources({normalized_source})
+        if not normalized_user_id or not normalized_id:
+            raise ValueError("user_id and id are required")
+        profile = self.settings_service.ensure_user_profile(user_id=normalized_user_id)
+        resolved_library_id = str(library_id or profile["active_knowledge_library"]["library_id"]).strip()
+        with use_library(normalized_user_id, resolved_library_id):
+            # 正式 SettingsService 在读取数据前确认 library_id 属于本请求用户。
+            profile = self.settings_service.ensure_user_profile(user_id=normalized_user_id)
+            if normalized_source == "files":
+                root = Path(str(profile["active_knowledge_library"]["knowledge_dir"])).expanduser().resolve()
+                normalized_id = self._relative_library_path(normalized_id, root)
+                documents = self._collect_file_documents(user_id=normalized_user_id)
+            elif normalized_source == "library":
+                documents = self._collect_library_documents(user_id=normalized_user_id)
+            elif normalized_source == "components":
+                documents = self._collect_component_documents(user_id=normalized_user_id)
+            else:
+                documents = self._collect_literature_documents(
+                    user_id=normalized_user_id, library_id=resolved_library_id,
+                )
+            document = next((item for item in documents if item.resource_id == normalized_id), None)
+            if document is None:
+                raise FileNotFoundError("知识对象不存在或已删除。")
+            return {**self._serialize_document(document), "library_id": resolved_library_id}
 
     def search(
         self,
@@ -231,6 +270,8 @@ class UnifiedSearchService:
             result_map.values(),
             key=lambda item: (-float(item["score"]), str(item["title"]).casefold(), str(item["id"])),
         )
+        for result in results:
+            result["library_id"] = library_id
         groups = {
             source: [result for result in results if result["source"] == source]
             for source in SEARCH_SOURCES
@@ -574,6 +615,22 @@ class UnifiedSearchService:
             )
 
     @staticmethod
+    def _serialize_document(document: _SearchDocument) -> dict[str, Any]:
+        """共享搜索结果和显式知识 URL 使用的原生卡片 DTO。"""
+
+        return {
+            "id": document.resource_id,
+            "source": document.source,
+            "title": document.title,
+            "snippet": "",
+            "locator": document.locator,
+            "updated_at": document.updated_at,
+            "score": 0.0,
+            "matched_modes": [],
+            "item": document.item,
+        }
+
+    @staticmethod
     def _merge_hit(
         result_map: dict[tuple[str, str], dict[str, Any]],
         document: _SearchDocument,
@@ -586,17 +643,7 @@ class UnifiedSearchService:
         key = (document.source, document.resource_id)
         result = result_map.setdefault(
             key,
-            {
-                "id": document.resource_id,
-                "source": document.source,
-                "title": document.title,
-                "snippet": "",
-                "locator": document.locator,
-                "updated_at": document.updated_at,
-                "score": 0.0,
-                "matched_modes": [],
-                "item": document.item,
-            },
+            UnifiedSearchService._serialize_document(document),
         )
         if mode not in result["matched_modes"]:
             result["matched_modes"].append(mode)

@@ -12,6 +12,7 @@
 ### 工具明细
 
 下表列出当前默认注册的全部内置工具；MCP 等外部工具由运行时配置动态追加，不在此固定清单中。
+名称与正式 `ToolRegistry` 对应；Agent 工具条的中文名称兜底共用同一份完整目录，Debug 则以运行后端的实际注册表为准。修改工具注册后须重启后端，再刷新工具注册表。
 
 文件处理只保留三种用户可理解的动作：`read_file` 读取文字和文档结构，必要时才触发 MinerU、本地解析或 OCR；`understand_image` 直接理解图片视觉语义；`save_uploaded_attachment_to_knowledge` 把临时附件长期保存。扫描器是面向用户的批量工作流，不是另一套 Agent 解析工具。
 
@@ -24,6 +25,7 @@
 | `add_todo` | 新增带可选截止日期的待办事项。 |
 | `cancel_knowledge_job` | 取消正在执行的灌库或图谱任务。 |
 | `complete_task_list_item` | 完成当前会话任务列表中的一项。 |
+| `continue_child_agent` | 向已完成或失败的 DSH 子 Agent 继续提交指令，复用原运行与会话。 |
 | `create_component` | 创建 Vue SFC 或独立 HTML 组件。 |
 | `create_custom_skill` | 创建用户定制 Skill。 |
 | `create_knowledge_folder` | 在知识库中创建文件夹。 |
@@ -47,13 +49,12 @@
 | `find_knowledge_graph_paths` | 查找两个图谱节点间的最短关系路径。 |
 | `finish_task_list` | 完成并关闭当前会话任务列表。 |
 | `get_component` | 读取组件源码和元数据。 |
-| `get_current_time` | 获取指定 IANA 时区的当前时间。 |
 | `get_current_viewing_document` | 获取编辑器当前查看的文档信息。 |
 | `get_custom_skill` | 读取用户 Skill 的完整内容。 |
 | `get_knowledge_context` | 按语义召回可用于回答的知识片段。 |
 | `get_knowledge_file_status` | 查询文件投影、索引和图谱状态。 |
-| `get_knowledge_file_url` | 获取知识库文件的浏览器访问地址。 |
 | `get_knowledge_job_status` | 查询灌库或图谱后台任务状态。 |
+| `get_knowledge_url` | 获取文件库、图书馆、组件库或文献库的知识链接，供回答按需展示知识块或图片。 |
 | `get_library_item` | 读取单个图书或集锦的完整信息。 |
 | `get_long_term_memory` | 检索当前用户的相关长期记忆。 |
 | `get_selected_knowledge_files` | 获取文件管理器当前选中的知识文件。 |
@@ -92,16 +93,18 @@
 | `permanently_delete_knowledge_trash` | 经确认后永久删除最近删除条目。 |
 | `preview_smart_form_fill` | 预览智能填充目标而不写入数据。 |
 | `read_file` | 统一读取知识库文件或会话附件；附件首次读取时按需解析并缓存。 |
+| `read_tool_result` | 按当前会话的 tool-result:// 引用继续读取已执行工具的完整结果，不重复执行原工具。 |
 | `remove_favorite` | 取消知识库、图书馆或会话收藏。 |
 | `remove_library_item` | 将条目移出图书馆而不删除源文件。 |
 | `rename_knowledge_file` | 重命名或移动知识库文件。 |
+| `request_user_input` | 同步询问用户，分别使用选择题或输入题，收到真实回答后继续同一轮任务。 |
 | `restore_knowledge_file` | 从最近删除恢复文件或文件夹。 |
 | `retry_failed_graph_extraction` | 重试图谱任务中的失败文件。 |
 | `retry_failed_knowledge_files` | 重试灌库任务中的失败文件。 |
 | `run_terminal_command` | 在权限约束下执行结构化终端指令。 |
 | `save_uploaded_attachment_to_knowledge` | 将会话附件保存并可选灌入知识库。 |
 | `understand_image` | 使用 LLM 设置中的远程视觉模型直接理解当前会话图片；已有 OCR 缓存时作为辅助。 |
-| `search_knowledge` | 复用统一搜索框的四库服务；最终回答引用 `[K#]` 时挂载对应原生结果块。 |
+| `search_knowledge` | 复用统一搜索框的四库服务，返回候选知识和 `[K#]` 引用；按需挂载须另取知识 URL 并输出链接。 |
 | `search_knowledge_graph_nodes` | 搜索图谱节点并返回邻接节点和边。 |
 | `set_skill_enabled` | 启用或停用内置或用户 Skill。 |
 | `show_markdown_html` | 在编辑器中展示 Markdown 的 HTML 可视化。 |

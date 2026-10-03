@@ -11,7 +11,6 @@ import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import LoadingState from '@/components/common/LoadingState.vue'
 import LoaderCube from '@/components/editor_workspace/agent_chat/LoaderCube.vue'
 import FinalTurnSummary from '@/components/editor_workspace/agent_chat/FinalTurnSummary.vue'
-import AgentSearchResultBlocks from '@/components/editor_workspace/agent_chat/AgentSearchResultBlocks.vue'
 import MessageBubble from '@/components/editor_workspace/agent_chat/MessageBubble.vue'
 import { undoSessionChange } from '@/api/agentChanges'
 import type { AgentChangeSnapshot } from '@/api/agentChanges'
@@ -19,7 +18,6 @@ import { useAvatar } from '@/components/editor_workspace/agent_chat/useAvatar'
 import type { AgentChatMessage, SourceItem } from '@/stores/chat'
 import { asSourceMap, useChatStore } from '@/stores/chat'
 import { useSettingsStore } from '@/stores/settings'
-import type { UnifiedSearchResult } from '@/types/unifiedSearch'
 
 const props = defineProps<{
   messages: AgentChatMessage[]
@@ -324,24 +322,6 @@ function knowledgeSourcesForMessage(message: AgentChatMessage, messageIndex = -1
   return sources
 }
 
-/** Mount only search results the Agent actually cited in its final answer. */
-function searchResultsForMessage(message: AgentChatMessage, messageIndex = -1): UnifiedSearchResult[] {
-  if (isThinkingActive.value || !isCompletedAssistantContentMessage(message)) return []
-  const citationMap = citationMapForMessage(message, messageIndex)
-  const metadataUsed = Array.isArray(message.metadata?.used_citations)
-    ? message.metadata.used_citations.filter((item): item is string => typeof item === 'string')
-    : []
-  const usedIds = metadataUsed.length > 0 ? metadataUsed : extractCitationIds(message.content)
-  const seen = new Set<string>()
-  return usedIds.flatMap((id) => {
-    const result = citationMap[id]?.search_result
-    const key = result ? `${result.source}:${result.id}` : ''
-    if (!result || seen.has(key)) return []
-    seen.add(key)
-    return [result]
-  })
-}
-
 function changeSnapshotForMessage(message: AgentChatMessage): AgentChangeSnapshot | null {
   const snapshot = message.metadata?.change_snapshot
   if (!snapshot || typeof snapshot !== 'object' || Array.isArray(snapshot)) return null
@@ -440,12 +420,6 @@ defineExpose({
         :knowledge-sources="emptyKnowledgeSources"
         :citation-map="message.role === 'assistant' ? citationMapForMessage(message, index) : emptyCitationMap"
         :change-snapshot="message.node === 'action' ? changeSnapshotForAction(index) : changeSnapshotForMessage(message)"
-      />
-      <AgentSearchResultBlocks
-        v-if="searchResultsForMessage(message, index).length"
-        class="assistant-summary-offset"
-        :results="searchResultsForMessage(message, index)"
-        :compact="compact"
       />
       <FinalTurnSummary
         v-if="message.role === 'assistant' && isFinalAssistantAnswer(message, index) && !isThinkingActive"

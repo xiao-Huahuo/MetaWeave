@@ -9,7 +9,7 @@ import { materialFileIconForNode } from '../materialFileIcons'
 /** Adds one icon per link without changing its label or existing navigation. */
 export function decorateMarkdownLinks(root: ParentNode): void {
   root.querySelectorAll<HTMLElement>('a[href], .source-file-link').forEach((link) => {
-    if (link.closest('pre, code') || link.querySelector('img, .markdown-link-icon')) return
+    if (link.closest('pre, code, .agent-knowledge-block') || link.querySelector('img, .markdown-link-icon')) return
     const href = link.dataset.sourceUri ?? link.getAttribute('href') ?? ''
     if (!href || href.startsWith('#') || /^(?:mailto|tel):/i.test(href)) return
     const absoluteFile = /^(?:file:|session-upload:|[a-z]:(?:[\\/]|%5c|%2f))/i.test(href)

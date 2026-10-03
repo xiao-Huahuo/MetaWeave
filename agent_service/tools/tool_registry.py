@@ -84,7 +84,10 @@ class ToolRegistry:
             func=definition.function,
             name=definition.name,
             description=definition.description,
-            args_schema=definition.args_schema if definition.name.startswith("mcp__") else self._build_args_model(definition),
+            # 提问的嵌套题型合同须完整暴露给模型，不能被简化成无字段的 list。
+            args_schema=(definition.args_schema
+                         if definition.name.startswith("mcp__") or definition.name == "request_user_input"
+                         else self._build_args_model(definition)),
         )
 
     @staticmethod

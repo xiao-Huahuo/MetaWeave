@@ -45,7 +45,7 @@ from agent_service.tools.builtin import (
     get_task_list_status,
     get_current_viewing_document,
     get_knowledge_context,
-    get_knowledge_file_url,
+    get_knowledge_url,
     get_long_term_memory,
     list_available_tools,
     read_tool_result,
@@ -452,7 +452,8 @@ KNOWLEDGE_TOOL_DEFINITIONS: list[BuiltinToolDefinition] = [
         description=(
             "四库联合搜索: 与前端统一搜索框相同,可搜索文件库、图书馆、组件库和文献库,并支持全文与语义搜索。"
             "适合用户要跨库定位文件、图书、组件或文献,也可用 sources 严格限定搜索范围。"
-            "最终回答引用结果的 [K#] 编号时,前端会把该结果挂载为可点击的原生库块。"
+            "[K#] 仅标注来源，不会挂载知识块；需要单独展示某条知识时，调用 get_knowledge_url"
+            "并在最终回答中单独一行写 [标题](返回的URL)，搜索本身不自动挂载结果。"
             "如果只需要完整列出目录树和所有文件路径,请使用 list_knowledge_files;如果已经要回答正文内容,请使用 get_knowledge_context。"
         ),
         args_schema={
@@ -507,17 +508,27 @@ KNOWLEDGE_TOOL_DEFINITIONS: list[BuiltinToolDefinition] = [
         display_name="识图",
     ),
     BuiltinToolDefinition(
-        name="get_knowledge_file_url",
-        description="获取知识库中本地文件的浏览器可访问 URL。返回的 URL 可用于 Markdown 图片或链接,在回复中直接引用知识库文件。",
+        name="get_knowledge_url",
+        description=(
+            "获取四库知识对象的真实访问链接。可用 source/id 指定正式列表中的对象，"
+            "或用 citation_id 指定当前会话的 K 来源编号。"
+            "返回 URL 本身不会挂载；在回答中单独一行写 [标题](URL) 可挂载单个知识块。"
+            "文件保持已有文件链接块，图书馆、组件库、文献库使用搜索页面的原生知识块。"
+            "图片可以使用 ![说明](文件URL) 直接展示；URL 工具不能替代 read_file 读取正文。"
+        ),
         args_schema={
             "type": "object",
             "properties": {
-                "path": {"type": "string", "description": "文件相对于知识库根目录的路径。例如 images/diagram.png。"},
+                "source": {"type": "string", "enum": ["files", "library", "components", "literature"],
+                           "description": "知识来源，默认 files；citation_id 有值时由真实引用确定。"},
+                "id": {"type": "string", "description": "稳定对象 ID：文件相对路径、图书 item_id、组件 component_id，或文献 form_id:row_id。"},
+                "path": {"type": "string", "description": "文件库相对路径；与 source=files 的 id 等效。"},
+                "citation_id": {"type": "string", "description": "可选。当前会话已有的 K 来源编号，如 K1，自动使用其真实对象身份。"},
             },
-            "required": ["path"],
+            "required": [],
         },
-        function=get_knowledge_file_url,
-        display_name="获取文件URL",
+        function=get_knowledge_url,
+        display_name="获取知识URL",
     ),
 ]
 
@@ -546,7 +557,7 @@ FILE_TOOL_DEFINITIONS: list[BuiltinToolDefinition] = [
             "统一读取知识库文件或当前会话附件。传入知识库相对路径时读取 Markdown 投影；"
             "传入 attachment:// 引用时首次按需解析原文件并缓存，后续直接读取缓存。"
             "图片文字可由本工具按需 OCR；理解对象、布局、图表和空间关系请使用 understand_image。"
-            "不要传 `.mw/md` 内部路径，也不要调用 run_terminal_command、get_knowledge_file_url、download_file 或 Python 库自行解析源文件。"
+            "不要传 `.mw/md` 内部路径，也不要调用 run_terminal_command、get_knowledge_url、download_file 或 Python 库自行解析源文件。"
         ),
         args_schema={
             "type": "object",
@@ -848,7 +859,10 @@ CHILD_AGENT_TOOL_DEFINITIONS: list[BuiltinToolDefinition] = [
         display_name="询问用户",
         description=("当需要用户补充信息或选择方案时使用。一次可提出多个问题和任意数量选项。"
                      "调用会同步暂停当前 Agent，收到用户真实回答后才继续；不得替用户选择答案。"
-                     "每题默认单选；multi_select=true 允许多选，allow_text=true 允许手动输入。"
+                     "每题必须指定 type：select 只选择选项，multi_select=true 允许多选；input 只填写文本，不能提供选项。"
+                     "不得在同一道题要求选择后再补填；方案选择与角色名等必需信息应拆成独立问题，同批可包含不同题型。"
+                     "只有彼此独立且都必答的问题才同批；后续输入取决于某个选项时，先收选择，再单独调用 type=input 追问。"
+                     "收到选项但仍缺少必需信息时，应用 input 题继续询问，不能猜测角色或目标来继续。"
                      "取消或超时返回对应状态，不能将其视为用户回答。"),
         args_schema={
             "type": "object",
@@ -857,10 +871,10 @@ CHILD_AGENT_TOOL_DEFINITIONS: list[BuiltinToolDefinition] = [
                 "items": {"type": "object", "properties": {
                     "id": {"type": "string", "description": "题目唯一 ID，省略时自动编号。"},
                     "question": {"type": "string", "description": "顶部显示的问题。"},
-                    "options": {"type": "array", "items": {"type": "string"}},
-                    "multi_select": {"type": "boolean", "default": False},
-                    "allow_text": {"type": "boolean", "default": False},
-                }, "required": ["question"]},
+                    "type": {"type": "string", "enum": ["select", "input"], "description": "每题只选择或只输入；同批可混合不同题型。"},
+                    "options": {"type": "array", "items": {"type": "string"}, "description": "select 必须提供非空选项；input 不提供选项。选项不能要求选中后另行填空。"},
+                    "multi_select": {"type": "boolean", "default": False, "description": "仅 select 题可设为 true。"},
+                }, "required": ["question", "type"], "additionalProperties": False},
             }},
             "required": ["questions"],
         },

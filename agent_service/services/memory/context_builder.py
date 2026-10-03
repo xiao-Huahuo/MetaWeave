@@ -205,10 +205,9 @@ class ContextBuilder:
             "例如 [1] 或 [K1]; 未实际使用的来源不要标注。"
         )
         sections.append(
-            "Citation discipline: if a tool result includes `Citation ID: [Kx]` or `Citation ID: [Nx]`, cite that exact id "
-            "when you use facts from it. `[Kx]` means a local knowledge/file source; `[Nx]` means a network source. "
-            "Never reuse one citation id for multiple different documents or URLs, "
-            "and never invent citation ids that were not provided."
+            "来源编号规则: [K1] 表示文件库、图书馆、组件库和文献库的四库知识来源，"
+            "[N1] 表示网页来源，[A1] 表示会话附件，[1] 表示自动召回的长期记忆。"
+            "使用资料中的事实时原样标注真实提供的编号，不得复用同一编号指向不同资料或编造编号。"
         )
         sections.append(
             "When summarizing multiple documents, cite each document or topic line separately with its own source id. "
@@ -229,9 +228,13 @@ class ContextBuilder:
             "宁可一次搜全面,也不要分多次零散搜索。"
         )
         sections.append(
-            "知识库文件 URL 规则: 为在回复中展示知识库中的图片/文件,使用 get_knowledge_file_url 工具获取文件的可访问 URL,"
-            "获取后在 Markdown 中以 `![描述](url)` 或 `[文件名](url)` 格式引用。"
-            "下载到本地的文件可通过 /downloads/ 路径访问,例如 `![图片](/downloads/filename.png)`。"
+            "链接与知识块规则: 普通本地文件或网页用 Markdown 蓝色链接 `[标题](URL)`，图片用 `![描述](图片URL)` 嵌入并预览。"
+            "需要单独挂载知识块时，先用 get_knowledge_url 获取真实 URL；搜索命中可传 citation_id=K1，"
+            "也可用 source=library、components、literature 与真实 id 获取相应条目，文件用 source=files 与 path。"
+            "再把返回地址用 `[标题](URL)` 放在单独一段中；获取 URL 本身不会挂载，搜索或 K 引用本身不会挂载知识块。"
+            "文件块保持现有样式，统一通过 get_knowledge_url 获取链接；非文件知识块复用搜索页面对应组件。"
+            "URL 工具只用于展示与打开；获取正文必须使用知识读取工具，不得下载或自行解析知识 URL。"
+            "知识库图片可通过上述 URL 工具获取地址后使用图片语法，下载文件仍可用 /downloads/ 路径引用。"
         )
         sections.append(
             "子 Agent 等待规则: 如果你使用 spawn_child_agent 且 mode=background,应先派出本轮所需的全部后台子 Agent,"

@@ -8,6 +8,7 @@ import json
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from typing import Any, Callable
+from urllib.parse import urlencode
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 from agent_service.tools.runtime_context import (
     AGENT_ACCESS_READONLY,
@@ -94,7 +95,8 @@ def search_knowledge(
     }
     mode_labels = {"title": "标题", "fulltext": "全文", "semantic": "语义"}
     lines = [
-        "请在最终回答中引用需要挂载的结果编号（例如 [K1]）。",
+        "[K#] 仅用于来源引用，不会挂载知识块。需要单独展示知识块时，调用 get_knowledge_url，"
+        "并在回答中单独一行使用 [标题](返回的URL)。",
         f"四库联合搜索共 {len(results)} 条结果:",
     ]
     for index, result in enumerate(results, 1):
@@ -109,6 +111,7 @@ def search_knowledge(
         )
         lines.append(f"{index}. [{source_labels.get(source, source)}] 来源: {locator} [{citation_id}]")
         lines.append(f"   标题: {title}")
+        lines.append(f"   知识链接参数: source={source}, id={result.get('id') or locator}")
         modes = [mode_labels.get(str(mode), str(mode)) for mode in result.get("matched_modes") or []]
         if modes:
             lines.append(f"   命中: {', '.join(modes)}")
@@ -611,12 +614,41 @@ def get_current_viewing_document() -> str:
         },
         ensure_ascii=False,
     )
-def get_knowledge_file_url(path: str) -> str:
-    """
-    获取知识库中本地文件的浏览器可访问 URL。用于在回复中以 Markdown 图片或链接形式引用知识库文件。
+def get_knowledge_url(
+    source: str = "files", id: str = "", path: str = "", citation_id: str = "",
+) -> str:
+    """获取真实四库知识对象链接，由回答中的 Markdown 链接主动展示知识块。
 
-    path: 文件相对于知识库根目录的路径。
+    source/id 可直接使用正式列表中的稳定身份；citation_id 可使用当前会话 K 编号
+    推导搜索结果身份。文件仍返回原始文件 URL；其他形态返回原库范围内的解析 URL。
+    获取 URL 本身不挂载卡片、不采纳引用，也不修改当前用户的活动知识库。
     """
 
     runtime = get_tool_runtime()
-    return f"/knowledge/files/raw?user_id={runtime.user_id}&path={path}"
+    service = runtime.unified_search_service
+    if service is None:
+        return "获取知识链接失败: 当前工具运行时缺少四库联合搜索服务。"
+    normalized_source = str(source or "files").strip().casefold()
+    resource_id = str(path or id or "").strip()
+    library_id = ""
+    if citation_id:
+        citation_key = str(citation_id).strip().strip("[]")
+        citation = runtime.citation_map.get(citation_key)
+        if not citation_key.startswith("K") or not isinstance(citation, dict):
+            return "获取知识链接失败: citation_id 无效，请使用当前会话已有的 K 来源编号。"
+        result = citation.get("search_result") or {}
+        normalized_source = str(result.get("source") or "files")
+        resource_id = str(result.get("id") or citation.get("source_uri") or "")
+        library_id = str(result.get("library_id") or "")
+    try:
+        result = service.resolve_knowledge(
+            user_id=runtime.user_id, source=normalized_source, id=resource_id, library_id=library_id,
+        )
+    except (ValueError, PermissionError, FileNotFoundError, RuntimeError) as exc:
+        return f"获取知识链接失败: {exc}"
+    if result["source"] == "files":
+        return "/knowledge/files/raw?" + urlencode({"user_id": runtime.user_id, "path": str(result["locator"])})
+    return "/knowledge/resolve?" + urlencode({
+        "source": result["source"], "id": result["id"], "user_id": runtime.user_id,
+        "library_id": result["library_id"],
+    })

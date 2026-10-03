@@ -24,6 +24,7 @@ import { useSettingsStore } from '@/stores/settings'
 import { useWorkspaceStore } from '@/stores/workspace'
 import { normalizeWikiAnchor } from './wikiLinks'
 import { decorateWikiPreview } from './wikiPreview'
+import { decorateMarkdownLinks } from './agent_chat/markdownLinkIcons'
 
 import { useImagePreviewer } from '@/components/common/useImagePreviewer'
 import type { ImagePreviewItem } from '@/components/common/useImagePreviewer'
@@ -868,6 +869,8 @@ function handlePreviewParse(element: HTMLElement) {
   decoratePreviewImages(element)
   decoratePreviewVideoBlocks(element)
   injectImageDownloadButtons(element)
+  // Decorate live DOM so icon load/error handlers survive Vditor's HTML replacement.
+  decorateMarkdownLinks(resetEl)
   highlightVueCodeBlocks(element)
   decorateOcrBlocks(resetEl)
   injectCodeCopyButtons()
@@ -879,7 +882,10 @@ function handlePreviewParse(element: HTMLElement) {
     currentPath: props.path ?? workspaceStore.selectedPath,
     userId: settingsStore.profile.userId,
     cache: wikiEmbedCache,
-  }).then(() => focusWikiAnchor())
+  }).then(() => {
+    decorateMarkdownLinks(resetEl)
+    focusWikiAnchor()
+  })
 }
 
 /** Attach persisted OCR block ids to the nearest rendered semantic elements. */
@@ -1024,12 +1030,12 @@ function handleClick(event: MouseEvent) {
   }
 
   // image preview — stopPropagation prevents Vditor's native lightbox
-  const img = eventTarget?.closest<HTMLImageElement>('img[src]')
+  const img = eventTarget?.closest<HTMLImageElement>('img[src]:not(.markdown-link-icon img)')
   if (img && img.src) {
     event.stopPropagation()
     const root = previewHost.value
     if (root) {
-      const allImgs = root.querySelectorAll<HTMLImageElement>('img[src]')
+      const allImgs = root.querySelectorAll<HTMLImageElement>('img[src]:not(.markdown-link-icon img)')
       const items: ImagePreviewItem[] = []
       let clickIndex = -1
       allImgs.forEach((el, i) => {
@@ -1652,3 +1658,4 @@ onBeforeUnmount(() => {
   border-color: color-mix(in srgb, var(--color-primary) 32%, var(--color-border)) !important;
 }
 </style>
+<style src="./agent_chat/markdownLinkIcons.css" scoped></style>

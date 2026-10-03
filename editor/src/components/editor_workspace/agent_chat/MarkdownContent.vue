@@ -6,6 +6,7 @@
   and highlights code blocks after Vue patches the DOM.
   Supports citation anchors that open attachments, web pages, local files, or
   the native sidebar for cited four-library search results.
+  Explicit knowledge URLs mount native non-file blocks; file blocks keep their original appearance.
 -->
 <script setup lang="ts">
 import { computed, nextTick, onMounted, onUnmounted, ref, watch } from 'vue'
@@ -15,6 +16,7 @@ import { hljs, isHighlightableLanguage } from '../codeHighlight'
 import { renderMathInHtml } from '../mathRender'
 import { decorateMarkdownLinks } from './markdownLinkIcons'
 import { patchMarkdownDom } from './patchMarkdownDom'
+import AgentKnowledgeLinkBlocks from './AgentKnowledgeLinkBlocks.vue'
 
 import { useWorkspaceStore } from '@/stores/workspace'
 import { useFavoritesStore } from '@/stores/favorites'
@@ -142,11 +144,18 @@ let pendingLine = ''
 let fenceCharacter = ''
 let fenceLength = 0
 
-/** Creates DOM through a template so sanitized top-level blocks need no layout wrappers. */
+/** Creates sanitized Markdown blocks with local scroll containers for native tables. */
 function createMarkdownFragment(source: string): DocumentFragment {
   const template = document.createElement('template')
   template.innerHTML = renderMarkdownHtml(source)
   decorateMarkdownLinks(template.content)
+  // A real scroll container preserves native table layout and its shared column widths.
+  template.content.querySelectorAll('table').forEach((table) => {
+    const scroll = document.createElement('div')
+    scroll.className = 'markdown-table-scroll'
+    table.replaceWith(scroll)
+    scroll.appendChild(table)
+  })
   return template.content
 }
 
@@ -224,8 +233,7 @@ function renderStreamingContent() {
 function renderFinalContent() {
   const root = contentRef.value
   if (!root) return
-  root.innerHTML = renderMarkdownHtml(props.content)
-  decorateMarkdownLinks(root)
+  root.replaceChildren(createMarkdownFragment(props.content))
   activeNodes = []
   streamedSource = ''
   pendingBlock = ''
@@ -255,11 +263,13 @@ const sourceLinkSignature = computed(() => {
 
 function handleClick(event: MouseEvent) {
   const target = event.target as HTMLElement
+  // Native cards own their clicks and previews; Markdown must not intercept them.
+  if (target.closest('.agent-knowledge-block')) return
   // image preview
   if (target.tagName === 'IMG' && target instanceof HTMLImageElement && target.src && !target.closest('.markdown-link-icon')) {
     const root = contentRef.value
     if (root) {
-      const allImgs = root.querySelectorAll<HTMLImageElement>('img[src]:not(.markdown-link-icon img)')
+      const allImgs = root.querySelectorAll<HTMLImageElement>('img[src]:not(.markdown-link-icon img):not(.agent-knowledge-block img)')
       const items: ImagePreviewItem[] = []
       let clickIndex = -1
       allImgs.forEach((img, i) => {
@@ -487,7 +497,7 @@ function buildSourceLinkCandidates() {
 
 function shouldSkipSourceLinkNode(node: Node) {
   const parent = node.parentElement
-  return !parent || Boolean(parent.closest('a, code, pre, button, .citation-anchor, .source-file-link'))
+  return !parent || Boolean(parent.closest('a, code, pre, button, .citation-anchor, .source-file-link, .agent-knowledge-block'))
 }
 
 function findNextSourceMatch(text: string, candidates: Array<{ text: string; uri: string }>) {
@@ -562,7 +572,7 @@ async function highlightCodeBlocks() {
   // 代码高亮已在 sanitizedHtml(renderer)中随内容增量完成,此处只做 DOM 增强:
   // 文件名链接化与复制按钮挂接(流式结束后 v-html 不再更新,不会被冲掉)。
   // Add copy buttons to pre blocks
-  root.querySelectorAll('pre').forEach((pre) => {
+  root.querySelectorAll<HTMLPreElement>('pre:not(.agent-knowledge-block *)').forEach((pre) => {
     if (pre.querySelector('.code-copy-btn')) return
     const btn = document.createElement('button')
     btn.className = 'code-copy-btn'
@@ -604,6 +614,7 @@ watch(sourceLinkSignature, () => {
 
 <template>
   <div ref="contentRef" class="markdown-body"></div>
+  <AgentKnowledgeLinkBlocks v-if="!isStreaming" :root="contentRef" :content="content" />
 </template>
 
 <style scoped>
@@ -615,34 +626,34 @@ watch(sourceLinkSignature, () => {
   word-break: break-word;
 }
 
-.markdown-body :deep(p) {
+.markdown-body :deep(p:where(:not(.agent-knowledge-block *))) {
   margin: 0 0 var(--space-8);
 }
 
-.markdown-body :deep(p:last-child) {
+.markdown-body :deep(p:last-child:where(:not(.agent-knowledge-block *))) {
   margin-bottom: 0;
 }
 
-.markdown-body :deep(h1),
-.markdown-body :deep(h2),
-.markdown-body :deep(h3),
-.markdown-body :deep(h4),
-.markdown-body :deep(h5),
-.markdown-body :deep(h6) {
+.markdown-body :deep(h1:where(:not(.agent-knowledge-block *))),
+.markdown-body :deep(h2:where(:not(.agent-knowledge-block *))),
+.markdown-body :deep(h3:where(:not(.agent-knowledge-block *))),
+.markdown-body :deep(h4:where(:not(.agent-knowledge-block *))),
+.markdown-body :deep(h5:where(:not(.agent-knowledge-block *))),
+.markdown-body :deep(h6:where(:not(.agent-knowledge-block *))) {
   margin: var(--space-16) 0 var(--space-8);
   font-family: var(--font-chat);
   font-weight: 650;
   line-height: var(--line-height-tight);
 }
 
-.markdown-body :deep(h1) { color: var(--color-primary); font-size: calc(2rem * var(--font-scale)); }
-.markdown-body :deep(h2) { color: color-mix(in srgb, var(--color-primary) 86.7%, white); font-size: calc(1.35rem * var(--font-scale)); }
-.markdown-body :deep(h3) { color: color-mix(in srgb, var(--color-primary) 73.3%, white); font-size: calc(1.05rem * var(--font-scale)); }
-.markdown-body :deep(h4) { color: color-mix(in srgb, var(--color-primary) 60%, white); font-size: calc(0.9rem * var(--font-scale)); }
-.markdown-body :deep(h5) { color: color-mix(in srgb, var(--color-primary) 46.7%, white); font-size: calc(0.825rem * var(--font-scale)); }
-.markdown-body :deep(h6) { color: color-mix(in srgb, var(--color-primary) 33.3%, white); font-size: calc(0.75rem * var(--font-scale)); }
+.markdown-body :deep(h1:where(:not(.agent-knowledge-block *))) { color: var(--color-primary); font-size: calc(2rem * var(--font-scale)); }
+.markdown-body :deep(h2:where(:not(.agent-knowledge-block *))) { color: color-mix(in srgb, var(--color-primary) 86.7%, white); font-size: calc(1.35rem * var(--font-scale)); }
+.markdown-body :deep(h3:where(:not(.agent-knowledge-block *))) { color: color-mix(in srgb, var(--color-primary) 73.3%, white); font-size: calc(1.05rem * var(--font-scale)); }
+.markdown-body :deep(h4:where(:not(.agent-knowledge-block *))) { color: color-mix(in srgb, var(--color-primary) 60%, white); font-size: calc(0.9rem * var(--font-scale)); }
+.markdown-body :deep(h5:where(:not(.agent-knowledge-block *))) { color: color-mix(in srgb, var(--color-primary) 46.7%, white); font-size: calc(0.825rem * var(--font-scale)); }
+.markdown-body :deep(h6:where(:not(.agent-knowledge-block *))) { color: color-mix(in srgb, var(--color-primary) 33.3%, white); font-size: calc(0.75rem * var(--font-scale)); }
 
-.markdown-body :deep(code) {
+.markdown-body :deep(code:where(:not(.agent-knowledge-block *))) {
   padding: 1px 8px;
   border: 0;
   border-radius: 999px;
@@ -652,7 +663,7 @@ watch(sourceLinkSignature, () => {
   font-size: 0.85em;
 }
 
-.markdown-body :deep(pre) {
+.markdown-body :deep(pre:where(:not(.agent-knowledge-block *))) {
   margin: var(--space-8) 0;
   padding: var(--space-12);
   overflow-x: auto;
@@ -662,7 +673,7 @@ watch(sourceLinkSignature, () => {
   line-height: 1.3;
 }
 
-.markdown-body :deep(pre code) {
+.markdown-body :deep(pre code:where(:not(.agent-knowledge-block *))) {
   padding: 0;
   border: 0;
   border-radius: 0;
@@ -672,76 +683,57 @@ watch(sourceLinkSignature, () => {
   line-height: 1.3;
 }
 
-.markdown-body :deep(ul),
-.markdown-body :deep(ol) {
+.markdown-body :deep(ul:where(:not(.agent-knowledge-block *))),
+.markdown-body :deep(ol:where(:not(.agent-knowledge-block *))) {
   margin: var(--space-8) 0;
   padding-left: var(--space-24);
 }
 
-.markdown-body :deep(li)::marker {
+.markdown-body :deep(li:where(:not(.agent-knowledge-block *)))::marker {
   color: var(--color-primary);
 }
 
-.markdown-body :deep(blockquote) {
+.markdown-body :deep(blockquote:where(:not(.agent-knowledge-block *))) {
   margin: var(--space-8) 0;
   padding: var(--space-8) var(--space-12);
   border-left: 2px solid var(--color-accent);
   color: var(--color-text-secondary);
 }
 
-.markdown-body :deep(a) {
+.markdown-body :deep(a:where(:not(.agent-knowledge-block *))) {
   color: var(--color-accent);
   text-decoration: underline;
   text-underline-offset: 2px;
   transition: color var(--transition-fast);
 }
 
-.markdown-body :deep(a:hover),
-.markdown-body :deep(a:focus-visible),
+.markdown-body :deep(a:hover:where(:not(.agent-knowledge-block *))),
+.markdown-body :deep(a:focus-visible:where(:not(.agent-knowledge-block *))),
 .markdown-body :deep(.source-file-link:hover),
 .markdown-body :deep(.source-file-link:focus-visible) {
   color: var(--color-primary-hover);
 }
 
-/* Inline icons occupy one text-sized slot and never become image-preview targets. */
-.markdown-body :deep(.markdown-link-icon) {
-  position: relative;
-  display: inline-block;
-  width: 1em;
-  height: 1em;
-  margin-inline-end: 0.3em;
-  vertical-align: -0.125em;
-  pointer-events: none;
-  user-select: none;
-}
-
-.markdown-body :deep(.markdown-link-icon > *) {
-  position: absolute;
-  inset: 0;
+.markdown-body :deep(.markdown-table-scroll) {
+  box-sizing: border-box;
   width: 100%;
-  height: 100%;
-  border-radius: 0;
-}
-
-.markdown-body :deep(.markdown-link-icon img) { opacity: 0; }
-.markdown-body :deep(.markdown-link-icon.is-loaded img) { opacity: 1; }
-.markdown-body :deep(.markdown-link-icon.is-loaded > :not(img)) { visibility: hidden; }
-.markdown-body :deep(.markdown-link-icon__fallback) {
-  background: currentColor;
-  mask-size: contain;
-  mask-repeat: no-repeat;
-}
-
-.markdown-body :deep(table) {
-  width: 100%;
+  max-width: 100%;
   margin: var(--space-8) 0;
+  overflow-x: auto;
+}
+
+.markdown-body :deep(table:where(:not(.agent-knowledge-block *))) {
+  width: 100%;
+  margin: 0;
   border-collapse: collapse;
   border: 1px solid var(--color-border);
-  font-size: var(--font-size-xs);
+  font-size: inherit;
 }
 
-.markdown-body :deep(th),
-.markdown-body :deep(td) {
+.markdown-body :deep(th:where(:not(.agent-knowledge-block *))),
+.markdown-body :deep(td:where(:not(.agent-knowledge-block *))) {
+  /* Scale the readable column minimum with the chat font, including narrow panes. */
+  min-width: 6em;
   padding: var(--space-6) var(--space-10);
   border: 1px solid var(--color-border-light);
   text-align: left;
@@ -906,7 +898,7 @@ watch(sourceLinkSignature, () => {
   height: 15px;
 }
 
-.markdown-body :deep(img) {
+.markdown-body :deep(img:where(:not(.agent-knowledge-block *))) {
   max-width: 100%;
   max-height: min(72vh, 960px);
   height: auto;
@@ -947,3 +939,4 @@ watch(sourceLinkSignature, () => {
 </style>
 
 <style src="./markdownHighlight.css"></style>
+<style src="./markdownLinkIcons.css" scoped></style>

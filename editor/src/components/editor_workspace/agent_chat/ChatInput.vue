@@ -578,7 +578,9 @@ function handleFileChange(event: Event) {
 </template>
 
 <style scoped>
-.question-extension { --settings-slide-offset: 8px; position: absolute; inset-inline: 0; bottom: calc(100% + var(--space-8)); }
+.question-extension { --settings-slide-offset: 8px; --question-overlap: 32px; position: absolute; inset-inline: var(--space-12); bottom: calc(100% - var(--question-overlap)); }
+.chat-input-wrap.compact .question-extension { inset-inline: var(--space-8); }
+@media (max-width: 480px) { .question-extension { inset-inline: var(--space-8); } }
 .chat-input-wrap {
   position: absolute;
   left: 50%;
@@ -788,6 +790,8 @@ function handleFileChange(event: Event) {
 
 .input-container {
   position: relative;
+  /* The question shell is behind the composer while its content occupies the layer above. */
+  z-index: 1;
   container-type: inline-size;
   display: flex;
   flex-direction: column;

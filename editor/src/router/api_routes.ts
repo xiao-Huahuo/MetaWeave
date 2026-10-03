@@ -73,6 +73,7 @@ export const API_ROUTES = {
   DEBUG_MULTIMODAL_INGESTION: '/debug/multimodal-ingestion',
   KNOWLEDGE_SEARCH: '/knowledge/search',
   UNIFIED_SEARCH: '/search',
+  KNOWLEDGE_RESOLVE: '/knowledge/resolve',
   KNOWLEDGE_GRAPH: '/knowledge/graph',
   KNOWLEDGE_GRAPH_NODES: '/knowledge/graph/nodes',
   KNOWLEDGE_GRAPH_REBUILD: '/knowledge/graph/rebuild',

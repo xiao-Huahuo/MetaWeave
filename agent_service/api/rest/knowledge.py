@@ -17,6 +17,7 @@ from fastapi.responses import FileResponse, StreamingResponse
 from starlette.concurrency import run_in_threadpool
 
 from agent_service.core.agent_config import DEFAULT_BUSINESS_LIMITS
+from agent_service.services.settings.mcp_settings import use_library
 
 try:
     from watchdog.events import FileSystemEvent, FileSystemEventHandler
@@ -241,18 +242,26 @@ async def raw_knowledge_file(
     user_id: str = Query(..., min_length=DEFAULT_BUSINESS_LIMITS.nonempty_min_length, description="用户 ID"),
     path: str = Query(..., min_length=DEFAULT_BUSINESS_LIMITS.nonempty_min_length, description="知识库内相对路径"),
     download: bool = Query(False, description="是否以附件方式下载"),
+    library_id: str = Query("", description="可选原始知识库 ID，供历史知识块封面保持来源范围"),
 ) -> FileResponse:
-    """返回当前 active 知识库中文件的原始字节流,用于 PDF 等 iframe 预览。"""
+    """返回原始文件字节流；默认当前库，显式原库须验证属于请求用户。"""
 
     svc = _require_knowledge_library_service()
     try:
-        file_path, media_type = await run_in_threadpool(
-            svc.resolve_file_for_raw_response,
-            user_id=user_id,
-            path=path,
-        )
+        with use_library(user_id, library_id) if library_id else contextlib.nullcontext():
+            if library_id:
+                # 请求级作用域只控制本次读取，不修改用户持久化的 active library。
+                await run_in_threadpool(_require_settings_service().ensure_user_profile, user_id=user_id)
+            file_path, media_type = await run_in_threadpool(
+                svc.resolve_file_for_raw_response,
+                user_id=user_id,
+                path=path,
+            )
+    except PermissionError as exc:
+        raise HTTPException(status_code=403, detail=str(exc)) from exc
     except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
+        status_code = 404 if str(exc) == "file not found" else 422
+        raise HTTPException(status_code=status_code, detail=str(exc)) from exc
     return FileResponse(
         file_path,
         media_type=media_type,

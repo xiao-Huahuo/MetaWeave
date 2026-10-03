@@ -7,6 +7,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
 import { fetchAvailableTools, fetchDisabledTools, saveDisabledTools } from '@/api/settings'
+import { fetchAgentTools } from '@/api/tools'
 
 describe('tool settings API client', () => {
   afterEach(() => vi.unstubAllGlobals())
@@ -23,9 +24,12 @@ describe('tool settings API client', () => {
 
     await fetchAvailableTools('user/1')
     await fetchDisabledTools('user/1')
+    await fetchAgentTools()
 
     expect(fetchMock.mock.calls[0]?.[0]).toBe('/settings/tools/available?user_id=user%2F1')
     expect(fetchMock.mock.calls[1]?.[0]).toBe('/settings/tools/disabled?user_id=user%2F1')
+    expect(fetchMock.mock.calls[2]?.[0]).toBe('/agent/tools')
+    expect(fetchMock.mock.calls.every(([, options]) => options?.cache === 'no-store')).toBe(true)
   })
 
   it('persists the exact disabled non-memory tool list', async () => {

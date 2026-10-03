@@ -6,7 +6,7 @@ import type { AgentQuestionRequest } from '@/api/agent'
 
 const request: AgentQuestionRequest = {
   request_id: 'question1', user_id: 'u1', session_id: 's1', run_id: 'r1', status: 'pending',
-  questions: [{ id: 'q1', question: '选择处理方式', options: ['阅读', '编辑'], multi_select: false, allow_text: false }],
+  questions: [{ id: 'q1', type: 'select', question: '选择处理方式', options: ['阅读', '编辑'], multi_select: false, allow_text: false }],
 }
 const mocks = vi.hoisted(() => ({
   stream: vi.fn(), answer: vi.fn(), cancel: vi.fn(), questions: vi.fn(), history: vi.fn(),

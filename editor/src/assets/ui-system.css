@@ -135,6 +135,23 @@
   box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-border-strong) 50%, transparent) !important;
 }
 
+/* The settings page and Agent input questions share the exact capsule field surface. */
+.settings-body input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='color']):not([type='file']):not([type='hidden']),
+.settings-body select,
+.form-input-capsule {
+  border: 0 !important;
+  border-radius: 999px !important;
+  background: color-mix(in srgb, var(--color-surface) 94%, var(--color-text) 6%) !important;
+  transition: box-shadow var(--transition-fast);
+}
+
+.settings-body input:not([type='checkbox']):not([type='radio']):not([type='range']):not([type='color']):not([type='file']):not([type='hidden']):focus,
+.settings-body select:focus,
+.settings-body textarea:focus,
+.form-input-capsule:focus {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--color-border-strong) 50%, transparent) !important;
+}
+
 /* Shared resource-manager-style segmented toggle for settings sections. */
 .settings-resource-page-switch {
   position: relative;

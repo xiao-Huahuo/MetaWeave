@@ -617,10 +617,10 @@ def test_deepseek_dsml_content_is_recovered_as_tool_calls(monkeypatch: object) -
     scheduler = get_llm_task_scheduler(make_scheduler_test_config())
     dsml = (
         "正在生成挂载地址。\n"
-        '<｜DSML｜tool_calls>\n<｜DSML｜invoke name="get_knowledge_file_url">\n'
+        '<｜DSML｜tool_calls>\n<｜DSML｜invoke name="get_knowledge_url">\n'
         '<｜DSML｜parameter name="path" string="true">游戏资料/原神/日月前事.md'
         '</｜DSML｜parameter>\n</｜DSML｜invoke>\n'
-        '<｜DSML｜invoke name="get_knowledge_file_url">\n'
+        '<｜DSML｜invoke name="get_knowledge_url">\n'
         '<｜DSML｜parameter name="path" string="true">游戏资料/原神/日月前事_来源存档.html'
         '</｜DSML｜parameter>\n</｜DSML｜invoke>\n</｜DSML｜tool_calls>'
     )
@@ -628,7 +628,7 @@ def test_deepseek_dsml_content_is_recovered_as_tool_calls(monkeypatch: object) -
         task_id="dsml-invoke",
         task_type=FOREGROUND_AGENT_TASK,
         messages=[HumanMessage(content="展示日月前事")],
-        tool_names=["get_knowledge_file_url"],
+        tool_names=["get_knowledge_url"],
         timeout_seconds=3,
         max_retries=0,
         api_key="test-key",
@@ -651,8 +651,8 @@ def test_deepseek_dsml_content_is_recovered_as_tool_calls(monkeypatch: object) -
 
     assert response.content == "正在生成挂载地址。\n"
     assert [call["name"] for call in response.tool_calls] == [
-        "get_knowledge_file_url",
-        "get_knowledge_file_url",
+        "get_knowledge_url",
+        "get_knowledge_url",
     ]
     assert [call["args"] for call in response.tool_calls] == [
         {"path": "游戏资料/原神/日月前事.md"},

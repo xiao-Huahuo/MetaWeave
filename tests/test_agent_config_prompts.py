@@ -57,6 +57,33 @@ def test_primary_prompts_have_one_authoritative_configuration_home() -> None:
     assert "不得改写、错配或编造编号" in prompts.retrieval_context_system_prompt
 
 
+def test_blocking_questions_require_separate_choice_and_input_types() -> None:
+    """题型和阻塞信息规则进入真正主提示词，避免继续把选项当作角色名。"""
+    prompt = AgentConfig.PromptConfig().agent_system_prompt
+    assert "request_user_input" in prompt
+    assert "type=select" in prompt and "type=input" in prompt
+    assert "不得在同一道题" in prompt and "选择选项后补填" in prompt
+    assert "彼此独立且都必答" in prompt and "后续输入取决于某个选项" in prompt
+    assert "先收选择，再单独调用 type=input 追问" in prompt
+    assert "角色名" in prompt and "仍缺少" in prompt
+    assert "知识库中唯一" in prompt and "猜测" in prompt
+
+
+def test_primary_prompt_explains_links_and_explicit_knowledge_mounts() -> None:
+    """主提示词覆盖普通链接、图片、四库主动挂载和所有已注册来源编号。"""
+
+    prompt = AgentConfig.PromptConfig().agent_system_prompt
+    assert "[标题](URL)" in prompt and "蓝色链接" in prompt
+    assert "![描述](图片URL)" in prompt
+    assert "get_knowledge_url" in prompt and "get_knowledge_file_url" not in prompt
+    assert "独立知识块" in prompt and "单独一段" in prompt
+    assert "文件块保持现有样式" in prompt
+    assert "图书馆、组件库和文献库" in prompt and "搜索页面" in prompt
+    assert "搜索或标注 K 引用不会自动挂载" in prompt
+    for citation in ("[K1]", "[N1]", "[A1]", "[1]"):
+        assert citation in prompt
+
+
 def test_system_messages_do_not_embed_fixed_prompt_literals() -> None:
     """生产代码不得直接内嵌 SystemMessage 文本或模块级系统提示词常量。"""
 

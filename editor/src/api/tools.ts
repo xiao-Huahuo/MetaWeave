@@ -32,7 +32,7 @@ export interface AgentToolListResponse {
 
 export async function fetchAgentTools(): Promise<AgentToolListResponse> {
   try {
-    return await apiGet<AgentToolListResponse>(API_ROUTES.AGENT_TOOLS)
+    return await apiGet<AgentToolListResponse>(API_ROUTES.AGENT_TOOLS, undefined, { cache: 'no-store' })
   } catch (error) {
     if (error instanceof SyntaxError) {
       return fetchAgentToolsFromBackendOrigin()
@@ -42,7 +42,7 @@ export async function fetchAgentTools(): Promise<AgentToolListResponse> {
 }
 
 async function fetchAgentToolsFromBackendOrigin(): Promise<AgentToolListResponse> {
-  const response = await fetch(`http://127.0.0.1:8002${API_ROUTES.AGENT_TOOLS}`)
+  const response = await fetch(`http://127.0.0.1:8002${API_ROUTES.AGENT_TOOLS}`, { cache: 'no-store' })
   if (!response.ok) {
     throw new Error(`Request failed: ${response.status} ${response.statusText}`)
   }

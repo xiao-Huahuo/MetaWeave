@@ -68,19 +68,23 @@ class UserQuestionService:
 
     @staticmethod
     def _validate_answers(questions: list[dict], answers: dict[str, UserQuestionAnswer]) -> None:
-        """拒绝漏题、陌生选项、非法多选及未启用的自由输入。"""
+        """拒绝漏题、非法选项或多选，以及与独立题型不符的回答。"""
         if set(answers) != {question["id"] for question in questions}:
             raise ValueError("请回答所有问题")
         for question in questions:
             answer = answers[question["id"]]
             selected = answer.selected_options
+            if question["type"] == "input":
+                if selected or not answer.text.strip():
+                    raise ValueError("输入题只能提交非空文本")
+                continue
             if len(set(selected)) != len(selected) or not set(selected).issubset(question["options"]):
                 raise ValueError("回答含无效或重复选项")
             if not question["multi_select"] and len(selected) > 1:
                 raise ValueError("本题只能单选")
-            if answer.text.strip() and not question["allow_text"]:
-                raise ValueError("本题不允许手动输入")
-            if not selected and not answer.text.strip():
+            if answer.text:
+                raise ValueError("选择题不能同时提交文本，请使用独立的输入题")
+            if not selected:
                 raise ValueError("请回答所有问题")
 
     def ask(self, *, questions: list[dict], user_id: str, session_id: str, run_id: str,

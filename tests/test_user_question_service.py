@@ -8,7 +8,7 @@ import pytest
 from sqlmodel import SQLModel, create_engine
 
 from agent_service.core.agent_config import AgentConfig
-from agent_service.schemas.user_question import UserQuestionAnswer
+from agent_service.schemas.user_question import UserQuestion, UserQuestionAnswer
 from agent_service.services.message.service import MessageService
 from agent_service.services.user_question.service import UserQuestionService
 
@@ -53,6 +53,48 @@ def answer(service, request, answers=None):
                           answers=answers or {"q1": UserQuestionAnswer(selected_options=["阅读"])})
 
 
+@pytest.mark.parametrize("question", [
+    {"question": "请选择方向，并补充角色名", "options": ["其他角色"], "allow_text": True},
+    {"question": "填写角色名", "allow_text": True, "multi_select": True},
+    {"question": "请选择", "type": "select", "options": ["其他角色"], "allow_text": True},
+    {"question": "请选择", "type": "select"},
+    {"question": "填写角色名", "type": "input", "options": ["芙宁娜"]},
+    {"question": "填写角色名", "type": "input", "multi_select": True},
+])
+def test_question_rejects_combined_choice_and_input(question):
+    """复现同题允许先选择后填写的缺陷；旧合同也不能绕过题型隔离。"""
+    with pytest.raises(ValueError):
+        UserQuestion.model_validate(question)
+
+
+@pytest.mark.parametrize("question,expected_type", [
+    ({"question": "请选择", "options": ["甲", "乙"]}, "select"),
+    ({"question": "填写角色名", "allow_text": True}, "input"),
+    ({"question": "请选择", "type": "select", "options": ["甲", "乙"], "multi_select": True}, "select"),
+    ({"question": "填写角色名", "type": "input"}, "input"),
+])
+def test_question_normalizes_explicit_and_legacy_pure_types(question, expected_type):
+    """新题型明确返回，旧纯选择／纯输入兼容，allow_text 仅为客户端派生字段。"""
+    parsed = UserQuestion.model_validate(question).model_dump()
+    assert parsed["type"] == expected_type
+    assert parsed["allow_text"] is (expected_type == "input")
+    if expected_type == "input":
+        assert parsed["options"] == [] and parsed["multi_select"] is False
+
+
+def test_question_tool_exposes_nested_types_to_the_model():
+    """真正绑定给模型的工具合同保留每题题型，且不再宣传同题自由输入。"""
+    from agent_service.tools import ToolRegistry
+
+    registry = ToolRegistry.with_builtin_tools()
+    tool = registry._to_langchain_tool(registry.get("request_user_input"))
+    schema = tool.args_schema if isinstance(tool.args_schema, dict) else tool.args_schema.model_json_schema()
+    question = schema["properties"]["questions"]["items"]
+    assert question["properties"]["type"]["enum"] == ["select", "input"]
+    assert "type" in question["required"]
+    assert "allow_text" not in question["properties"]
+
+
 def test_pauses_and_persists_before_resuming(service):
     """回答前执行未完成，回答后同一请求恢复且正式消息保存问答。"""
     thread, request, cancel, results, events = start_question(service)
@@ -78,17 +120,21 @@ def test_pauses_and_persists_before_resuming(service):
 
 def test_batch_validation_does_not_resume_on_invalid_or_cross_session_answers(service):
     """漏答和跨用户／会话回答不能唤醒；合法多选与手动输入原样交还。"""
-    questions = [{"id": "choose", "question": "选哪些", "options": ["甲", "乙"], "multi_select": True},
-                 {"id": "text", "question": "补充说明", "allow_text": True}]
+    questions = [{"id": "choose", "question": "选哪些", "type": "select", "options": ["甲", "乙"], "multi_select": True},
+                 {"id": "text", "question": "填写角色名", "type": "input"}]
     thread, request, cancel, results, _ = start_question(service, questions=questions)
     try:
-        valid = {"choose": UserQuestionAnswer(selected_options=["甲", "乙"]), "text": UserQuestionAnswer(text="保留原文")}
+        assert [question["type"] for question in request["questions"]] == ["select", "input"]
+        valid = {"choose": UserQuestionAnswer(selected_options=["甲", "乙"]), "text": UserQuestionAnswer(text="芙宁娜")}
         for user, session in [("u2", "s1"), ("u1", "s2")]:
             with pytest.raises(PermissionError):
                 service.submit(request_id=request["request_id"], user_id=user, session_id=session, answers=valid)
         for invalid in [{}, {"choose": valid["choose"]}, {**valid, "choose": UserQuestionAnswer(selected_options=["陌生选项"])},
                         {**valid, "choose": UserQuestionAnswer(selected_options=["甲", "甲"])},
                         {**valid, "text": UserQuestionAnswer(text="  ")},
+                        {**valid, "text": UserQuestionAnswer(selected_options=["甲"], text="芙宁娜")},
+                        {**valid, "choose": UserQuestionAnswer(selected_options=["甲"], text="芙宁娜")},
+                        {**valid, "choose": UserQuestionAnswer(selected_options=["甲"], text=" ")},
                         {**valid, "choose": UserQuestionAnswer(text="不允许") }]:
             with pytest.raises(ValueError):
                 answer(service, request, invalid) if invalid else service.submit(request_id=request["request_id"], user_id="u1", session_id="s1", answers=invalid)
@@ -96,7 +142,7 @@ def test_batch_validation_does_not_resume_on_invalid_or_cross_session_answers(se
         result = answer(service, request, valid)
         thread.join(3)
         assert result["answers"]["choose"]["selected_options"] == ["甲", "乙"]
-        assert result["answers"]["text"]["text"] == "保留原文"
+        assert result["answers"]["text"]["text"] == "芙宁娜"
     finally:
         cancel.set()
         thread.join(3)

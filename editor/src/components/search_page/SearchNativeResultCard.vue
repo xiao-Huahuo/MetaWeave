@@ -39,6 +39,7 @@ const emit = defineEmits<{
   <LibraryCard
     v-else-if="result.source === 'library'"
     :item="result.item as unknown as LibraryItem"
+    :library-id="result.library_id"
     :selected="false"
     :multi-select="false"
     readonly
@@ -50,6 +51,7 @@ const emit = defineEmits<{
   <ComponentLibraryCard
     v-else-if="result.source === 'components'"
     :item="result.item as unknown as ComponentLibraryItem"
+    :library-id="result.library_id"
     readonly
     @open="emit('activate', result)"
   />

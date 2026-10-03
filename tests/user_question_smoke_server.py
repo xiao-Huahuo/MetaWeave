@@ -47,19 +47,43 @@ class QuestionGraph:
     def stream(self, inputs, **kwargs):
         """按测试提示选择问题，仅将真实提交的回答传给最后一个节点。"""
         prompt = inputs["messages"][-1].content
-        questions = [{"id": "q1", "question": "如何处理这份资料？", "options": ["阅读并总结", "保留原文"]}]
+        questions = [{"id": "q1", "type": "select", "question": "如何处理这份资料？", "options": ["阅读并总结", "保留原文"]}]
+        conditional = "条件追问" in prompt
+        if conditional:
+            questions = [{"id": "q1", "type": "select", "question": "接下来做什么？", "options": ["比较角色机制", "结束任务"]}]
         if "多题" in prompt:
-            questions += [{"id": "q2", "question": "需要哪些输出内容？", "options": ["摘要", "引用", "待办"], "multi_select": True},
-                          {"id": "q3", "question": "还有哪些需要保留的细节？", "allow_text": True}]
+            questions += [{"id": "q2", "type": "select", "question": "需要哪些输出内容？", "options": ["摘要", "引用", "待办"], "multi_select": True},
+                          {"id": "q3", "type": "input", "question": "请输入角色名。"}]
         elif "多选" in prompt:
             questions[0]["multi_select"] = True
         elif "输入" in prompt:
-            questions = [{"id": "q1", "question": "请填写你希望保留的内容。", "allow_text": True}]
-        message = AIMessage(content="请先选择处理方式。", tool_calls=[{"id": "call_question", "name": "request_user_input", "args": {"questions": questions}}])
+            questions = [{"id": "q1", "type": "input", "question": "请输入角色名。"}]
+        if "长选项" in prompt:
+            questions[0]["question"] = "接下来把《原神》的多资料对照推向哪个方向？"
+            questions[0]["options"] = [
+                "深化议题 A：《日月前事》与法涅斯／四影——纳入 BWIKI 白夜国馆藏另 4 卷，核实常世大神与伊斯塔露的身份和真实出处",
+                "加固议题 B：知识地图口径对照——把报告转引的外部来源取入库，逐条核对公开资料与一手原文",
+                "改为讨论角色机制，下一题填写角色名",
+                "到此结束，不再展开",
+            ]
+        table = "\n\n| 资料 | 依据 | 对照结果 |\n| --- | --- | --- |\n| 技能与命座 | 游戏内原文 | 保留机制与适配条件 |\n| 社区观点 | 明确作者与时间 | 区分体验和可核验事实 |"
+        if "宽表" in prompt:
+            headings = [f"队伍适配条件{i}" for i in range(1, 11)]
+            table = "\n\n| " + " | ".join(headings) + " |\n| " + " | ".join(["---"] * 10) + " |\n| " + " | ".join(["原文依据与角色机制"] * 10) + " |"
+        message = AIMessage(content="请先选择处理方式。" + table, tool_calls=[{"id": "call_question", "name": "request_user_input", "args": {"questions": questions}}])
         yield {"agent": {"messages": [message], "trace": []}}
         action = self.tool_node({**inputs, "messages": [message]})
         yield {"action": action}
         result = json.loads(action["messages"][0].content)
+        if conditional and result["status"] == "answered" and result["answers"]["q1"]["selected_options"] == ["比较角色机制"]:
+            role_message = AIMessage(content="还需要你提供角色名。", tool_calls=[{
+                "id": "call_role_input", "name": "request_user_input",
+                "args": {"questions": [{"id": "role", "type": "input", "question": "请输入角色名。"}]},
+            }])
+            yield {"agent": {"messages": [role_message], "trace": []}}
+            role_action = self.tool_node({**inputs, "messages": [role_message]})
+            yield {"action": role_action}
+            result = json.loads(role_action["messages"][0].content)
         if result["status"] == "answered":
             yield {"agent": {"messages": [AIMessage(content="已收到回答，继续处理：" + json.dumps(result["answers"], ensure_ascii=False))], "trace": []}}
 
