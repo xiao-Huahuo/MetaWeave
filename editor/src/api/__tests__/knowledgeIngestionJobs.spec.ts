@@ -36,4 +36,24 @@ describe('knowledge ingestion job API client', () => {
     expect(fetchMock.mock.calls[1]?.[0]).toBe('/knowledge/ingestion/jobs/ingest%2Fa%20b/cancel')
     expect(JSON.parse(String((fetchMock.mock.calls[1]?.[1] as RequestInit).body))).toEqual({ user_id: 'user/1' })
   })
+
+  it('preserves the submitted library and cancels by job identity after switching libraries', async () => {
+    const job = { job_id: 'ingest_A', library_id: 'library_A', path: 'note.md', status: 'queued' }
+    const fetchMock = vi.fn<typeof fetch>()
+      .mockResolvedValueOnce(new Response(JSON.stringify({ jobs: [job] }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ jobs: [
+        job, { ...job, job_id: 'ingest_B', library_id: 'library_B' },
+      ] }), { status: 200 }))
+      .mockResolvedValueOnce(new Response(JSON.stringify({ ...job, status: 'cancelled' }), { status: 200 }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const submitted = await createKnowledgeIngestionJobs('user/1', ['note.md'])
+    const listed = await listKnowledgeIngestionJobs('user/1', true)
+    expect(submitted.jobs[0]?.library_id).toBe('library_A')
+    expect(listed.jobs.map((item) => item.library_id)).toEqual(['library_A', 'library_B'])
+    await cancelKnowledgeIngestionJob('user/1', submitted.jobs[0]!.job_id)
+
+    expect(fetchMock.mock.calls[2]?.[0]).toBe('/knowledge/ingestion/jobs/ingest_A/cancel')
+    expect(JSON.parse(String((fetchMock.mock.calls[2]?.[1] as RequestInit).body))).toEqual({ user_id: 'user/1' })
+  })
 })

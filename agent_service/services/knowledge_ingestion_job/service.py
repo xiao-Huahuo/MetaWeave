@@ -13,6 +13,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import multiprocessing
 import queue
 import threading
@@ -26,6 +27,10 @@ from sqlmodel import Session, select
 
 from agent_service.core.agent_config import DEFAULT_BUSINESS_LIMITS
 from agent_service.models.knowledge_ingestion_job import KnowledgeIngestionJobRecord
+from agent_service.services.settings.mcp_settings import use_library
+
+
+logger = logging.getLogger(__name__)
 
 
 ACTIVE_JOB_STATUSES = {"queued", "running", "cancelling"}
@@ -38,8 +43,8 @@ def _utc_now() -> datetime:
     return datetime.now(timezone.utc)
 
 
-def _run_ingestion_worker(user_id: str, path: str, event_queue: Any) -> None:
-    """在可强制终止的子进程中重建最小知识库服务并灌库一个文件。"""
+def _run_ingestion_worker(user_id: str, library_id: str, path: str, event_queue: Any) -> None:
+    """在子进程中绑定任务提交时的知识库；不修改用户当前激活库。"""
 
     try:
         from agent_service.core.agent_config import AgentConfig
@@ -57,11 +62,12 @@ def _run_ingestion_worker(user_id: str, path: str, event_queue: Any) -> None:
             settings_service=settings_service,
             knowledge_graph_service=KnowledgeGraphService(config=config),
         )
-        result = library_service.ingest_single_file(
-            user_id=user_id,
-            path=path,
-            progress_callback=lambda payload: event_queue.put({"type": "progress", "payload": payload}),
-        )
+        with use_library(user_id, library_id):
+            result = library_service.ingest_single_file(
+                user_id=user_id,
+                path=path,
+                progress_callback=lambda payload: event_queue.put({"type": "progress", "payload": payload}),
+            )
         event_queue.put({"type": "done", "result": result.to_dict()})
     except BaseException as exc:
         event_queue.put({"type": "error", "message": str(exc)})
@@ -153,10 +159,13 @@ class KnowledgeIngestionJobService:
     def submit(self, *, user_id: str, paths: list[str]) -> list[dict[str, Any]]:
         """校验文件并将每个路径持久化为独立等待任务。"""
 
-        root = self.knowledge_library_service.get_active_root_path(user_id=user_id)
         profile_service = getattr(self.knowledge_library_service, "settings_service", None)
         profile = profile_service.ensure_user_profile(user_id=user_id) if profile_service else {}
-        library_id = str(dict(profile.get("active_knowledge_library") or {}).get("library_id") or "")
+        library = dict(profile.get("active_knowledge_library") or {})
+        library_id = str(library.get("library_id") or "")
+        # 同一档案快照同时确定目录和 ID，避免切库发生在两次读取之间。
+        root = (Path(str(library["knowledge_dir"])).expanduser().resolve() if profile_service
+                else self.knowledge_library_service.get_active_root_path(user_id=user_id))
         records: list[KnowledgeIngestionJobRecord] = []
         now = _utc_now()
         for raw_path in dict.fromkeys(paths):
@@ -272,7 +281,7 @@ class KnowledgeIngestionJobService:
                 process.join(timeout=self.limits.knowledge_job_process_join_timeout_seconds)
             self._finish_cancelled(job_id=job_id, message="用户中止灌库")
         else:
-            self._cleanup_source(user_id=user_id, path=record.path)
+            self._cleanup_source(user_id=user_id, library_id=record.library_id, path=record.path)
         result = self.get_job(job_id=job_id, user_id=user_id)
         self._wake_event.set()
         return result
@@ -317,7 +326,7 @@ class KnowledgeIngestionJobService:
         event_queue = context.Queue()
         process = context.Process(
             target=_run_ingestion_worker,
-            args=(job["user_id"], job["path"], event_queue),
+            args=(job["user_id"], job["library_id"], job["path"], event_queue),
             daemon=True,
         )
         job_id = str(job["job_id"])
@@ -406,7 +415,7 @@ class KnowledgeIngestionJobService:
                 return
             if record.status == "cancelled" and record.finished_at is not None:
                 return
-            user_id, path = record.user_id, record.path
+            user_id, library_id, path = record.user_id, record.library_id, record.path
             record.status = "failed"
             record.stage = "failed"
             record.stage_label = "灌库失败"
@@ -416,7 +425,7 @@ class KnowledgeIngestionJobService:
             record.updated_at = _utc_now()
             db.add(record)
             db.commit()
-        self._cleanup_source(user_id=user_id, path=path)
+        self._cleanup_source(user_id=user_id, library_id=library_id, path=path)
 
     def _finish_cancelled(self, *, job_id: str, message: str) -> None:
         """清理部分索引并把任务收敛为 cancelled。"""
@@ -425,7 +434,7 @@ class KnowledgeIngestionJobService:
             record = db.get(KnowledgeIngestionJobRecord, job_id)
             if record is None:
                 return
-            user_id, path = record.user_id, record.path
+            user_id, library_id, path = record.user_id, record.library_id, record.path
             record.status = "cancelled"
             record.stage = "cancelled"
             record.stage_label = "已中止"
@@ -436,12 +445,17 @@ class KnowledgeIngestionJobService:
             record.updated_at = _utc_now()
             db.add(record)
             db.commit()
-        self._cleanup_source(user_id=user_id, path=path)
+        self._cleanup_source(user_id=user_id, library_id=library_id, path=path)
 
-    def _cleanup_source(self, *, user_id: str, path: str) -> None:
-        """删除取消或失败任务产生的部分索引，使文件恢复未灌库状态。"""
+    def _cleanup_source(self, *, user_id: str, library_id: str, path: str) -> None:
+        """只清理任务所属库；原库失去访问权限时禁止退回当前库。"""
 
-        self.knowledge_library_service.invalidate_paths(user_id=user_id, relative_paths=[path])
+        try:
+            with use_library(user_id, library_id):
+                self.knowledge_library_service.invalidate_paths(user_id=user_id, relative_paths=[path])
+        except PermissionError:
+            logger.warning("跳过不可访问的灌库任务索引清理 | user_id=%s library_id=%s path=%s",
+                           user_id, library_id, path)
 
     def _is_cancel_requested(self, job_id: str) -> bool:
         """查询持久化取消标记。"""
