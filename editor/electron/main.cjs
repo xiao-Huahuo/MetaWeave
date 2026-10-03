@@ -702,8 +702,8 @@ app.whenReady().then(async () => {
     }
   }
 
-  // 悬浮窗随主窗口同步启动。
-  createFloatingWindow()
+  // The main renderer restores the user setting through floating:set-visible.
+  // Create the floating window only when that setting or an explicit open requests it.
 
   // Keep clipboard roles available without claiming renderer-owned history keys.
   const template = [

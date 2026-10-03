@@ -1,0 +1,1154 @@
+[
+  {
+    "path": "agent/block/anaterate-woman-8026954_1920.jpg",
+    "original_sha256": "9f62879f266942bd9545249a9c8a1990f02089a55211dff414c801bcb392ee0d",
+    "derivative_sha256": "537dc52f432cf56e7400225f6a8c750868d4946d867e432fd9e297ca88a9b8fa",
+    "original_size": [
+      1477,
+      1920
+    ],
+    "derivative_size": [
+      1231,
+      1600
+    ],
+    "format": "JPEG",
+    "original_mode": "RGB",
+    "derivative_mode": "RGB",
+    "original_bytes": 739732,
+    "derivative_bytes": 605005
+  },
+  {
+    "path": "agent/block/juliush-ai-generated-7775990_1920.jpg",
+    "original_sha256": "b484fc415aa241d58c910284e86c020435a7080d85bf071462dcac9c2288d664",
+    "derivative_sha256": "cb198ddc12a031087a90aba4d61427cae0ab7aa77e70562545424e6748a19ec1",
+    "original_size": [
+      1920,
+      1920
+    ],
+    "derivative_size": [
+      1600,
+      1600
+    ],
+    "format": "JPEG",
+    "original_mode": "RGB",
+    "derivative_mode": "RGB",
+    "original_bytes": 451476,
+    "derivative_bytes": 388785
+  },
+  {
+    "path": "agent/rectangle/brianpenny-artificial-intelligence-7450797_1920.jpg",
+    "original_sha256": "fd2296ff214ba638cf725b77d47b802766b206e08175b06b956f08b1f0c80787",
+    "derivative_sha256": "c9882908f97d4b93d0edf9c751a584ad37bc4789340fdf854736c6298dc984e8",
+    "original_size": [
+      1920,
+      1280
+    ],
+    "derivative_size": [
+      1600,
+      1067
+    ],
+    "format": "JPEG",
+    "original_mode": "RGB",
+    "derivative_mode": "RGB",
+    "original_bytes": 453997,
+    "derivative_bytes": 398679
+  },
+  {
+    "path": "agent/rectangle/rox_buwa-electronic-5902163_1920.jpg",
+    "original_sha256": "3e211f23871a29d035520aebd5f4ba581a79523cb2fa176d8feb6e18c32c86fa",
+    "derivative_sha256": "718311ed831df634cc51001d87483839d0232e0333f880bdaef3c53f234e5431",
+    "original_size": [
+      1920,
+      1080
+    ],
+    "derivative_size": [
+      1600,
+      900
+    ],
+    "format": "JPEG",
+    "original_mode": "RGB",
+    "derivative_mode": "RGB",
+    "original_bytes": 434536,
+    "derivative_bytes": 330347
+  },
+  {
+    "path": "browser/block/pexels-asphotography-5494323.jpg",
+    "original_sha256": "34584798b14259f521a7d620d22eab91e9b4a7e7b84027760ddb82f7dd6468ac",
+    "derivative_sha256": "f07c0172bfa42388260b1fbe54eda8065b2ab03a1034aefced2b5fe5386edf90",
+    "original_size": [
+      4684,
+      3123
+    ],
+    "derivative_size": [
+      1600,
+      1067
+    ],
+    "format": "JPEG",
+    "original_mode": "RGB",
+    "derivative_mode": "RGB",
+    "original_bytes": 1072002,
+    "derivative_bytes": 184813
+  },
+  {
+    "path": "browser/block/pexels-deepanker70-1482061.jpg",
+    "original_sha256": "aa9e36442a6371d1c7476700922d28ee791e33a41fa1b68c216890473cb4247e",
+    "derivative_sha256": "ab938d1055952aacecb252c9bc4cfb1cce424522f7a70c618ffe8058531e47c8",
+    "original_size": [
+      4496,
+      3000
+    ],
+    "derivative_size": [
+      1600,
+      1068
+    ],
+    "format": "JPEG",
+    "original_mode": "RGB",
+    "derivative_mode": "RGB",
+    "original_bytes": 609325,
+    "derivative_bytes": 185033
+  },
+  {
+    "path": "browser/rectangle/pexels-asphotography-218717.jpg",
+    "original_sha256": "4ccf1cb288e6fe62c60cfa93b59e74f2b6e8c9086ca9a6d824e345577365da69",
+    "derivative_sha256": "fd1c2a291dde2ffc8c61ab51dc0abd9912eca5fff3a4ee5142499b703546843e",
+    "original_size": [
+      6016,
+      4016
+    ],
+    "derivative_size": [
+      1600,
+      1068
+    ],
+    "format": "JPEG",
+    "original_mode": "RGB",
+    "derivative_mode": "RGB",
+    "original_bytes": 1318909,
+    "derivative_bytes": 240289
+  },
+  {
+    "path": "browser/rectangle/pexels-deepanker70-1482061.jpg",
+    "original_sha256": "aa9e36442a6371d1c7476700922d28ee791e33a41fa1b68c216890473cb4247e",
+    "derivative_sha256": "ab938d1055952aacecb252c9bc4cfb1cce424522f7a70c618ffe8058531e47c8",
+    "original_size": [
+      4496,
+      3000
+    ],
+    "derivative_size": [
+      1600,
+      1068
+    ],
+    "format": "JPEG",
+    "original_mode": "RGB",
+    "derivative_mode": "RGB",
+    "original_bytes": 609325,
+    "derivative_bytes": 185033
+  },
+  {
+    "path": "components-vault/block/img.png",
+    "original_sha256": "818a20d2ea6445411f5d542244e76e701a43d8a9a4bd6a3fb9fdc9203b699ea6",
+    "derivative_sha256": "818a20d2ea6445411f5d542244e76e701a43d8a9a4bd6a3fb9fdc9203b699ea6",
+    "original_size": [
+      1257,
+      1141
+    ],
+    "derivative_size": [
+      1257,
+      1141
+    ],
+    "format": "PNG",
+    "original_mode": "RGB",
+    "derivative_mode": "RGB",
+    "original_bytes": 228331,
+    "derivative_bytes": 228331
+  },
+  {
+    "path": "components-vault/block/img_1.png",
+    "original_sha256": "12ca5027e11d73e88cae61150350d70b963e07b72c1cd6f4a8e5b5595333b916",
+    "derivative_sha256": "12ca5027e11d73e88cae61150350d70b963e07b72c1cd6f4a8e5b5595333b916",
+    "original_size": [
+      1244,
+      1140
+    ],
+    "derivative_size": [
+      1244,
+      1140
+    ],
+    "format": "PNG",
+    "original_mode": "RGB",
+    "derivative_mode": "RGB",
+    "original_bytes": 95121,
+    "derivative_bytes": 95121
+  },
+  {
+    "path": "components-vault/rectangle/img.png",
+    "original_sha256": "fc5468b24abf504b687d2354328d7f079aacd3c87a63c2021a3c362b9a4d7ea9",
+    "derivative_sha256": "fc5468b24abf504b687d2354328d7f079aacd3c87a63c2021a3c362b9a4d7ea9",
+    "original_size": [
+      1479,
+      781
+    ],
+    "derivative_size": [
+      1479,
+      781
+    ],
+    "format": "PNG",
+    "original_mode": "RGB",
+    "derivative_mode": "RGB",
+    "original_bytes": 85805,
+    "derivative_bytes": 85805
+  },
+  {
+    "path": "components-vault/rectangle/img_1.png",
+    "original_sha256": "cdb8f9a526fb46e910ad5d8bd6179045380695e9992ae2da34f45494ba01840e",
+    "derivative_sha256": "cdb8f9a526fb46e910ad5d8bd6179045380695e9992ae2da34f45494ba01840e",
+    "original_size": [
+      1257,
+      928
+    ],
+    "derivative_size": [
+      1257,
+      928
+    ],
+    "format": "PNG",
+    "original_mode": "RGB",
+    "derivative_mode": "RGB",
+    "original_bytes": 149849,
+    "derivative_bytes": 149849
+  },
+  {
+    "path": "debug/block/clarkdonald413-linux-4259595_1920.jpg",
+    "original_sha256": "f631a23392bd84acf91574109a9720495f5f48fbef4b3c9dfb905dcde0e39a33",
+    "derivative_sha256": "196aea6150ffea4047a9388e22ec733b69e799eae713a6432c62252c661d2324",
+    "original_size": [
+      1729,
+      1920
+    ],
+    "derivative_size": [
+      1441,
+      1600
+    ],
+    "format": "JPEG",
+    "original_mode": "RGB",
+    "derivative_mode": "RGB",
+    "original_bytes": 839062,
+    "derivative_bytes": 768281
+  },
+  {
+    "path": "debug/block/suixin390-data-5606639_1920.jpg",
+    "original_sha256": "a5ee713cc6173b04567fb87c9b8c5f43240c6fc3839ad615b5718e09d87f8823",
+    "derivative_sha256": "8da0b47e34424397fe4ca8bbcaaef1251f56e5cfaca83db0af82e17a6ef8000a",
+    "original_size": [
+      1920,
+      1282
+    ],
+    "derivative_size": [
+      1600,
+      1068
+    ],
+    "format": "JPEG",
+    "original_mode": "RGB",
+    "derivative_mode": "RGB",
+    "original_bytes": 706712,
+    "derivative_bytes": 456966
+  },
+  {
+    "path": "debug/rectangle/fernandoz-work-environment-10392555_1920.jpg",
+    "original_sha256": "ee30b74fdde0073e9c07152339f415f41b94caf7d75066c2c43d0f97e135d9a3",
+    "derivative_sha256": "0dca54893ed4e282983fcb347b7571281193ab9a7d3fee346967b29e8c01c01c",
+    "original_size": [
+      1920,
+      1072
+    ],
+    "derivative_size": [
+      1600,
+      893
+    ],
+    "format": "JPEG",
+    "original_mode": "RGB",
+    "derivative_mode": "RGB",
+    "original_bytes": 386978,
+    "derivative_bytes": 327323
+  },
+  {
+    "path": "debug/rectangle/stocksnap-coding-924920_1920.jpg",
+    "original_sha256": "4b4b606754b8e2e281a6ca95559c47ed057b27cdb6df714959a9b47daa650cee",
+    "derivative_sha256": "16fbafebe46c9c024ed5df80793da7c2fa5c20607f1dcd150484c61454618082",
+    "original_size": [
+      1920,
+      1280
+    ],
+    "derivative_size": [
+      1600,
+      1067
+    ],
+    "format": "JPEG",
+    "original_mode": "RGB",
+    "derivative_mode": "RGB",
+    "original_bytes": 371458,
+    "derivative_bytes": 289498
+  },
+  {
+    "path": "files/block/godoycordoba-firm-2003808_1920.jpg",
+    "original_sha256": "552e3282e439a2729ed9441a0fa3a2611b009b8d74bc5697ca5c05766f65a15e",
+    "derivative_sha256": "b571ddd5b5b8b4c5e4443dcf920b4cea349c692127656dd19ac631bfd1333564",
+    "original_size": [
+      1920,
+      1280
+    ],
+    "derivative_size": [
+      1600,
+      1067
+    ],
+    "format": "JPEG",
+    "original_mode": "RGB",
+    "derivative_mode": "RGB",
+    "original_bytes": 379938,
+    "derivative_bytes": 275558
+  },
+  {
+    "path": "files/block/jarmoluk-architect-254579_1920.jpg",
+    "original_sha256": "f151c758ff8dde46602d3d387b49985dfeae7a3c1099d0369b7bf7102efdcf15",
+    "derivative_sha256": "e5a3c141965a00bae4eef92a8dc3413c64200bd67ef80c4d8697ada33c8ce1a8",
+    "original_size": [
+      1920,
+      1272
+    ],
+    "derivative_size": [
+      1600,
+      1060
+    ],
+    "format": "JPEG",
+    "original_mode": "RGB",
+    "derivative_mode": "RGB",
+    "original_bytes": 467127,
+    "derivative_bytes": 353143
+  },
+  {
+    "path": "files/rectangle/bru-no-coffee-2737047_1920.jpg",
+    "original_sha256": "def25f28f42e00d3c5086ddc2ffaabbcc877d94a396f87f49dbceff0ffbbe0d5",
+    "derivative_sha256": "198c0b57c3feb1b01a99b1e2c417fe04d57d80c8b45b6a7019ca6ff507384f83",
+    "original_size": [
+      1920,
+      1280
+    ],
+    "derivative_size": [
+      1600,
+      1067
+    ],
+    "format": "JPEG",
+    "original_mode": "RGB",
+    "derivative_mode": "RGB",
+    "original_bytes": 468938,
+    "derivative_bytes": 324985
+  },
+  {
+    "path": "files/rectangle/vargazs-folder-1049826_1920.jpg",
+    "original_sha256": "162e349837014f7adf9357ffa3e2692ef50bf54cdd8af059c04b88eef3a8fbfd",
+    "derivative_sha256": "a3005a20227de483d5ad9dc8ef837bd8e9500a6202769fe145c96caa93f5a403",
+    "original_size": [
+      1920,
+      1280
+    ],
+    "derivative_size": [
+      1600,
+      1067
+    ],
+    "format": "JPEG",
+    "original_mode": "RGB",
+    "derivative_mode": "RGB",
+    "original_bytes": 399297,
+    "derivative_bytes": 307062
+  },
+  {
+    "path": "graph/block/6db9dcb0f4e3bc1d662bb2aeff324500.jpg",
+    "original_sha256": "833d43cf942b1be72e02d0bc2668a968339544ab0416c593edc3ebfbea503af0",
+    "derivative_sha256": "833d43cf942b1be72e02d0bc2668a968339544ab0416c593edc3ebfbea503af0",
+    "original_size": [
+      1056,
+      1284
+    ],
+    "derivative_size": [
+      1056,
+      1284
+    ],
+    "format": "JPEG",
+    "original_mode": "RGB",
+    "derivative_mode": "RGB",
+    "original_bytes": 694392,
+    "derivative_bytes": 694392
+  },
+  {
+    "path": "graph/block/PixPin_2026-08-05_14-53-50.png",
+    "original_sha256": "8864c2942561319f6a33ed67701e082df28586c89df72993010eabbbe7d16f08",
+    "derivative_sha256": "8864c2942561319f6a33ed67701e082df28586c89df72993010eabbbe7d16f08",
+    "original_size": [
+      756,
+      699
+    ],
+    "derivative_size": [
+      756,
+      699
+    ],
+    "format": "PNG",
+    "original_mode": "RGBA",
+    "derivative_mode": "RGBA",
+    "original_bytes": 200884,
+    "derivative_bytes": 200884
+  },
+  {
+    "path": "graph/rectangle/PixPin_2026-08-05_14-53-03.png",
+    "original_sha256": "ecc7c249731a2d3353a1d1d68087d5b2549d1595549e43ae0b71686631bdd901",
+    "derivative_sha256": "9a4a0487cab3fa396b101efd909ec8944ca547887971d79d2c1677a2c2d1269f",
+    "original_size": [
+      2345,
+      1246
+    ],
+    "derivative_size": [
+      1600,
+      850
+    ],
+    "format": "PNG",
+    "original_mode": "RGBA",
+    "derivative_mode": "RGBA",
+    "original_bytes": 859959,
+    "derivative_bytes": 433506
+  },
+  {
+    "path": "graph/rectangle/PixPin_2026-08-05_14-54-33.png",
+    "original_sha256": "4a710a90e2eb6e1d06d731e3146d2361f05259e7788870bb748b27f4881bf8aa",
+    "derivative_sha256": "4a710a90e2eb6e1d06d731e3146d2361f05259e7788870bb748b27f4881bf8aa",
+    "original_size": [
+      1333,
+      766
+    ],
+    "derivative_size": [
+      1333,
+      766
+    ],
+    "format": "PNG",
+    "original_mode": "RGBA",
+    "derivative_mode": "RGBA",
+    "original_bytes": 399824,
+    "derivative_bytes": 399824
+  },
+  {
+    "path": "intelligent-forms/block/img.png",
+    "original_sha256": "43c8b3ebf22af7d7202cb21dc96098e90744860459616feafd4664ca7de15aa2",
+    "derivative_sha256": "43c8b3ebf22af7d7202cb21dc96098e90744860459616feafd4664ca7de15aa2",
+    "original_size": [
+      511,
+      481
+    ],
+    "derivative_size": [
+      511,
+      481
+    ],
+    "format": "PNG",
+    "original_mode": "RGB",
+    "derivative_mode": "RGB",
+    "original_bytes": 185157,
+    "derivative_bytes": 185157
+  },
+  {
+    "path": "intelligent-forms/block/img_1.png",
+    "original_sha256": "5d2141dcb49f57fa1bc006771a2bc6b5a9516348ffe7b252481a70faae00a682",
+    "derivative_sha256": "5d2141dcb49f57fa1bc006771a2bc6b5a9516348ffe7b252481a70faae00a682",
+    "original_size": [
+      510,
+      496
+    ],
+    "derivative_size": [
+      510,
+      496
+    ],
+    "format": "PNG",
+    "original_mode": "RGB",
+    "derivative_mode": "RGB",
+    "original_bytes": 175199,
+    "derivative_bytes": 175199
+  },
+  {
+    "path": "intelligent-forms/rectangle/img.png",
+    "original_sha256": "c6d639cc9b17212feed22c285d1e1a942d50f986ff36c963714241070d4af1ed",
+    "derivative_sha256": "c6d639cc9b17212feed22c285d1e1a942d50f986ff36c963714241070d4af1ed",
+    "original_size": [
+      1591,
+      839
+    ],
+    "derivative_size": [
+      1591,
+      839
+    ],
+    "format": "PNG",
+    "original_mode": "RGB",
+    "derivative_mode": "RGB",
+    "original_bytes": 190021,
+    "derivative_bytes": 190021
+  },
+  {
+    "path": "intelligent-forms/rectangle/pexels-mikhail-nilov-7735708.jpg",
+    "original_sha256": "6164904ed8fe3f654b7f736b563517c7f6891e936b34f86012fa76bfc1f68a5b",
+    "derivative_sha256": "eb16ff53e48d2d46a2d5f6764bb651f26d1402d52adf7715ef446fe6cc093980",
+    "original_size": [
+      3583,
+      2614
+    ],
+    "derivative_size": [
+      1600,
+      1167
+    ],
+    "format": "JPEG",
+    "original_mode": "RGB",
+    "derivative_mode": "RGB",
+    "original_bytes": 457766,
+    "derivative_bytes": 257334
+  },
+  {
+    "path": "library/block/nelistaneva-woman-9064449_1920.jpg",
+    "original_sha256": "990c9d327df87d1d620d9b2512bdd4b2af9ff1a2880807a0ea224ff755102395",
+    "derivative_sha256": "e1291352482522e59a31f4e07cb231efffe283e91586dfd5c17b8eeb14049ea2",
+    "original_size": [
+      1920,
+      1920
+    ],
+    "derivative_size": [
+      1600,
+      1600
+    ],
+    "format": "JPEG",
+    "original_mode": "RGB",
+    "derivative_mode": "RGB",
+    "original_bytes": 973043,
+    "derivative_bytes": 807754
+  },
+  {
+    "path": "library/block/stocksnap-books-2596809_1920.jpg",
+    "original_sha256": "a63a2ab8c1918590d011a5ffdebd961822b6c454dd83fb68dfc413a82689073a",
+    "derivative_sha256": "612d41e2edccfb97d5ce3cb6a377d8d6d4086753d777dcca24c463e1fbd645f4",
+    "original_size": [
+      1920,
+      1775
+    ],
+    "derivative_size": [
+      1600,
+      1479
+    ],
+    "format": "JPEG",
+    "original_mode": "RGB",
+    "derivative_mode": "RGB",
+    "original_bytes": 559721,
+    "derivative_bytes": 442208
+  },
+  {
+    "path": "library/rectangle/alexandra_koch-library-7976837_1920.jpg",
+    "original_sha256": "a6b3673d5f6ae182577c9703c9d68855c626891497fed0d726b3fe5b402b2898",
+    "derivative_sha256": "ecd3c5b95b4b1c0c3341efcd3acb161cd5e4bd9f7c9a18bb13ef71a624ec86c9",
+    "original_size": [
+      1920,
+      1280
+    ],
+    "derivative_size": [
+      1600,
+      1067
+    ],
+    "format": "JPEG",
+    "original_mode": "RGB",
+    "derivative_mode": "RGB",
+    "original_bytes": 1107471,
+    "derivative_bytes": 854138
+  },
+  {
+    "path": "library/rectangle/ejaera-library-7598247_1920.jpg",
+    "original_sha256": "ec4f5f7df0f49f29549cc15797b42c65dd4eda93003ab5262a62c89a1ce2c64f",
+    "derivative_sha256": "9290275320f4b2135bc426dd5e041b029965d2d707eecbc4b2e29bd1537a8257",
+    "original_size": [
+      1920,
+      1280
+    ],
+    "derivative_size": [
+      1600,
+      1067
+    ],
+    "format": "JPEG",
+    "original_mode": "RGB",
+    "derivative_mode": "RGB",
+    "original_bytes": 589266,
+    "derivative_bytes": 443531
+  },
+  {
+    "path": "literature-reading/block/pexels-mikhail-nilov-8851450.jpg",
+    "original_sha256": "ff2cad748fdebca70ddcd38452b8a408602ea9ad8a6ec5d31974acf7584b7197",
+    "derivative_sha256": "393ecda016c625918d279e7404f01d6e1b5922b83af95b87779bd38dbee30faa",
+    "original_size": [
+      5304,
+      7952
+    ],
+    "derivative_size": [
+      1067,
+      1600
+    ],
+    "format": "JPEG",
+    "original_mode": "RGB",
+    "derivative_mode": "RGB",
+    "original_bytes": 2802200,
+    "derivative_bytes": 232535
+  },
+  {
+    "path": "literature-reading/block/pexels-omeraydin-16869636.jpg",
+    "original_sha256": "d57c079f3e83b9b8192273daaa0a9225639a9c2d217ef5597c2dc1f9bcaddf54",
+    "derivative_sha256": "6a8b7a22788ee007edcdf4f65653115b18c898bdbba0e29479eb26c15675a480",
+    "original_size": [
+      3840,
+      5760
+    ],
+    "derivative_size": [
+      1067,
+      1600
+    ],
+    "format": "JPEG",
+    "original_mode": "RGB",
+    "derivative_mode": "RGB",
+    "original_bytes": 2690470,
+    "derivative_bytes": 404814
+  },
+  {
+    "path": "literature-reading/rectangle/pexels-46792860-10493203.jpg",
+    "original_sha256": "1df4268496cc1dcd5ea87f1a0bc9be0f140bd736d6f6ac3e7607c83bf5e308e2",
+    "derivative_sha256": "435c3fd66be9a9ba9cf1a335c276651dceabefee4379bf910768b1aa4531dcb3",
+    "original_size": [
+      5760,
+      3840
+    ],
+    "derivative_size": [
+      1600,
+      1067
+    ],
+    "format": "JPEG",
+    "original_mode": "RGB",
+    "derivative_mode": "RGB",
+    "original_bytes": 949418,
+    "derivative_bytes": 303325
+  },
+  {
+    "path": "literature-reading/rectangle/pexels-pixabay-261857.jpg",
+    "original_sha256": "6e54b704f47532ed45f7c71e37b76b7ed6b43dbec55ede59db4302034d1c3c35",
+    "derivative_sha256": "f19ce38199e18f51e039820696699a7d5d44830d59b00dd509e2735f9489440a",
+    "original_size": [
+      5115,
+      3410
+    ],
+    "derivative_size": [
+      1600,
+      1067
+    ],
+    "format": "JPEG",
+    "original_mode": "RGB",
+    "derivative_mode": "RGB",
+    "original_bytes": 1828590,
+    "derivative_bytes": 585992
+  },
+  {
+    "path": "md-html/block/chas_artist-laptop-10381734_1920.jpg",
+    "original_sha256": "699a237da2ae15580074642c35bfccfd592feb8758b51803d2dac1c0f8803587",
+    "derivative_sha256": "be7b343c5156eb0e4e68dc8607eb3238fdc4c20f32241aefa4df3348ae4993c9",
+    "original_size": [
+      1920,
+      1920
+    ],
+    "derivative_size": [
+      1600,
+      1600
+    ],
+    "format": "JPEG",
+    "original_mode": "RGB",
+    "derivative_mode": "RGB",
+    "original_bytes": 570684,
+    "derivative_bytes": 466104
+  },
+  {
+    "path": "md-html/block/pexels-laptop-1836990_1920.jpg",
+    "original_sha256": "d3413efad80932e3e3028139bac0c0103da93c24ea30d862fdef4961164fa7cc",
+    "derivative_sha256": "b8664768f8a7a02fd1ba8dd256ba50267184b4c1bb9b75071b7c2c815506b80c",
+    "original_size": [
+      1920,
+      1280
+    ],
+    "derivative_size": [
+      1600,
+      1067
+    ],
+    "format": "JPEG",
+    "original_mode": "RGB",
+    "derivative_mode": "RGB",
+    "original_bytes": 404728,
+    "derivative_bytes": 305588
+  },
+  {
+    "path": "md-html/rectangle/marijana1-science-3480102_1920.jpg",
+    "original_sha256": "f5ed1287e8e432ba6df78539f3973e5ed553676f464cc3e911fc06a784cb87ed",
+    "derivative_sha256": "d3d9f776531d3455c134a14f21728cb0b72748ea2caff9238fab734094b4c4b1",
+    "original_size": [
+      1920,
+      1281
+    ],
+    "derivative_size": [
+      1600,
+      1068
+    ],
+    "format": "JPEG",
+    "original_mode": "RGB",
+    "derivative_mode": "RGB",
+    "original_bytes": 452978,
+    "derivative_bytes": 355536
+  },
+  {
+    "path": "md-html/rectangle/pexels-blur-1853262_1920.jpg",
+    "original_sha256": "347fc0d62426380248aba82cb81562f1711d15241d3c67ea11ec455e75bb2a28",
+    "derivative_sha256": "67da4b15d97ac9e3ebb0239233ca39340764865fc5e29c74d8c0e947b4230b9d",
+    "original_size": [
+      1920,
+      1440
+    ],
+    "derivative_size": [
+      1600,
+      1200
+    ],
+    "format": "JPEG",
+    "original_mode": "RGB",
+    "derivative_mode": "RGB",
+    "original_bytes": 337562,
+    "derivative_bytes": 269083
+  },
+  {
+    "path": "mission-queue/block/1bc2561a4ee0a2df09aafe0aade288b6.jpg",
+    "original_sha256": "92ebc1d0e00f482540bfb867c46cbb651cb5386de1d15606a0caa4cc3462a45e",
+    "derivative_sha256": "92ebc1d0e00f482540bfb867c46cbb651cb5386de1d15606a0caa4cc3462a45e",
+    "original_size": [
+      1398,
+      1280
+    ],
+    "derivative_size": [
+      1398,
+      1280
+    ],
+    "format": "JPEG",
+    "original_mode": "RGB",
+    "derivative_mode": "RGB",
+    "original_bytes": 431461,
+    "derivative_bytes": 431461
+  },
+  {
+    "path": "mission-queue/block/pexels-jakubzerdzicki-38888701.jpg",
+    "original_sha256": "e68234a78fae40877af9fbd9a506d89de390b82b50ad0306f680cf63e4ee6ef7",
+    "derivative_sha256": "53fbebe6ece754c94fca44a4141b8fcdd63d2714000f4418bd0fc3074f0f3de7",
+    "original_size": [
+      2000,
+      3000
+    ],
+    "derivative_size": [
+      1067,
+      1600
+    ],
+    "format": "JPEG",
+    "original_mode": "RGB",
+    "derivative_mode": "RGB",
+    "original_bytes": 244907,
+    "derivative_bytes": 195393
+  },
+  {
+    "path": "mission-queue/rectangle/img.png",
+    "original_sha256": "45059153525d15d1cb21d628d2d32af38ff725d8b5773ef7112cc45f1bcf8531",
+    "derivative_sha256": "45059153525d15d1cb21d628d2d32af38ff725d8b5773ef7112cc45f1bcf8531",
+    "original_size": [
+      459,
+      368
+    ],
+    "derivative_size": [
+      459,
+      368
+    ],
+    "format": "PNG",
+    "original_mode": "RGB",
+    "derivative_mode": "RGB",
+    "original_bytes": 231680,
+    "derivative_bytes": 231680
+  },
+  {
+    "path": "mission-queue/rectangle/pexels-jakubzerdzicki-36950612.jpg",
+    "original_sha256": "504a80b6a604f8042822b41107687e4bdee05a0b14a7d75e0116f950b1715fca",
+    "derivative_sha256": "a65e1643f861aac440ac215681593bf48ee175db9384bf583aef8ed7a3e96802",
+    "original_size": [
+      3100,
+      1744
+    ],
+    "derivative_size": [
+      1600,
+      900
+    ],
+    "format": "JPEG",
+    "original_mode": "RGB",
+    "derivative_mode": "RGB",
+    "original_bytes": 342672,
+    "derivative_bytes": 221977
+  },
+  {
+    "path": "search/block/422737-google-485611_1920.jpg",
+    "original_sha256": "aa86d061a83503c556cc156c5edb80d84e92893cbf642b6c14ccee89b3860762",
+    "derivative_sha256": "4e0384323e218283b054a8c8db9be5e8bf641f46f0e894656972b5eb6681c60d",
+    "original_size": [
+      1920,
+      1357
+    ],
+    "derivative_size": [
+      1600,
+      1131
+    ],
+    "format": "PNG",
+    "original_mode": "RGBA",
+    "derivative_mode": "RGBA",
+    "original_bytes": 2250256,
+    "derivative_bytes": 1608694
+  },
+  {
+    "path": "search/block/anatoly777-newspaper-3844071_1920.jpg",
+    "original_sha256": "c5f00af3a6009bfe7f35fcc24a5dde99a34561c5530b24fdcd6f3bdc46d0de78",
+    "derivative_sha256": "6d771b776cac26e5d6504d4dfdc5295e402ec5ea3d58b89c5561d1852201d4e0",
+    "original_size": [
+      1920,
+      1328
+    ],
+    "derivative_size": [
+      1600,
+      1107
+    ],
+    "format": "JPEG",
+    "original_mode": "RGB",
+    "derivative_mode": "RGB",
+    "original_bytes": 661695,
+    "derivative_bytes": 506196
+  },
+  {
+    "path": "search/rectangle/fernandozhiminaicela-technology-3184426_1920.jpg",
+    "original_sha256": "122252dd2ccedbcab2b05386eca91c8401e1e372a5445a3359d99ba669bc6b67",
+    "derivative_sha256": "f8f1754fb716bbd00de3e03d3f9e10bb7c3f0a39d34e198a27220287bd6cd132",
+    "original_size": [
+      1920,
+      1285
+    ],
+    "derivative_size": [
+      1600,
+      1071
+    ],
+    "format": "JPEG",
+    "original_mode": "RGB",
+    "derivative_mode": "RGB",
+    "original_bytes": 273048,
+    "derivative_bytes": 206766
+  },
+  {
+    "path": "search/rectangle/roksana96-telescope-5154664_1920.jpg",
+    "original_sha256": "4cfc43679a034c0f521dc4f40e9c830c7bec1747c54462877a9626dd3d9598ed",
+    "derivative_sha256": "7ebb6c271716dde338b178bb04a2201af81a1f84d90473400cc9cd178b22699b",
+    "original_size": [
+      1920,
+      1282
+    ],
+    "derivative_size": [
+      1600,
+      1068
+    ],
+    "format": "JPEG",
+    "original_mode": "RGB",
+    "derivative_mode": "RGB",
+    "original_bytes": 380760,
+    "derivative_bytes": 257680
+  },
+  {
+    "path": "secret-vault/block/img.png",
+    "original_sha256": "9a9f820938d85382438263a5a2cba8fb18d87bd7522ff6213758ff72b4a40b3e",
+    "derivative_sha256": "9a9f820938d85382438263a5a2cba8fb18d87bd7522ff6213758ff72b4a40b3e",
+    "original_size": [
+      451,
+      381
+    ],
+    "derivative_size": [
+      451,
+      381
+    ],
+    "format": "PNG",
+    "original_mode": "RGB",
+    "derivative_mode": "RGB",
+    "original_bytes": 180202,
+    "derivative_bytes": 180202
+  },
+  {
+    "path": "secret-vault/block/img_1.png",
+    "original_sha256": "21853303a722ad95847f4ebdd5e04b1a6713c91020df3a671f82a432c772356f",
+    "derivative_sha256": "21853303a722ad95847f4ebdd5e04b1a6713c91020df3a671f82a432c772356f",
+    "original_size": [
+      437,
+      380
+    ],
+    "derivative_size": [
+      437,
+      380
+    ],
+    "format": "PNG",
+    "original_mode": "RGB",
+    "derivative_mode": "RGB",
+    "original_bytes": 184951,
+    "derivative_bytes": 184951
+  },
+  {
+    "path": "secret-vault/rectangle/pexels-charldurand-6486122.jpg",
+    "original_sha256": "778484480bd15dd74de9427253880a695a9a138d2ffe721b0f094f590ddea64a",
+    "derivative_sha256": "48498999b78712be70f0ba55846ddc6766382b952edbb3331ed7368e3e4f154b",
+    "original_size": [
+      4368,
+      2912
+    ],
+    "derivative_size": [
+      1600,
+      1067
+    ],
+    "format": "JPEG",
+    "original_mode": "RGB",
+    "derivative_mode": "RGB",
+    "original_bytes": 1288693,
+    "derivative_bytes": 264503
+  },
+  {
+    "path": "secret-vault/rectangle/pexels-indraprojectsofficial-27742642.jpg",
+    "original_sha256": "0a54a3b5e9299fd613a59e42d735c63744c7a78c915eb7d4b5f2214548f86b60",
+    "derivative_sha256": "c248ab8a65e908a4470125b463760b55fafdaada34fbae0bce46fd4565b2687f",
+    "original_size": [
+      5184,
+      3456
+    ],
+    "derivative_size": [
+      1600,
+      1067
+    ],
+    "format": "JPEG",
+    "original_mode": "RGB",
+    "derivative_mode": "RGB",
+    "original_bytes": 2069378,
+    "derivative_bytes": 224588
+  },
+  {
+    "path": "settings/block/nabeelshoukat-hd-iphone-wallpaper-8431262_1920.jpg",
+    "original_sha256": "8519eb8f7b12b6bfdca92d89c63581351cd82cc86c6983c8e841ff125d913171",
+    "derivative_sha256": "83db8d6b4770f1ce81afc125a8eca1d14a856945b6072018f6dd24ccba96c412",
+    "original_size": [
+      1280,
+      1920
+    ],
+    "derivative_size": [
+      1067,
+      1600
+    ],
+    "format": "JPEG",
+    "original_mode": "RGB",
+    "derivative_mode": "RGB",
+    "original_bytes": 374446,
+    "derivative_bytes": 266061
+  },
+  {
+    "path": "settings/block/stocksnap-gear-stick-923294_1920.jpg",
+    "original_sha256": "2cf292bd4154c260ba7eaeb0632e669d14e7d14fde9868784746dbeda24a952e",
+    "derivative_sha256": "68c56071c4c56d37e29450da3802fe09250a611f13c43d6ba1cbf78e6d4a86cb",
+    "original_size": [
+      1920,
+      1280
+    ],
+    "derivative_size": [
+      1600,
+      1067
+    ],
+    "format": "JPEG",
+    "original_mode": "RGB",
+    "derivative_mode": "RGB",
+    "original_bytes": 253304,
+    "derivative_bytes": 193238
+  },
+  {
+    "path": "settings/rectangle/bernhardfalkinger-gear-4913309_1920.jpg",
+    "original_sha256": "eb4102a7a468acc1372f10bd92d8525044bf3a56ad4968cd232620fb2e499446",
+    "derivative_sha256": "82c821759fdbbc72b7a523f68f6ea70f836b416e1b58f032c19babc2a168e83b",
+    "original_size": [
+      1920,
+      1269
+    ],
+    "derivative_size": [
+      1600,
+      1058
+    ],
+    "format": "JPEG",
+    "original_mode": "RGB",
+    "derivative_mode": "RGB",
+    "original_bytes": 572217,
+    "derivative_bytes": 432048
+  },
+  {
+    "path": "settings/rectangle/pavlofox-macro-1452987_1920.jpg",
+    "original_sha256": "9cd16b2a6aaa06df7f318416c33f79ffae3a41a4ba8d503f79575a3c43e93304",
+    "derivative_sha256": "41f3f19b4b083e8c2f83e6d42e820c50215eb56d3ef0b7fe9b767f58b295fd74",
+    "original_size": [
+      1920,
+      1252
+    ],
+    "derivative_size": [
+      1600,
+      1043
+    ],
+    "format": "JPEG",
+    "original_mode": "RGB",
+    "derivative_mode": "RGB",
+    "original_bytes": 1170280,
+    "derivative_bytes": 830040
+  },
+  {
+    "path": "skills/block/clarencealford-music-7504778_1920.jpg",
+    "original_sha256": "f73a427f7cbfd6f551cf5902c619937278772040217bd4c1f69f1adfb4ac771d",
+    "derivative_sha256": "dcea5c0572aad2f631fa9015a0ff27c98cac76e8a6c39f60a977614c58b039e5",
+    "original_size": [
+      1343,
+      1920
+    ],
+    "derivative_size": [
+      1119,
+      1600
+    ],
+    "format": "JPEG",
+    "original_mode": "RGB",
+    "derivative_mode": "RGB",
+    "original_bytes": 635644,
+    "derivative_bytes": 507539
+  },
+  {
+    "path": "skills/block/geralt-adult-education-3812693_1920.jpg",
+    "original_sha256": "6e9c8b8897fc125f5ead149c18e5602d7936ec2a84f17953e537b9fd900b6b26",
+    "derivative_sha256": "ec51cf40d821124ac7bb98b2b853762532be885b111fb96381d39e1f4cc42a80",
+    "original_size": [
+      1920,
+      1280
+    ],
+    "derivative_size": [
+      1600,
+      1067
+    ],
+    "format": "JPEG",
+    "original_mode": "RGB",
+    "derivative_mode": "RGB",
+    "original_bytes": 315155,
+    "derivative_bytes": 271986
+  },
+  {
+    "path": "skills/rectangle/mrha-pottery-10258355_1920.jpg",
+    "original_sha256": "a904efce61043d93eb263f65e263a891fd7b2d01637f3f968f95dad73a8ea40a",
+    "derivative_sha256": "d78c79f0a7c4b34af01e8893160da38e353614ebf880aed38c17096e988aee26",
+    "original_size": [
+      1920,
+      1280
+    ],
+    "derivative_size": [
+      1600,
+      1067
+    ],
+    "format": "JPEG",
+    "original_mode": "RGB",
+    "derivative_mode": "RGB",
+    "original_bytes": 460429,
+    "derivative_bytes": 325561
+  },
+  {
+    "path": "skills/rectangle/yousafbhutta-watercolor-7292245_1920.jpg",
+    "original_sha256": "38598ac314d0fd565c941ab09aa6d40e1770a38bd63660b1db0a665c2cb4407e",
+    "derivative_sha256": "368766d2a8f095a5a9232f311a2e61c194af07dba3a7f152a0f7de7f18e77492",
+    "original_size": [
+      1920,
+      1280
+    ],
+    "derivative_size": [
+      1600,
+      1067
+    ],
+    "format": "JPEG",
+    "original_mode": "RGB",
+    "derivative_mode": "RGB",
+    "original_bytes": 341394,
+    "derivative_bytes": 294954
+  },
+  {
+    "path": "visualization/block/pix1861-chart-1905225_1920.jpg",
+    "original_sha256": "92c43d68ea780caa5d20829efe8d8642012be88bbc3bd3d3cfa22d0f90b38df4",
+    "derivative_sha256": "42d6c62a3d13a9d3d5565d1851eb493ed63b67f773ff15868e0b5fb6b62e0918",
+    "original_size": [
+      1920,
+      1078
+    ],
+    "derivative_size": [
+      1600,
+      898
+    ],
+    "format": "JPEG",
+    "original_mode": "RGB",
+    "derivative_mode": "RGB",
+    "original_bytes": 662985,
+    "derivative_bytes": 504483
+  },
+  {
+    "path": "visualization/block/sergeitokmakov-stock-market-6693060_1920.jpg",
+    "original_sha256": "483ace503f5f97d3ff5a4a28c2f03ca76c463beb5b2250f346ff4becbcd56a6d",
+    "derivative_sha256": "c162af2a1f75335b914060b0f3df49500e7f9feb327bf0c7c6000b227f547cc2",
+    "original_size": [
+      1920,
+      1280
+    ],
+    "derivative_size": [
+      1600,
+      1067
+    ],
+    "format": "JPEG",
+    "original_mode": "RGB",
+    "derivative_mode": "RGB",
+    "original_bytes": 598186,
+    "derivative_bytes": 468896
+  },
+  {
+    "path": "visualization/rectangle/sergeitokmakov-stock-6283760_1920.jpg",
+    "original_sha256": "f87d032c743c4ac80e7b828bd26439c6b5a488c3782c7bc015902f77fbdfcf9e",
+    "derivative_sha256": "1ecdc0e7d6f611a81cc826382131275bc96e97dfd4619d2bd22a60db995cdcee",
+    "original_size": [
+      1920,
+      1280
+    ],
+    "derivative_size": [
+      1600,
+      1067
+    ],
+    "format": "JPEG",
+    "original_mode": "RGB",
+    "derivative_mode": "RGB",
+    "original_bytes": 725539,
+    "derivative_bytes": 552836
+  },
+  {
+    "path": "visualization/rectangle/sergeitokmakov-stock-6682491_1920.jpg",
+    "original_sha256": "1f2406f83af1b8f1aaaacaefbd6655625d5f177d6fb9f4f926bc77f64d82926b",
+    "derivative_sha256": "2429ec6607c5a1bd9223defc2c1dcb955b8179d96c688ad0d430262fd48600dd",
+    "original_size": [
+      1920,
+      1280
+    ],
+    "derivative_size": [
+      1600,
+      1067
+    ],
+    "format": "JPEG",
+    "original_mode": "RGB",
+    "derivative_mode": "RGB",
+    "original_bytes": 619777,
+    "derivative_bytes": 497272
+  }
+]

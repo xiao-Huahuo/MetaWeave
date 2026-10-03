@@ -169,6 +169,8 @@ npm run dist:win
 3. `npm run build:backend`: 使用 `pyinstaller --clean` 读取根目录 `AgentService.spec`，校验并内置 DSH SDK，生成 `dist/AgentService.exe`；SDK缺失时此步直接失败。
 4. `npm run build:win-installer`: 再次确认 Electron 运行时存在，为本次构建创建独立时间戳目录，并调用 electron-builder 生成 Windows NSIS 安装包。
 
+`app.asar` 只携带 Electron 壳、本地 `.cjs` 模块、图标和应用元数据，显式排除 `node_modules`。前端依赖由 Vite 构建并随内置后端提供，避免再次收集 Mermaid、ECharts 等依赖原包。开发依赖安装和 Vite 构建不受此过滤影响；若以后主进程或 preload 引入外部运行依赖，必须同步调整过滤范围。
+
 PyInstaller 开始时会把 `editor/dist/` 复制到唯一临时快照，后续归档只读取该不可变副本，避免另一个 Vite 构建替换哈希资源后生成残缺 exe；进程退出时自动删除快照。
 
 资源模板规则：

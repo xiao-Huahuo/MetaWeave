@@ -1,0 +1,151 @@
+{
+  "before": [
+    {
+      "floating": true,
+      "visible": false
+    },
+    {
+      "floating": false,
+      "visible": true
+    }
+  ],
+  "states": [
+    {
+      "step": "disabled-startup",
+      "windows": [
+        {
+          "id": 1,
+          "floating": false,
+          "visible": true,
+          "pid": 25612
+        }
+      ]
+    },
+    {
+      "step": "disable-before-first-use",
+      "windows": [
+        {
+          "id": 1,
+          "floating": false,
+          "visible": true,
+          "pid": 25612
+        }
+      ]
+    },
+    {
+      "step": "enabled-show",
+      "windows": [
+        {
+          "id": 2,
+          "floating": true,
+          "visible": true,
+          "pid": 30896
+        },
+        {
+          "id": 1,
+          "floating": false,
+          "visible": true,
+          "pid": 25612
+        }
+      ]
+    },
+    {
+      "step": "close-hides",
+      "windows": [
+        {
+          "id": 2,
+          "floating": true,
+          "visible": false,
+          "pid": 30896
+        },
+        {
+          "id": 1,
+          "floating": false,
+          "visible": true,
+          "pid": 25612
+        }
+      ]
+    },
+    {
+      "step": "manual-reopen",
+      "windows": [
+        {
+          "id": 2,
+          "floating": true,
+          "visible": true,
+          "pid": 30896
+        },
+        {
+          "id": 1,
+          "floating": false,
+          "visible": true,
+          "pid": 25612
+        }
+      ]
+    },
+    {
+      "step": "disable-after-use",
+      "windows": [
+        {
+          "id": 2,
+          "floating": true,
+          "visible": false,
+          "pid": 30896
+        },
+        {
+          "id": 1,
+          "floating": false,
+          "visible": true,
+          "pid": 25612
+        }
+      ]
+    },
+    {
+      "step": "manual-reopen-after-disable",
+      "windows": [
+        {
+          "id": 2,
+          "floating": true,
+          "visible": true,
+          "pid": 30896
+        },
+        {
+          "id": 1,
+          "floating": false,
+          "visible": true,
+          "pid": 25612
+        }
+      ]
+    },
+    {
+      "step": "destroyed-window",
+      "windows": [
+        {
+          "id": 1,
+          "floating": false,
+          "visible": true,
+          "pid": 25612
+        }
+      ]
+    },
+    {
+      "step": "manual-recreate",
+      "windows": [
+        {
+          "id": 3,
+          "floating": true,
+          "visible": true,
+          "pid": 20060
+        },
+        {
+          "id": 1,
+          "floating": false,
+          "visible": true,
+          "pid": 25612
+        }
+      ]
+    }
+  ],
+  "errors": [],
+  "userSettingsMutated": false
+}

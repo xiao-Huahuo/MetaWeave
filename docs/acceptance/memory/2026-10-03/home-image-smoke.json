@@ -1,0 +1,15 @@
+{
+  "decodedCount": 64,
+  "maximumEdge": 1600,
+  "carouselSlides": 10,
+  "navigationTiles": 6,
+  "selectedSlideTransform": "translateX(-200%)",
+  "browserErrors": [],
+  "imageFailures": [],
+  "originalRequests": [],
+  "screenshots": [
+    "home-thumbnails.png",
+    "home-thumbnails-carousel.png"
+  ],
+  "build": "vite build passed"
+}
