@@ -46,6 +46,7 @@ const props = defineProps<{
 }>()
 
 const emit = defineEmits<{
+  newConversation: []
   openHome: []
   toggleFile: []
   toggleGit: []
@@ -215,6 +216,18 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', closeActivityM
       }"
     ></span>
     <ThemeToggleButton :dark="isDark" @toggle="emit('toggleTheme')" />
+    <button
+      class="activity-button"
+      type="button"
+      title="新对话"
+      aria-label="新对话"
+      @mousedown.prevent="handleRipple"
+      @click="emit('newConversation'); closeActivityMenu()"
+    >
+      <IcIcon name="add" :size="18" />
+      <span class="activity-label">新对话</span>
+    </button>
+    <div class="new-conversation-divider" role="separator"></div>
     <button
       class="activity-button"
       :class="{ active: homeActive }"
@@ -738,6 +751,14 @@ onBeforeUnmount(() => document.removeEventListener('pointerdown', closeActivityM
     background 0.25s,
     border-color 0.25s,
     color 0.25s;
+}
+
+/* Separate the conversation action from workspace navigation in both sidebar modes. */
+.new-conversation-divider {
+  align-self: stretch;
+  flex-shrink: 0;
+  margin: var(--space-4) var(--space-6);
+  border-top: 1px solid var(--color-activity-bar-border);
 }
 
 .activity-button:hover,

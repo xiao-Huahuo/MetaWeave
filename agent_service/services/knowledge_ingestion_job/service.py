@@ -5,6 +5,7 @@
 - 每个文件形成独立数据库任务并按队列顺序执行。
 - 实际灌库运行在独立进程中，取消时可以立即终止阻塞中的 OCR 或模型推理。
 - 子进程只通过消息队列返回进度，主进程负责持久化和取消后的索引清理。
+- 执行与清理绑定任务持久化的知识库 ID，用户切库不会改变任务作用域。
 
 使用说明:
 应用启动时构造服务并调用 start();退出时调用 stop()。
@@ -164,8 +165,10 @@ class KnowledgeIngestionJobService:
         library = dict(profile.get("active_knowledge_library") or {})
         library_id = str(library.get("library_id") or "")
         # 同一档案快照同时确定目录和 ID，避免切库发生在两次读取之间。
-        root = (Path(str(library["knowledge_dir"])).expanduser().resolve() if profile_service
-                else self.knowledge_library_service.get_active_root_path(user_id=user_id))
+        if profile_service:
+            root = Path(str(library["knowledge_dir"])).expanduser().resolve()
+        else:
+            root = self.knowledge_library_service.get_active_root_path(user_id=user_id)
         records: list[KnowledgeIngestionJobRecord] = []
         now = _utc_now()
         for raw_path in dict.fromkeys(paths):

@@ -4,6 +4,7 @@
 </p>
 
 > v1.1.0 - 2026.10.2
+
 ![AI Native](https://img.shields.io/badge/AI-native-8A2BE2) ![Multimodal](https://img.shields.io/badge/knowledge-multimodal-FF6F61) [![GitHub Release](https://img.shields.io/github/v/release/xiao-Huahuo/MetaWeave?include_prereleases)](https://github.com/xiao-Huahuo/MetaWeave/releases/latest) ![Agent](https://img.shields.io/badge/system-AI_Agent-8B5CF6) ![AgenticRAG](https://img.shields.io/badge/retrieval-AgenticRAG-7C3AED) ![Multi Agent](https://img.shields.io/badge/Agent-multi--agent-8B5CF6) ![Knowledge Base](https://img.shields.io/badge/product-knowledge_base-0EA5E9) ![Knowledge Graph](https://img.shields.io/badge/knowledge-graph-2563EB) ![Markdown](https://img.shields.io/badge/editor-Markdown-000000?logo=markdown&logoColor=white) ![LaTeX](https://img.shields.io/badge/typesetting-LaTeX-008080?logo=latex&logoColor=white) ![MCP](https://img.shields.io/badge/protocol-MCP-8B5CF6) ![PaddleOCR](https://img.shields.io/badge/OCR-PaddleOCR-005BAC) [![DSH Runtime SDK](https://img.shields.io/badge/DSH_Runtime_SDK-47f9438-4224EB)](https://github.com/deepseek-ai/deepseek-harness/commit/47f943859bef60e4160492346772ded9b24f765a)
 # MetaWeave 元织
 ## 0. 背景
@@ -312,7 +313,7 @@
 ## 1. 项目概述
 
 ### 1.1 MetaWeave 是什么
-元织（MetaWeave）是一款Agent-Native的本地优先个人知识操作系统。系统兼容了多个文件管理与知识库操作平台的基本能力，以AI Agent为操作中枢，将文件、科研文献、智能表格、组件和语义知识图谱等异构知识形态进行“编织”，形成高度集成的元知识智慧工作台。
+元织（MetaWeave）是一款Agent原生的个人知识库。系统是一款将文件、科研文献、智能表格、组件和语义知识图谱等异构知识形态统一关联的AI Agent操作中枢。
 ### 1.2 核心能力与整体结构
 #### 1.2.1 核心能力
 元织依据知识的生命周期（阅读 - 组织 - 检索 - 集成） 来建立全链路功能：
@@ -1746,8 +1747,8 @@ Agent 可以在同一条回答中使用普通链接、图片、独立知识块�
 
 #### 5.5.2 知识块的主动挂载与来源展示
 
-搜索只返回候选知识。回答下方不会自动挂载全部搜索结果；Agent 标注 K 来源编号也不会触发独立知识块。需要展示某个对象时，由 Agent 主动选择，调用统一的 `get_knowledge_url`，再把返回 URL 放入单独一段的 Markdown 链接中。只调用 URL 工具而没有在回答中使用链接，也不会挂载。
 
+当 Agent 需要展示某个对象时，由 Agent 主动选择，调用获取url的工具 `get_knowledge_url`，再把返回 URL 放入单独一段的 Markdown 链接中。
 `get_knowledge_url` 支持两种选择方式：
 
 - 搜索结果已经提供引用编号时，使用 `get_knowledge_url(citation_id="K2")`；工具根据本轮真实来源确定库形态和对象。

@@ -366,6 +366,12 @@ function openAgentPage() {
   agentSidebarOpen.value = false
 }
 
+/** Navigate immediately and reuse the Agent panel's existing blank-conversation action. */
+function startNewConversation() {
+  workspaceStore.pendingAgentNewConversation = true
+  openAgentPage()
+}
+
 /** Open the durable Agent task board from the activity bar. */
 function openAgentQueue() {
   workspaceStore.setMainView('agent-queue')
@@ -821,6 +827,7 @@ watch(
         :display-mode="settingsStore.sidebarDisplayMode"
         :is-dark="settingsStore.isDark"
         @open-home="openHome"
+        @new-conversation="startNewConversation"
         @toggle-file="toggleFileSidebar"
         @toggle-git="toggleLeftGitSidebar"
         @open-resources="openResources"

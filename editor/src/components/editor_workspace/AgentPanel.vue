@@ -627,6 +627,13 @@ watch(
   { immediate: true },
 )
 
+/** Consume only in the main Agent surface; sidebar and pinned task panels must not steal the request. */
+watch(() => workspaceStore.pendingAgentNewConversation, (pending) => {
+  if (!pending || props.sessionId || (props.mode !== 'page' && !props.mobileMain)) return
+  startNewConversationDraft()
+  workspaceStore.pendingAgentNewConversation = false
+}, { immediate: true })
+
 watch(() => workspaceStore.pendingAgentPrompt, (prompt) => {
   if (prompt) {
     void sendMessage(prompt)

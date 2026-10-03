@@ -1,0 +1,962 @@
+[
+  {
+    "path": "agent\\block\\anaterate-woman-8026954_1920.jpg",
+    "original": [
+      1477,
+      1920
+    ],
+    "resized": [
+      1231,
+      1600
+    ],
+    "original_rgba": 11343360,
+    "resized_rgba": 7878400,
+    "original_file": 739732,
+    "resized_file": 400644
+  },
+  {
+    "path": "agent\\block\\juliush-ai-generated-7775990_1920.jpg",
+    "original": [
+      1920,
+      1920
+    ],
+    "resized": [
+      1600,
+      1600
+    ],
+    "original_rgba": 14745600,
+    "resized_rgba": 10240000,
+    "original_file": 451476,
+    "resized_file": 243097
+  },
+  {
+    "path": "agent\\rectangle\\brianpenny-artificial-intelligence-7450797_1920.jpg",
+    "original": [
+      1920,
+      1280
+    ],
+    "resized": [
+      1600,
+      1067
+    ],
+    "original_rgba": 9830400,
+    "resized_rgba": 6828800,
+    "original_file": 453997,
+    "resized_file": 238246
+  },
+  {
+    "path": "agent\\rectangle\\rox_buwa-electronic-5902163_1920.jpg",
+    "original": [
+      1920,
+      1080
+    ],
+    "resized": [
+      1600,
+      900
+    ],
+    "original_rgba": 8294400,
+    "resized_rgba": 5760000,
+    "original_file": 434536,
+    "resized_file": 254423
+  },
+  {
+    "path": "browser\\block\\pexels-asphotography-5494323.jpg",
+    "original": [
+      4684,
+      3123
+    ],
+    "resized": [
+      1600,
+      1067
+    ],
+    "original_rgba": 58512528,
+    "resized_rgba": 6828800,
+    "original_file": 1072002,
+    "resized_file": 102226
+  },
+  {
+    "path": "browser\\block\\pexels-deepanker70-1482061.jpg",
+    "original": [
+      4496,
+      3000
+    ],
+    "resized": [
+      1600,
+      1068
+    ],
+    "original_rgba": 53952000,
+    "resized_rgba": 6835200,
+    "original_file": 609325,
+    "resized_file": 95437
+  },
+  {
+    "path": "browser\\rectangle\\pexels-asphotography-218717.jpg",
+    "original": [
+      6016,
+      4016
+    ],
+    "resized": [
+      1600,
+      1068
+    ],
+    "original_rgba": 96641024,
+    "resized_rgba": 6835200,
+    "original_file": 1318909,
+    "resized_file": 121981
+  },
+  {
+    "path": "browser\\rectangle\\pexels-deepanker70-1482061.jpg",
+    "original": [
+      4496,
+      3000
+    ],
+    "resized": [
+      1600,
+      1068
+    ],
+    "original_rgba": 53952000,
+    "resized_rgba": 6835200,
+    "original_file": 609325,
+    "resized_file": 95437
+  },
+  {
+    "path": "components-vault\\block\\img.png",
+    "original": [
+      1257,
+      1141
+    ],
+    "resized": [
+      1257,
+      1141
+    ],
+    "original_rgba": 5736948,
+    "resized_rgba": 5736948,
+    "original_file": 228331,
+    "resized_file": 105521
+  },
+  {
+    "path": "components-vault\\block\\img_1.png",
+    "original": [
+      1244,
+      1140
+    ],
+    "resized": [
+      1244,
+      1140
+    ],
+    "original_rgba": 5672640,
+    "resized_rgba": 5672640,
+    "original_file": 95121,
+    "resized_file": 93583
+  },
+  {
+    "path": "components-vault\\rectangle\\img.png",
+    "original": [
+      1479,
+      781
+    ],
+    "resized": [
+      1479,
+      781
+    ],
+    "original_rgba": 4620396,
+    "resized_rgba": 4620396,
+    "original_file": 85805,
+    "resized_file": 49921
+  },
+  {
+    "path": "components-vault\\rectangle\\img_1.png",
+    "original": [
+      1257,
+      928
+    ],
+    "resized": [
+      1257,
+      928
+    ],
+    "original_rgba": 4665984,
+    "resized_rgba": 4665984,
+    "original_file": 149849,
+    "resized_file": 88399
+  },
+  {
+    "path": "debug\\block\\clarkdonald413-linux-4259595_1920.jpg",
+    "original": [
+      1729,
+      1920
+    ],
+    "resized": [
+      1441,
+      1600
+    ],
+    "original_rgba": 13278720,
+    "resized_rgba": 9222400,
+    "original_file": 839062,
+    "resized_file": 435418
+  },
+  {
+    "path": "debug\\block\\suixin390-data-5606639_1920.jpg",
+    "original": [
+      1920,
+      1282
+    ],
+    "resized": [
+      1600,
+      1068
+    ],
+    "original_rgba": 9845760,
+    "resized_rgba": 6835200,
+    "original_file": 706712,
+    "resized_file": 275955
+  },
+  {
+    "path": "debug\\rectangle\\fernandoz-work-environment-10392555_1920.jpg",
+    "original": [
+      1920,
+      1072
+    ],
+    "resized": [
+      1600,
+      893
+    ],
+    "original_rgba": 8232960,
+    "resized_rgba": 5715200,
+    "original_file": 386978,
+    "resized_file": 204169
+  },
+  {
+    "path": "debug\\rectangle\\stocksnap-coding-924920_1920.jpg",
+    "original": [
+      1920,
+      1280
+    ],
+    "resized": [
+      1600,
+      1067
+    ],
+    "original_rgba": 9830400,
+    "resized_rgba": 6828800,
+    "original_file": 371458,
+    "resized_file": 170235
+  },
+  {
+    "path": "files\\block\\godoycordoba-firm-2003808_1920.jpg",
+    "original": [
+      1920,
+      1280
+    ],
+    "resized": [
+      1600,
+      1067
+    ],
+    "original_rgba": 9830400,
+    "resized_rgba": 6828800,
+    "original_file": 379938,
+    "resized_file": 175065
+  },
+  {
+    "path": "files\\block\\jarmoluk-architect-254579_1920.jpg",
+    "original": [
+      1920,
+      1272
+    ],
+    "resized": [
+      1600,
+      1060
+    ],
+    "original_rgba": 9768960,
+    "resized_rgba": 6784000,
+    "original_file": 467127,
+    "resized_file": 230557
+  },
+  {
+    "path": "files\\rectangle\\bru-no-coffee-2737047_1920.jpg",
+    "original": [
+      1920,
+      1280
+    ],
+    "resized": [
+      1600,
+      1067
+    ],
+    "original_rgba": 9830400,
+    "resized_rgba": 6828800,
+    "original_file": 468938,
+    "resized_file": 231680
+  },
+  {
+    "path": "files\\rectangle\\vargazs-folder-1049826_1920.jpg",
+    "original": [
+      1920,
+      1280
+    ],
+    "resized": [
+      1600,
+      1067
+    ],
+    "original_rgba": 9830400,
+    "resized_rgba": 6828800,
+    "original_file": 399297,
+    "resized_file": 205271
+  },
+  {
+    "path": "graph\\block\\6db9dcb0f4e3bc1d662bb2aeff324500.jpg",
+    "original": [
+      1056,
+      1284
+    ],
+    "resized": [
+      1056,
+      1284
+    ],
+    "original_rgba": 5423616,
+    "resized_rgba": 5423616,
+    "original_file": 694392,
+    "resized_file": 288510
+  },
+  {
+    "path": "graph\\block\\PixPin_2026-08-05_14-53-50.png",
+    "original": [
+      756,
+      699
+    ],
+    "resized": [
+      756,
+      699
+    ],
+    "original_rgba": 2113776,
+    "resized_rgba": 2113776,
+    "original_file": 200884,
+    "resized_file": 60582
+  },
+  {
+    "path": "graph\\rectangle\\PixPin_2026-08-05_14-53-03.png",
+    "original": [
+      2345,
+      1246
+    ],
+    "resized": [
+      1600,
+      850
+    ],
+    "original_rgba": 11687480,
+    "resized_rgba": 5440000,
+    "original_file": 859959,
+    "resized_file": 125988
+  },
+  {
+    "path": "graph\\rectangle\\PixPin_2026-08-05_14-54-33.png",
+    "original": [
+      1333,
+      766
+    ],
+    "resized": [
+      1333,
+      766
+    ],
+    "original_rgba": 4084312,
+    "resized_rgba": 4084312,
+    "original_file": 399824,
+    "resized_file": 91652
+  },
+  {
+    "path": "intelligent-forms\\block\\img.png",
+    "original": [
+      511,
+      481
+    ],
+    "resized": [
+      511,
+      481
+    ],
+    "original_rgba": 983164,
+    "resized_rgba": 983164,
+    "original_file": 185157,
+    "resized_file": 43637
+  },
+  {
+    "path": "intelligent-forms\\block\\img_1.png",
+    "original": [
+      510,
+      496
+    ],
+    "resized": [
+      510,
+      496
+    ],
+    "original_rgba": 1011840,
+    "resized_rgba": 1011840,
+    "original_file": 175199,
+    "resized_file": 47615
+  },
+  {
+    "path": "intelligent-forms\\rectangle\\img.png",
+    "original": [
+      1591,
+      839
+    ],
+    "resized": [
+      1591,
+      839
+    ],
+    "original_rgba": 5339396,
+    "resized_rgba": 5339396,
+    "original_file": 190021,
+    "resized_file": 175743
+  },
+  {
+    "path": "intelligent-forms\\rectangle\\pexels-mikhail-nilov-7735708.jpg",
+    "original": [
+      3583,
+      2614
+    ],
+    "resized": [
+      1600,
+      1167
+    ],
+    "original_rgba": 37463848,
+    "resized_rgba": 7468800,
+    "original_file": 457766,
+    "resized_file": 172509
+  },
+  {
+    "path": "library\\block\\nelistaneva-woman-9064449_1920.jpg",
+    "original": [
+      1920,
+      1920
+    ],
+    "resized": [
+      1600,
+      1600
+    ],
+    "original_rgba": 14745600,
+    "resized_rgba": 10240000,
+    "original_file": 973043,
+    "resized_file": 560656
+  },
+  {
+    "path": "library\\block\\stocksnap-books-2596809_1920.jpg",
+    "original": [
+      1920,
+      1775
+    ],
+    "resized": [
+      1600,
+      1479
+    ],
+    "original_rgba": 13632000,
+    "resized_rgba": 9465600,
+    "original_file": 559721,
+    "resized_file": 255869
+  },
+  {
+    "path": "library\\rectangle\\alexandra_koch-library-7976837_1920.jpg",
+    "original": [
+      1920,
+      1280
+    ],
+    "resized": [
+      1600,
+      1067
+    ],
+    "original_rgba": 9830400,
+    "resized_rgba": 6828800,
+    "original_file": 1107471,
+    "resized_file": 596349
+  },
+  {
+    "path": "library\\rectangle\\ejaera-library-7598247_1920.jpg",
+    "original": [
+      1920,
+      1280
+    ],
+    "resized": [
+      1600,
+      1067
+    ],
+    "original_rgba": 9830400,
+    "resized_rgba": 6828800,
+    "original_file": 589266,
+    "resized_file": 270705
+  },
+  {
+    "path": "literature-reading\\block\\pexels-mikhail-nilov-8851450.jpg",
+    "original": [
+      5304,
+      7952
+    ],
+    "resized": [
+      1067,
+      1600
+    ],
+    "original_rgba": 168709632,
+    "resized_rgba": 6828800,
+    "original_file": 2802200,
+    "resized_file": 144934
+  },
+  {
+    "path": "literature-reading\\block\\pexels-omeraydin-16869636.jpg",
+    "original": [
+      3840,
+      5760
+    ],
+    "resized": [
+      1067,
+      1600
+    ],
+    "original_rgba": 88473600,
+    "resized_rgba": 6828800,
+    "original_file": 2690470,
+    "resized_file": 246921
+  },
+  {
+    "path": "literature-reading\\rectangle\\pexels-46792860-10493203.jpg",
+    "original": [
+      5760,
+      3840
+    ],
+    "resized": [
+      1600,
+      1067
+    ],
+    "original_rgba": 88473600,
+    "resized_rgba": 6828800,
+    "original_file": 949418,
+    "resized_file": 173456
+  },
+  {
+    "path": "literature-reading\\rectangle\\pexels-pixabay-261857.jpg",
+    "original": [
+      5115,
+      3410
+    ],
+    "resized": [
+      1600,
+      1067
+    ],
+    "original_rgba": 69768600,
+    "resized_rgba": 6828800,
+    "original_file": 1828590,
+    "resized_file": 437459
+  },
+  {
+    "path": "md-html\\block\\chas_artist-laptop-10381734_1920.jpg",
+    "original": [
+      1920,
+      1920
+    ],
+    "resized": [
+      1600,
+      1600
+    ],
+    "original_rgba": 14745600,
+    "resized_rgba": 10240000,
+    "original_file": 570684,
+    "resized_file": 294418
+  },
+  {
+    "path": "md-html\\block\\pexels-laptop-1836990_1920.jpg",
+    "original": [
+      1920,
+      1280
+    ],
+    "resized": [
+      1600,
+      1067
+    ],
+    "original_rgba": 9830400,
+    "resized_rgba": 6828800,
+    "original_file": 404728,
+    "resized_file": 191141
+  },
+  {
+    "path": "md-html\\rectangle\\marijana1-science-3480102_1920.jpg",
+    "original": [
+      1920,
+      1281
+    ],
+    "resized": [
+      1600,
+      1068
+    ],
+    "original_rgba": 9838080,
+    "resized_rgba": 6835200,
+    "original_file": 452978,
+    "resized_file": 227945
+  },
+  {
+    "path": "md-html\\rectangle\\pexels-blur-1853262_1920.jpg",
+    "original": [
+      1920,
+      1440
+    ],
+    "resized": [
+      1600,
+      1200
+    ],
+    "original_rgba": 11059200,
+    "resized_rgba": 7680000,
+    "original_file": 337562,
+    "resized_file": 155441
+  },
+  {
+    "path": "mission-queue\\block\\1bc2561a4ee0a2df09aafe0aade288b6.jpg",
+    "original": [
+      1398,
+      1280
+    ],
+    "resized": [
+      1398,
+      1280
+    ],
+    "original_rgba": 7157760,
+    "resized_rgba": 7157760,
+    "original_file": 431461,
+    "resized_file": 180418
+  },
+  {
+    "path": "mission-queue\\block\\pexels-jakubzerdzicki-38888701.jpg",
+    "original": [
+      2000,
+      3000
+    ],
+    "resized": [
+      1067,
+      1600
+    ],
+    "original_rgba": 24000000,
+    "resized_rgba": 6828800,
+    "original_file": 244907,
+    "resized_file": 104642
+  },
+  {
+    "path": "mission-queue\\rectangle\\img.png",
+    "original": [
+      459,
+      368
+    ],
+    "resized": [
+      459,
+      368
+    ],
+    "original_rgba": 675648,
+    "resized_rgba": 675648,
+    "original_file": 231680,
+    "resized_file": 22708
+  },
+  {
+    "path": "mission-queue\\rectangle\\pexels-jakubzerdzicki-36950612.jpg",
+    "original": [
+      3100,
+      1744
+    ],
+    "resized": [
+      1600,
+      900
+    ],
+    "original_rgba": 21625600,
+    "resized_rgba": 5760000,
+    "original_file": 342672,
+    "resized_file": 123826
+  },
+  {
+    "path": "search\\block\\422737-google-485611_1920.jpg",
+    "original": [
+      1920,
+      1357
+    ],
+    "resized": [
+      1600,
+      1131
+    ],
+    "original_rgba": 10421760,
+    "resized_rgba": 7238400,
+    "original_file": 2250256,
+    "resized_file": 159777
+  },
+  {
+    "path": "search\\block\\anatoly777-newspaper-3844071_1920.jpg",
+    "original": [
+      1920,
+      1328
+    ],
+    "resized": [
+      1600,
+      1107
+    ],
+    "original_rgba": 10199040,
+    "resized_rgba": 7084800,
+    "original_file": 661695,
+    "resized_file": 343039
+  },
+  {
+    "path": "search\\rectangle\\fernandozhiminaicela-technology-3184426_1920.jpg",
+    "original": [
+      1920,
+      1285
+    ],
+    "resized": [
+      1600,
+      1071
+    ],
+    "original_rgba": 9868800,
+    "resized_rgba": 6854400,
+    "original_file": 273048,
+    "resized_file": 126232
+  },
+  {
+    "path": "search\\rectangle\\roksana96-telescope-5154664_1920.jpg",
+    "original": [
+      1920,
+      1282
+    ],
+    "resized": [
+      1600,
+      1068
+    ],
+    "original_rgba": 9845760,
+    "resized_rgba": 6835200,
+    "original_file": 380760,
+    "resized_file": 145056
+  },
+  {
+    "path": "secret-vault\\block\\img.png",
+    "original": [
+      451,
+      381
+    ],
+    "resized": [
+      451,
+      381
+    ],
+    "original_rgba": 687324,
+    "resized_rgba": 687324,
+    "original_file": 180202,
+    "resized_file": 20438
+  },
+  {
+    "path": "secret-vault\\block\\img_1.png",
+    "original": [
+      437,
+      380
+    ],
+    "resized": [
+      437,
+      380
+    ],
+    "original_rgba": 664240,
+    "resized_rgba": 664240,
+    "original_file": 184951,
+    "resized_file": 20603
+  },
+  {
+    "path": "secret-vault\\rectangle\\pexels-charldurand-6486122.jpg",
+    "original": [
+      4368,
+      2912
+    ],
+    "resized": [
+      1600,
+      1067
+    ],
+    "original_rgba": 50878464,
+    "resized_rgba": 6828800,
+    "original_file": 1288693,
+    "resized_file": 149044
+  },
+  {
+    "path": "secret-vault\\rectangle\\pexels-indraprojectsofficial-27742642.jpg",
+    "original": [
+      5184,
+      3456
+    ],
+    "resized": [
+      1600,
+      1067
+    ],
+    "original_rgba": 71663616,
+    "resized_rgba": 6828800,
+    "original_file": 2069378,
+    "resized_file": 126591
+  },
+  {
+    "path": "settings\\block\\nabeelshoukat-hd-iphone-wallpaper-8431262_1920.jpg",
+    "original": [
+      1280,
+      1920
+    ],
+    "resized": [
+      1067,
+      1600
+    ],
+    "original_rgba": 9830400,
+    "resized_rgba": 6828800,
+    "original_file": 374446,
+    "resized_file": 155802
+  },
+  {
+    "path": "settings\\block\\stocksnap-gear-stick-923294_1920.jpg",
+    "original": [
+      1920,
+      1280
+    ],
+    "resized": [
+      1600,
+      1067
+    ],
+    "original_rgba": 9830400,
+    "resized_rgba": 6828800,
+    "original_file": 253304,
+    "resized_file": 116262
+  },
+  {
+    "path": "settings\\rectangle\\bernhardfalkinger-gear-4913309_1920.jpg",
+    "original": [
+      1920,
+      1269
+    ],
+    "resized": [
+      1600,
+      1058
+    ],
+    "original_rgba": 9745920,
+    "resized_rgba": 6771200,
+    "original_file": 572217,
+    "resized_file": 283193
+  },
+  {
+    "path": "settings\\rectangle\\pavlofox-macro-1452987_1920.jpg",
+    "original": [
+      1920,
+      1252
+    ],
+    "resized": [
+      1600,
+      1043
+    ],
+    "original_rgba": 9615360,
+    "resized_rgba": 6675200,
+    "original_file": 1170280,
+    "resized_file": 651926
+  },
+  {
+    "path": "skills\\block\\clarencealford-music-7504778_1920.jpg",
+    "original": [
+      1343,
+      1920
+    ],
+    "resized": [
+      1119,
+      1600
+    ],
+    "original_rgba": 10314240,
+    "resized_rgba": 7161600,
+    "original_file": 635644,
+    "resized_file": 321500
+  },
+  {
+    "path": "skills\\block\\geralt-adult-education-3812693_1920.jpg",
+    "original": [
+      1920,
+      1280
+    ],
+    "resized": [
+      1600,
+      1067
+    ],
+    "original_rgba": 9830400,
+    "resized_rgba": 6828800,
+    "original_file": 315155,
+    "resized_file": 158164
+  },
+  {
+    "path": "skills\\rectangle\\mrha-pottery-10258355_1920.jpg",
+    "original": [
+      1920,
+      1280
+    ],
+    "resized": [
+      1600,
+      1067
+    ],
+    "original_rgba": 9830400,
+    "resized_rgba": 6828800,
+    "original_file": 460429,
+    "resized_file": 203182
+  },
+  {
+    "path": "skills\\rectangle\\yousafbhutta-watercolor-7292245_1920.jpg",
+    "original": [
+      1920,
+      1280
+    ],
+    "resized": [
+      1600,
+      1067
+    ],
+    "original_rgba": 9830400,
+    "resized_rgba": 6828800,
+    "original_file": 341394,
+    "resized_file": 177535
+  },
+  {
+    "path": "visualization\\block\\pix1861-chart-1905225_1920.jpg",
+    "original": [
+      1920,
+      1078
+    ],
+    "resized": [
+      1600,
+      898
+    ],
+    "original_rgba": 8279040,
+    "resized_rgba": 5747200,
+    "original_file": 662985,
+    "resized_file": 330181
+  },
+  {
+    "path": "visualization\\block\\sergeitokmakov-stock-market-6693060_1920.jpg",
+    "original": [
+      1920,
+      1280
+    ],
+    "resized": [
+      1600,
+      1067
+    ],
+    "original_rgba": 9830400,
+    "resized_rgba": 6828800,
+    "original_file": 598186,
+    "resized_file": 274883
+  },
+  {
+    "path": "visualization\\rectangle\\sergeitokmakov-stock-6283760_1920.jpg",
+    "original": [
+      1920,
+      1280
+    ],
+    "resized": [
+      1600,
+      1067
+    ],
+    "original_rgba": 9830400,
+    "resized_rgba": 6828800,
+    "original_file": 725539,
+    "resized_file": 371236
+  },
+  {
+    "path": "visualization\\rectangle\\sergeitokmakov-stock-6682491_1920.jpg",
+    "original": [
+      1920,
+      1280
+    ],
+    "resized": [
+      1600,
+      1067
+    ],
+    "original_rgba": 9830400,
+    "resized_rgba": 6828800,
+    "original_file": 619777,
+    "resized_file": 300686
+  }
+]

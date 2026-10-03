@@ -85,12 +85,17 @@ def test_cleanup_remains_in_submitted_library_after_switch(libraries, outcome: s
     assert selected_library.get() is None
 
 
-def test_worker_pins_original_library_without_changing_active_setting(libraries, monkeypatch) -> None:
-    """子进程入口必须显式绑定原库，完成后释放上下文且保留 B 为当前库。"""
+@pytest.mark.parametrize("available", [True, False])
+def test_worker_pins_original_library_without_changing_active_setting(libraries, monkeypatch, available: bool) -> None:
+    """子进程绑定原库；原库不存在时返回错误，完成或失败都释放上下文。"""
 
     env = libraries
     job = env.jobs.submit(user_id="u1", paths=["note.md"])[0]
     env.settings.update_knowledge_dir(user_id="u1", knowledge_dir=str(env.roots["B"]))
+    if not available:
+        with Session(env.engine) as db:
+            db.delete(db.get(UserKnowledgeLibrary, env.ids["A"]))
+            db.commit()
     import agent_service.services.knowledge_library as library_module
     import agent_service.services.knowledge_graph as graph_module
     import agent_service.services.memory.longterm_memory_service as memory_module
@@ -113,8 +118,8 @@ def test_worker_pins_original_library_without_changing_active_setting(libraries,
     events = Queue()
     job_module._run_ingestion_worker("u1", job["library_id"], "note.md", events)
     event = events.get_nowait()
-    assert event["type"] == "done", event
-    assert seen == [(env.ids["A"], "# A")]
+    assert event["type"] == ("done" if available else "error"), event
+    assert seen == ([(env.ids["A"], "# A")] if available else [])
     assert selected_library.get() is None
     assert env.settings.ensure_user_profile(user_id="u1")["active_library_id"] == env.ids["B"]
 

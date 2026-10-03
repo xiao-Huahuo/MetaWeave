@@ -1,0 +1,2728 @@
+[
+  {
+    "name": "original-both",
+    "images": "original",
+    "floating": true,
+    "windowInfo": [
+      {
+        "pid": 29312,
+        "floating": true,
+        "visible": false,
+        "bounds": {
+          "x": 794,
+          "y": 466,
+          "width": 461,
+          "height": 181
+        }
+      },
+      {
+        "pid": 30300,
+        "floating": false,
+        "visible": true,
+        "bounds": {
+          "x": 304,
+          "y": 92,
+          "width": 1440,
+          "height": 920
+        }
+      }
+    ],
+    "dom": [
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/files/rectangle/bru-no-coffee-2737047_1920.jpg\")",
+        "width": 693.5875244140625,
+        "height": 391.6000061035156
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/library/rectangle/ejaera-library-7598247_1920.jpg\")",
+        "width": 693.5875244140625,
+        "height": 391.6000061035156
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/components-vault/rectangle/img.png\")",
+        "width": 693.5875244140625,
+        "height": 391.6000061035156
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/secret-vault/rectangle/pexels-charldurand-6486122.jpg\")",
+        "width": 693.5875244140625,
+        "height": 391.6000061035156
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/intelligent-forms/rectangle/img.png\")",
+        "width": 693.5875244140625,
+        "height": 391.6000061035156
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/literature-reading/rectangle/pexels-pixabay-261857.jpg\")",
+        "width": 693.5875244140625,
+        "height": 391.6000061035156
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/agent/rectangle/rox_buwa-electronic-5902163_1920.jpg\")",
+        "width": 469.6125183105469,
+        "height": 189
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/mission-queue/rectangle/pexels-jakubzerdzicki-36950612.jpg\")",
+        "width": 469.6125183105469,
+        "height": 189
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/search/block/422737-google-485611_1920.jpg\")",
+        "width": 339.9875183105469,
+        "height": 391.6000061035156
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/graph/block/PixPin_2026-08-05_14-53-50.png\")",
+        "width": 340,
+        "height": 391.6000061035156
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/visualization/rectangle/sergeitokmakov-stock-6682491_1920.jpg\")",
+        "width": 228,
+        "height": 189
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/browser/rectangle/pexels-asphotography-218717.jpg\")",
+        "width": 228.0124969482422,
+        "height": 189
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/debug/rectangle/fernandoz-work-environment-10392555_1920.jpg\")",
+        "width": 469.6125183105469,
+        "height": 189
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/md-html/rectangle/pexels-blur-1853262_1920.jpg\")",
+        "width": 469.6125183105469,
+        "height": 189
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/settings/rectangle/pavlofox-macro-1452987_1920.jpg\")",
+        "width": 469.6125183105469,
+        "height": 189
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/skills/rectangle/mrha-pottery-10258355_1920.jpg\")",
+        "width": 469.6125183105469,
+        "height": 189
+      }
+    ],
+    "loadedImages": [
+      "agent/rectangle/brianpenny-artificial-intelligence-7450797_1920.jpg",
+      "agent/rectangle/rox_buwa-electronic-5902163_1920.jpg",
+      "browser/rectangle/pexels-asphotography-218717.jpg",
+      "browser/rectangle/pexels-deepanker70-1482061.jpg",
+      "components-vault/rectangle/img.png",
+      "components-vault/rectangle/img_1.png",
+      "debug/rectangle/fernandoz-work-environment-10392555_1920.jpg",
+      "debug/rectangle/stocksnap-coding-924920_1920.jpg",
+      "files/rectangle/bru-no-coffee-2737047_1920.jpg",
+      "files/rectangle/vargazs-folder-1049826_1920.jpg",
+      "graph/block/6db9dcb0f4e3bc1d662bb2aeff324500.jpg",
+      "graph/block/PixPin_2026-08-05_14-53-50.png",
+      "intelligent-forms/rectangle/img.png",
+      "intelligent-forms/rectangle/pexels-mikhail-nilov-7735708.jpg",
+      "library/rectangle/alexandra_koch-library-7976837_1920.jpg",
+      "library/rectangle/ejaera-library-7598247_1920.jpg",
+      "literature-reading/rectangle/pexels-pixabay-261857.jpg",
+      "md-html/rectangle/marijana1-science-3480102_1920.jpg",
+      "md-html/rectangle/pexels-blur-1853262_1920.jpg",
+      "mission-queue/rectangle/img.png",
+      "mission-queue/rectangle/pexels-jakubzerdzicki-36950612.jpg",
+      "search/block/422737-google-485611_1920.jpg",
+      "search/block/anatoly777-newspaper-3844071_1920.jpg",
+      "secret-vault/rectangle/pexels-charldurand-6486122.jpg",
+      "secret-vault/rectangle/pexels-indraprojectsofficial-27742642.jpg",
+      "settings/rectangle/pavlofox-macro-1452987_1920.jpg",
+      "skills/rectangle/mrha-pottery-10258355_1920.jpg",
+      "skills/rectangle/yousafbhutta-watercolor-7292245_1920.jpg",
+      "visualization/rectangle/sergeitokmakov-stock-6283760_1920.jpg",
+      "visualization/rectangle/sergeitokmakov-stock-6682491_1920.jpg"
+    ],
+    "errors": [],
+    "samples": [
+      [
+        {
+          "pid": 9212,
+          "rss": 167501824,
+          "uss": 74399744,
+          "commit": 95866880,
+          "type": "Browser",
+          "window": null
+        },
+        {
+          "pid": 27756,
+          "rss": 969089024,
+          "uss": 904044544,
+          "commit": 965320704,
+          "type": "GPU",
+          "window": null
+        },
+        {
+          "pid": 14672,
+          "rss": 62906368,
+          "uss": 19722240,
+          "commit": 25665536,
+          "type": "Utility",
+          "window": null
+        },
+        {
+          "pid": 30300,
+          "rss": 595775488,
+          "uss": 323878912,
+          "commit": 359178240,
+          "type": "Tab",
+          "window": "main"
+        },
+        {
+          "pid": 29312,
+          "rss": 272310272,
+          "uss": 192180224,
+          "commit": 208322560,
+          "type": "Tab",
+          "window": "floating"
+        }
+      ],
+      [
+        {
+          "pid": 9212,
+          "rss": 167501824,
+          "uss": 74399744,
+          "commit": 95866880,
+          "type": "Browser",
+          "window": null
+        },
+        {
+          "pid": 27756,
+          "rss": 970309632,
+          "uss": 900956160,
+          "commit": 957591552,
+          "type": "GPU",
+          "window": null
+        },
+        {
+          "pid": 14672,
+          "rss": 62935040,
+          "uss": 19726336,
+          "commit": 25669632,
+          "type": "Utility",
+          "window": null
+        },
+        {
+          "pid": 30300,
+          "rss": 601198592,
+          "uss": 324665344,
+          "commit": 359862272,
+          "type": "Tab",
+          "window": "main"
+        },
+        {
+          "pid": 29312,
+          "rss": 271441920,
+          "uss": 191307776,
+          "commit": 207441920,
+          "type": "Tab",
+          "window": "floating"
+        }
+      ],
+      [
+        {
+          "pid": 9212,
+          "rss": 167636992,
+          "uss": 74534912,
+          "commit": 96137216,
+          "type": "Browser",
+          "window": null
+        },
+        {
+          "pid": 27756,
+          "rss": 878456832,
+          "uss": 813412352,
+          "commit": 868745216,
+          "type": "GPU",
+          "window": null
+        },
+        {
+          "pid": 14672,
+          "rss": 62935040,
+          "uss": 19726336,
+          "commit": 25669632,
+          "type": "Utility",
+          "window": null
+        },
+        {
+          "pid": 30300,
+          "rss": 597229568,
+          "uss": 325005312,
+          "commit": 360222720,
+          "type": "Tab",
+          "window": "main"
+        },
+        {
+          "pid": 29312,
+          "rss": 271441920,
+          "uss": 191307776,
+          "commit": 207441920,
+          "type": "Tab",
+          "window": "floating"
+        }
+      ],
+      [
+        {
+          "pid": 9212,
+          "rss": 167428096,
+          "uss": 74317824,
+          "commit": 96178176,
+          "type": "Browser",
+          "window": null
+        },
+        {
+          "pid": 27756,
+          "rss": 944492544,
+          "uss": 879439872,
+          "commit": 931057664,
+          "type": "GPU",
+          "window": null
+        },
+        {
+          "pid": 14672,
+          "rss": 62943232,
+          "uss": 19726336,
+          "commit": 25669632,
+          "type": "Utility",
+          "window": null
+        },
+        {
+          "pid": 30300,
+          "rss": 599044096,
+          "uss": 326778880,
+          "commit": 360546304,
+          "type": "Tab",
+          "window": "main"
+        },
+        {
+          "pid": 29312,
+          "rss": 271912960,
+          "uss": 191766528,
+          "commit": 207900672,
+          "type": "Tab",
+          "window": "floating"
+        }
+      ],
+      [
+        {
+          "pid": 9212,
+          "rss": 167428096,
+          "uss": 74317824,
+          "commit": 96178176,
+          "type": "Browser",
+          "window": null
+        },
+        {
+          "pid": 27756,
+          "rss": 954187776,
+          "uss": 880865280,
+          "commit": 930181120,
+          "type": "GPU",
+          "window": null
+        },
+        {
+          "pid": 14672,
+          "rss": 62943232,
+          "uss": 19726336,
+          "commit": 25669632,
+          "type": "Utility",
+          "window": null
+        },
+        {
+          "pid": 30300,
+          "rss": 608067584,
+          "uss": 327536640,
+          "commit": 361164800,
+          "type": "Tab",
+          "window": "main"
+        },
+        {
+          "pid": 29312,
+          "rss": 271978496,
+          "uss": 191832064,
+          "commit": 207900672,
+          "type": "Tab",
+          "window": "floating"
+        }
+      ]
+    ]
+  },
+  {
+    "name": "original-main",
+    "images": "original",
+    "floating": false,
+    "windowInfo": [
+      {
+        "pid": 31260,
+        "floating": false,
+        "visible": true,
+        "bounds": {
+          "x": 304,
+          "y": 92,
+          "width": 1440,
+          "height": 920
+        }
+      }
+    ],
+    "dom": [
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/files/rectangle/bru-no-coffee-2737047_1920.jpg\")",
+        "width": 693.5875244140625,
+        "height": 391.6000061035156
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/library/rectangle/ejaera-library-7598247_1920.jpg\")",
+        "width": 693.5875244140625,
+        "height": 391.6000061035156
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/components-vault/rectangle/img.png\")",
+        "width": 693.5875244140625,
+        "height": 391.6000061035156
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/secret-vault/rectangle/pexels-charldurand-6486122.jpg\")",
+        "width": 693.5875244140625,
+        "height": 391.6000061035156
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/intelligent-forms/rectangle/img.png\")",
+        "width": 693.5875244140625,
+        "height": 391.6000061035156
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/literature-reading/rectangle/pexels-pixabay-261857.jpg\")",
+        "width": 693.5875244140625,
+        "height": 391.6000061035156
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/agent/rectangle/rox_buwa-electronic-5902163_1920.jpg\")",
+        "width": 469.6125183105469,
+        "height": 189
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/mission-queue/rectangle/pexels-jakubzerdzicki-36950612.jpg\")",
+        "width": 469.6125183105469,
+        "height": 189
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/search/block/422737-google-485611_1920.jpg\")",
+        "width": 339.9875183105469,
+        "height": 391.6000061035156
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/graph/block/PixPin_2026-08-05_14-53-50.png\")",
+        "width": 340,
+        "height": 391.6000061035156
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/visualization/rectangle/sergeitokmakov-stock-6682491_1920.jpg\")",
+        "width": 228,
+        "height": 189
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/browser/rectangle/pexels-asphotography-218717.jpg\")",
+        "width": 228.0124969482422,
+        "height": 189
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/debug/rectangle/fernandoz-work-environment-10392555_1920.jpg\")",
+        "width": 469.6125183105469,
+        "height": 189
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/md-html/rectangle/pexels-blur-1853262_1920.jpg\")",
+        "width": 469.6125183105469,
+        "height": 189
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/settings/rectangle/pavlofox-macro-1452987_1920.jpg\")",
+        "width": 469.6125183105469,
+        "height": 189
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/skills/rectangle/mrha-pottery-10258355_1920.jpg\")",
+        "width": 469.6125183105469,
+        "height": 189
+      }
+    ],
+    "loadedImages": [
+      "agent/rectangle/brianpenny-artificial-intelligence-7450797_1920.jpg",
+      "agent/rectangle/rox_buwa-electronic-5902163_1920.jpg",
+      "browser/rectangle/pexels-asphotography-218717.jpg",
+      "browser/rectangle/pexels-deepanker70-1482061.jpg",
+      "components-vault/rectangle/img.png",
+      "components-vault/rectangle/img_1.png",
+      "debug/rectangle/fernandoz-work-environment-10392555_1920.jpg",
+      "debug/rectangle/stocksnap-coding-924920_1920.jpg",
+      "files/rectangle/bru-no-coffee-2737047_1920.jpg",
+      "files/rectangle/vargazs-folder-1049826_1920.jpg",
+      "graph/block/6db9dcb0f4e3bc1d662bb2aeff324500.jpg",
+      "graph/block/PixPin_2026-08-05_14-53-50.png",
+      "intelligent-forms/rectangle/img.png",
+      "intelligent-forms/rectangle/pexels-mikhail-nilov-7735708.jpg",
+      "library/rectangle/alexandra_koch-library-7976837_1920.jpg",
+      "library/rectangle/ejaera-library-7598247_1920.jpg",
+      "literature-reading/rectangle/pexels-pixabay-261857.jpg",
+      "md-html/rectangle/marijana1-science-3480102_1920.jpg",
+      "md-html/rectangle/pexels-blur-1853262_1920.jpg",
+      "mission-queue/rectangle/img.png",
+      "mission-queue/rectangle/pexels-jakubzerdzicki-36950612.jpg",
+      "search/block/422737-google-485611_1920.jpg",
+      "search/block/anatoly777-newspaper-3844071_1920.jpg",
+      "secret-vault/rectangle/pexels-charldurand-6486122.jpg",
+      "secret-vault/rectangle/pexels-indraprojectsofficial-27742642.jpg",
+      "settings/rectangle/pavlofox-macro-1452987_1920.jpg",
+      "skills/rectangle/mrha-pottery-10258355_1920.jpg",
+      "skills/rectangle/yousafbhutta-watercolor-7292245_1920.jpg",
+      "visualization/rectangle/sergeitokmakov-stock-6283760_1920.jpg",
+      "visualization/rectangle/sergeitokmakov-stock-6682491_1920.jpg"
+    ],
+    "errors": [],
+    "samples": [
+      [
+        {
+          "pid": 10312,
+          "rss": 164249600,
+          "uss": 70832128,
+          "commit": 91787264,
+          "type": "Browser",
+          "window": null
+        },
+        {
+          "pid": 25836,
+          "rss": 1013518336,
+          "uss": 917688320,
+          "commit": 969048064,
+          "type": "GPU",
+          "window": null
+        },
+        {
+          "pid": 3028,
+          "rss": 58429440,
+          "uss": 16162816,
+          "commit": 21827584,
+          "type": "Utility",
+          "window": null
+        },
+        {
+          "pid": 31260,
+          "rss": 682078208,
+          "uss": 367648768,
+          "commit": 404443136,
+          "type": "Tab",
+          "window": "main"
+        }
+      ],
+      [
+        {
+          "pid": 10312,
+          "rss": 164253696,
+          "uss": 70836224,
+          "commit": 91791360,
+          "type": "Browser",
+          "window": null
+        },
+        {
+          "pid": 25836,
+          "rss": 972230656,
+          "uss": 907313152,
+          "commit": 957276160,
+          "type": "GPU",
+          "window": null
+        },
+        {
+          "pid": 3028,
+          "rss": 57733120,
+          "uss": 15462400,
+          "commit": 21028864,
+          "type": "Utility",
+          "window": null
+        },
+        {
+          "pid": 31260,
+          "rss": 650694656,
+          "uss": 367177728,
+          "commit": 404103168,
+          "type": "Tab",
+          "window": "main"
+        }
+      ],
+      [
+        {
+          "pid": 10312,
+          "rss": 162902016,
+          "uss": 68911104,
+          "commit": 89284608,
+          "type": "Browser",
+          "window": null
+        },
+        {
+          "pid": 25836,
+          "rss": 973332480,
+          "uss": 908402688,
+          "commit": 954077184,
+          "type": "GPU",
+          "window": null
+        },
+        {
+          "pid": 3028,
+          "rss": 57704448,
+          "uss": 15409152,
+          "commit": 20922368,
+          "type": "Utility",
+          "window": null
+        },
+        {
+          "pid": 31260,
+          "rss": 623681536,
+          "uss": 339955712,
+          "commit": 374865920,
+          "type": "Tab",
+          "window": "main"
+        }
+      ],
+      [
+        {
+          "pid": 10312,
+          "rss": 162910208,
+          "uss": 68911104,
+          "commit": 89284608,
+          "type": "Browser",
+          "window": null
+        },
+        {
+          "pid": 25836,
+          "rss": 1057382400,
+          "uss": 942604288,
+          "commit": 987463680,
+          "type": "GPU",
+          "window": null
+        },
+        {
+          "pid": 3028,
+          "rss": 57556992,
+          "uss": 15257600,
+          "commit": 20807680,
+          "type": "Utility",
+          "window": null
+        },
+        {
+          "pid": 31260,
+          "rss": 675397632,
+          "uss": 342425600,
+          "commit": 377147392,
+          "type": "Tab",
+          "window": "main"
+        }
+      ],
+      [
+        {
+          "pid": 10312,
+          "rss": 162975744,
+          "uss": 68976640,
+          "commit": 89284608,
+          "type": "Browser",
+          "window": null
+        },
+        {
+          "pid": 25836,
+          "rss": 1004056576,
+          "uss": 939126784,
+          "commit": 983109632,
+          "type": "GPU",
+          "window": null
+        },
+        {
+          "pid": 3028,
+          "rss": 57556992,
+          "uss": 15257600,
+          "commit": 20807680,
+          "type": "Utility",
+          "window": null
+        },
+        {
+          "pid": 31260,
+          "rss": 625684480,
+          "uss": 341950464,
+          "commit": 376528896,
+          "type": "Tab",
+          "window": "main"
+        }
+      ]
+    ]
+  },
+  {
+    "name": "small-both",
+    "images": "small",
+    "floating": true,
+    "windowInfo": [
+      {
+        "pid": 27968,
+        "floating": true,
+        "visible": false,
+        "bounds": {
+          "x": 794,
+          "y": 466,
+          "width": 461,
+          "height": 173
+        }
+      },
+      {
+        "pid": 11772,
+        "floating": false,
+        "visible": true,
+        "bounds": {
+          "x": 304,
+          "y": 92,
+          "width": 1440,
+          "height": 920
+        }
+      }
+    ],
+    "dom": [
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/files/rectangle/bru-no-coffee-2737047_1920.jpg\")",
+        "width": 693.5875244140625,
+        "height": 391.6000061035156
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/library/rectangle/ejaera-library-7598247_1920.jpg\")",
+        "width": 693.5875244140625,
+        "height": 391.6000061035156
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/components-vault/rectangle/img.png\")",
+        "width": 693.5875244140625,
+        "height": 391.6000061035156
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/secret-vault/rectangle/pexels-charldurand-6486122.jpg\")",
+        "width": 693.5875244140625,
+        "height": 391.6000061035156
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/intelligent-forms/rectangle/img.png\")",
+        "width": 693.5875244140625,
+        "height": 391.6000061035156
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/literature-reading/rectangle/pexels-pixabay-261857.jpg\")",
+        "width": 693.5875244140625,
+        "height": 391.6000061035156
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/agent/rectangle/rox_buwa-electronic-5902163_1920.jpg\")",
+        "width": 469.6125183105469,
+        "height": 189
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/mission-queue/rectangle/pexels-jakubzerdzicki-36950612.jpg\")",
+        "width": 469.6125183105469,
+        "height": 189
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/search/block/422737-google-485611_1920.jpg\")",
+        "width": 339.9875183105469,
+        "height": 391.6000061035156
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/graph/block/PixPin_2026-08-05_14-53-50.png\")",
+        "width": 340,
+        "height": 391.6000061035156
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/visualization/rectangle/sergeitokmakov-stock-6682491_1920.jpg\")",
+        "width": 228,
+        "height": 189
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/browser/rectangle/pexels-asphotography-218717.jpg\")",
+        "width": 228.0124969482422,
+        "height": 189
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/debug/rectangle/fernandoz-work-environment-10392555_1920.jpg\")",
+        "width": 469.6125183105469,
+        "height": 189
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/md-html/rectangle/pexels-blur-1853262_1920.jpg\")",
+        "width": 469.6125183105469,
+        "height": 189
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/settings/rectangle/pavlofox-macro-1452987_1920.jpg\")",
+        "width": 469.6125183105469,
+        "height": 189
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/skills/rectangle/mrha-pottery-10258355_1920.jpg\")",
+        "width": 469.6125183105469,
+        "height": 189
+      }
+    ],
+    "loadedImages": [
+      "agent/rectangle/brianpenny-artificial-intelligence-7450797_1920.jpg",
+      "agent/rectangle/rox_buwa-electronic-5902163_1920.jpg",
+      "browser/rectangle/pexels-asphotography-218717.jpg",
+      "browser/rectangle/pexels-deepanker70-1482061.jpg",
+      "components-vault/rectangle/img.png",
+      "components-vault/rectangle/img_1.png",
+      "debug/rectangle/fernandoz-work-environment-10392555_1920.jpg",
+      "debug/rectangle/stocksnap-coding-924920_1920.jpg",
+      "files/rectangle/bru-no-coffee-2737047_1920.jpg",
+      "files/rectangle/vargazs-folder-1049826_1920.jpg",
+      "graph/block/6db9dcb0f4e3bc1d662bb2aeff324500.jpg",
+      "graph/block/PixPin_2026-08-05_14-53-50.png",
+      "intelligent-forms/rectangle/img.png",
+      "intelligent-forms/rectangle/pexels-mikhail-nilov-7735708.jpg",
+      "library/rectangle/alexandra_koch-library-7976837_1920.jpg",
+      "library/rectangle/ejaera-library-7598247_1920.jpg",
+      "literature-reading/rectangle/pexels-pixabay-261857.jpg",
+      "md-html/rectangle/marijana1-science-3480102_1920.jpg",
+      "md-html/rectangle/pexels-blur-1853262_1920.jpg",
+      "mission-queue/rectangle/img.png",
+      "mission-queue/rectangle/pexels-jakubzerdzicki-36950612.jpg",
+      "search/block/422737-google-485611_1920.jpg",
+      "search/block/anatoly777-newspaper-3844071_1920.jpg",
+      "secret-vault/rectangle/pexels-charldurand-6486122.jpg",
+      "secret-vault/rectangle/pexels-indraprojectsofficial-27742642.jpg",
+      "settings/rectangle/pavlofox-macro-1452987_1920.jpg",
+      "skills/rectangle/mrha-pottery-10258355_1920.jpg",
+      "skills/rectangle/yousafbhutta-watercolor-7292245_1920.jpg",
+      "visualization/rectangle/sergeitokmakov-stock-6283760_1920.jpg",
+      "visualization/rectangle/sergeitokmakov-stock-6682491_1920.jpg"
+    ],
+    "errors": [],
+    "samples": [
+      [
+        {
+          "pid": 14460,
+          "rss": 162594816,
+          "uss": 72810496,
+          "commit": 93122560,
+          "type": "Browser",
+          "window": null
+        },
+        {
+          "pid": 1288,
+          "rss": 548601856,
+          "uss": 477958144,
+          "commit": 546553856,
+          "type": "GPU",
+          "window": null
+        },
+        {
+          "pid": 28728,
+          "rss": 61341696,
+          "uss": 18534400,
+          "commit": 24272896,
+          "type": "Utility",
+          "window": null
+        },
+        {
+          "pid": 11772,
+          "rss": 424804352,
+          "uss": 317640704,
+          "commit": 349700096,
+          "type": "Tab",
+          "window": "main"
+        },
+        {
+          "pid": 27968,
+          "rss": 273653760,
+          "uss": 193507328,
+          "commit": 211668992,
+          "type": "Tab",
+          "window": "floating"
+        }
+      ],
+      [
+        {
+          "pid": 14460,
+          "rss": 162598912,
+          "uss": 72814592,
+          "commit": 93122560,
+          "type": "Browser",
+          "window": null
+        },
+        {
+          "pid": 1288,
+          "rss": 540946432,
+          "uss": 475779072,
+          "commit": 543518720,
+          "type": "GPU",
+          "window": null
+        },
+        {
+          "pid": 28728,
+          "rss": 61345792,
+          "uss": 18534400,
+          "commit": 24272896,
+          "type": "Utility",
+          "window": null
+        },
+        {
+          "pid": 11772,
+          "rss": 419602432,
+          "uss": 317915136,
+          "commit": 350117888,
+          "type": "Tab",
+          "window": "main"
+        },
+        {
+          "pid": 27968,
+          "rss": 273674240,
+          "uss": 193527808,
+          "commit": 211668992,
+          "type": "Tab",
+          "window": "floating"
+        }
+      ],
+      [
+        {
+          "pid": 14460,
+          "rss": 163942400,
+          "uss": 74158080,
+          "commit": 94388224,
+          "type": "Browser",
+          "window": null
+        },
+        {
+          "pid": 1288,
+          "rss": 544890880,
+          "uss": 479723520,
+          "commit": 543576064,
+          "type": "GPU",
+          "window": null
+        },
+        {
+          "pid": 28728,
+          "rss": 61345792,
+          "uss": 18534400,
+          "commit": 24272896,
+          "type": "Utility",
+          "window": null
+        },
+        {
+          "pid": 11772,
+          "rss": 420655104,
+          "uss": 318885888,
+          "commit": 350912512,
+          "type": "Tab",
+          "window": "main"
+        },
+        {
+          "pid": 27968,
+          "rss": 273686528,
+          "uss": 193540096,
+          "commit": 211668992,
+          "type": "Tab",
+          "window": "floating"
+        }
+      ],
+      [
+        {
+          "pid": 14460,
+          "rss": 163475456,
+          "uss": 73826304,
+          "commit": 94605312,
+          "type": "Browser",
+          "window": null
+        },
+        {
+          "pid": 1288,
+          "rss": 628039680,
+          "uss": 553025536,
+          "commit": 612802560,
+          "type": "GPU",
+          "window": null
+        },
+        {
+          "pid": 28728,
+          "rss": 61345792,
+          "uss": 18534400,
+          "commit": 24272896,
+          "type": "Utility",
+          "window": null
+        },
+        {
+          "pid": 11772,
+          "rss": 432779264,
+          "uss": 321150976,
+          "commit": 353304576,
+          "type": "Tab",
+          "window": "main"
+        },
+        {
+          "pid": 27968,
+          "rss": 273715200,
+          "uss": 193560576,
+          "commit": 211668992,
+          "type": "Tab",
+          "window": "floating"
+        }
+      ],
+      [
+        {
+          "pid": 14460,
+          "rss": 163512320,
+          "uss": 73859072,
+          "commit": 94642176,
+          "type": "Browser",
+          "window": null
+        },
+        {
+          "pid": 1288,
+          "rss": 616718336,
+          "uss": 551546880,
+          "commit": 610467840,
+          "type": "GPU",
+          "window": null
+        },
+        {
+          "pid": 28728,
+          "rss": 61345792,
+          "uss": 18534400,
+          "commit": 24272896,
+          "type": "Utility",
+          "window": null
+        },
+        {
+          "pid": 11772,
+          "rss": 423546880,
+          "uss": 321761280,
+          "commit": 353959936,
+          "type": "Tab",
+          "window": "main"
+        },
+        {
+          "pid": 27968,
+          "rss": 273780736,
+          "uss": 193626112,
+          "commit": 211668992,
+          "type": "Tab",
+          "window": "floating"
+        }
+      ]
+    ]
+  },
+  {
+    "name": "small-main",
+    "images": "small",
+    "floating": false,
+    "windowInfo": [
+      {
+        "pid": 28756,
+        "floating": false,
+        "visible": true,
+        "bounds": {
+          "x": 304,
+          "y": 92,
+          "width": 1440,
+          "height": 920
+        }
+      }
+    ],
+    "dom": [
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/files/rectangle/bru-no-coffee-2737047_1920.jpg\")",
+        "width": 693.5875244140625,
+        "height": 391.6000061035156
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/library/rectangle/ejaera-library-7598247_1920.jpg\")",
+        "width": 693.5875244140625,
+        "height": 391.6000061035156
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/components-vault/rectangle/img.png\")",
+        "width": 693.5875244140625,
+        "height": 391.6000061035156
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/secret-vault/rectangle/pexels-charldurand-6486122.jpg\")",
+        "width": 693.5875244140625,
+        "height": 391.6000061035156
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/intelligent-forms/rectangle/img.png\")",
+        "width": 693.5875244140625,
+        "height": 391.6000061035156
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/literature-reading/rectangle/pexels-pixabay-261857.jpg\")",
+        "width": 693.5875244140625,
+        "height": 391.6000061035156
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/agent/rectangle/rox_buwa-electronic-5902163_1920.jpg\")",
+        "width": 469.6125183105469,
+        "height": 189
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/mission-queue/rectangle/pexels-jakubzerdzicki-36950612.jpg\")",
+        "width": 469.6125183105469,
+        "height": 189
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/search/block/422737-google-485611_1920.jpg\")",
+        "width": 339.9875183105469,
+        "height": 391.6000061035156
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/graph/block/PixPin_2026-08-05_14-53-50.png\")",
+        "width": 340,
+        "height": 391.6000061035156
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/visualization/rectangle/sergeitokmakov-stock-6682491_1920.jpg\")",
+        "width": 228,
+        "height": 189
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/browser/rectangle/pexels-asphotography-218717.jpg\")",
+        "width": 228.0124969482422,
+        "height": 189
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/debug/rectangle/fernandoz-work-environment-10392555_1920.jpg\")",
+        "width": 469.6125183105469,
+        "height": 189
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/md-html/rectangle/pexels-blur-1853262_1920.jpg\")",
+        "width": 469.6125183105469,
+        "height": 189
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/settings/rectangle/pavlofox-macro-1452987_1920.jpg\")",
+        "width": 469.6125183105469,
+        "height": 189
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/skills/rectangle/mrha-pottery-10258355_1920.jpg\")",
+        "width": 469.6125183105469,
+        "height": 189
+      }
+    ],
+    "loadedImages": [
+      "agent/rectangle/brianpenny-artificial-intelligence-7450797_1920.jpg",
+      "agent/rectangle/rox_buwa-electronic-5902163_1920.jpg",
+      "browser/rectangle/pexels-asphotography-218717.jpg",
+      "browser/rectangle/pexels-deepanker70-1482061.jpg",
+      "components-vault/rectangle/img.png",
+      "components-vault/rectangle/img_1.png",
+      "debug/rectangle/fernandoz-work-environment-10392555_1920.jpg",
+      "debug/rectangle/stocksnap-coding-924920_1920.jpg",
+      "files/rectangle/bru-no-coffee-2737047_1920.jpg",
+      "files/rectangle/vargazs-folder-1049826_1920.jpg",
+      "graph/block/6db9dcb0f4e3bc1d662bb2aeff324500.jpg",
+      "graph/block/PixPin_2026-08-05_14-53-50.png",
+      "intelligent-forms/rectangle/img.png",
+      "intelligent-forms/rectangle/pexels-mikhail-nilov-7735708.jpg",
+      "library/rectangle/alexandra_koch-library-7976837_1920.jpg",
+      "library/rectangle/ejaera-library-7598247_1920.jpg",
+      "literature-reading/rectangle/pexels-pixabay-261857.jpg",
+      "md-html/rectangle/marijana1-science-3480102_1920.jpg",
+      "md-html/rectangle/pexels-blur-1853262_1920.jpg",
+      "mission-queue/rectangle/img.png",
+      "mission-queue/rectangle/pexels-jakubzerdzicki-36950612.jpg",
+      "search/block/422737-google-485611_1920.jpg",
+      "search/block/anatoly777-newspaper-3844071_1920.jpg",
+      "secret-vault/rectangle/pexels-charldurand-6486122.jpg",
+      "secret-vault/rectangle/pexels-indraprojectsofficial-27742642.jpg",
+      "settings/rectangle/pavlofox-macro-1452987_1920.jpg",
+      "skills/rectangle/mrha-pottery-10258355_1920.jpg",
+      "skills/rectangle/yousafbhutta-watercolor-7292245_1920.jpg",
+      "visualization/rectangle/sergeitokmakov-stock-6283760_1920.jpg",
+      "visualization/rectangle/sergeitokmakov-stock-6682491_1920.jpg"
+    ],
+    "errors": [],
+    "samples": [
+      [
+        {
+          "pid": 30932,
+          "rss": 164433920,
+          "uss": 71192576,
+          "commit": 91811840,
+          "type": "Browser",
+          "window": null
+        },
+        {
+          "pid": 13360,
+          "rss": 534155264,
+          "uss": 466321408,
+          "commit": 535678976,
+          "type": "GPU",
+          "window": null
+        },
+        {
+          "pid": 21516,
+          "rss": 56971264,
+          "uss": 14925824,
+          "commit": 20275200,
+          "type": "Utility",
+          "window": null
+        },
+        {
+          "pid": 28756,
+          "rss": 452259840,
+          "uss": 352600064,
+          "commit": 385175552,
+          "type": "Tab",
+          "window": "main"
+        }
+      ],
+      [
+        {
+          "pid": 30932,
+          "rss": 162234368,
+          "uss": 68407296,
+          "commit": 88133632,
+          "type": "Browser",
+          "window": null
+        },
+        {
+          "pid": 13360,
+          "rss": 525004800,
+          "uss": 459886592,
+          "commit": 528478208,
+          "type": "GPU",
+          "window": null
+        },
+        {
+          "pid": 21516,
+          "rss": 56946688,
+          "uss": 14893056,
+          "commit": 20209664,
+          "type": "Utility",
+          "window": null
+        },
+        {
+          "pid": 28756,
+          "rss": 414085120,
+          "uss": 317075456,
+          "commit": 348565504,
+          "type": "Tab",
+          "window": "main"
+        }
+      ],
+      [
+        {
+          "pid": 30932,
+          "rss": 161529856,
+          "uss": 67694592,
+          "commit": 87552000,
+          "type": "Browser",
+          "window": null
+        },
+        {
+          "pid": 13360,
+          "rss": 534016000,
+          "uss": 468721664,
+          "commit": 530276352,
+          "type": "GPU",
+          "window": null
+        },
+        {
+          "pid": 21516,
+          "rss": 56971264,
+          "uss": 14897152,
+          "commit": 20213760,
+          "type": "Utility",
+          "window": null
+        },
+        {
+          "pid": 28756,
+          "rss": 416059392,
+          "uss": 318849024,
+          "commit": 349847552,
+          "type": "Tab",
+          "window": "main"
+        }
+      ],
+      [
+        {
+          "pid": 30932,
+          "rss": 161775616,
+          "uss": 67932160,
+          "commit": 87891968,
+          "type": "Browser",
+          "window": null
+        },
+        {
+          "pid": 13360,
+          "rss": 600616960,
+          "uss": 523001856,
+          "commit": 580591616,
+          "type": "GPU",
+          "window": null
+        },
+        {
+          "pid": 21516,
+          "rss": 56971264,
+          "uss": 14897152,
+          "commit": 20213760,
+          "type": "Utility",
+          "window": null
+        },
+        {
+          "pid": 28756,
+          "rss": 430583808,
+          "uss": 321048576,
+          "commit": 352047104,
+          "type": "Tab",
+          "window": "main"
+        }
+      ],
+      [
+        {
+          "pid": 30932,
+          "rss": 161775616,
+          "uss": 67932160,
+          "commit": 87891968,
+          "type": "Browser",
+          "window": null
+        },
+        {
+          "pid": 13360,
+          "rss": 586272768,
+          "uss": 521084928,
+          "commit": 577843200,
+          "type": "GPU",
+          "window": null
+        },
+        {
+          "pid": 21516,
+          "rss": 56971264,
+          "uss": 14897152,
+          "commit": 20213760,
+          "type": "Utility",
+          "window": null
+        },
+        {
+          "pid": 28756,
+          "rss": 418504704,
+          "uss": 321396736,
+          "commit": 352272384,
+          "type": "Tab",
+          "window": "main"
+        }
+      ]
+    ]
+  },
+  {
+    "name": "blank-both",
+    "images": "blank",
+    "floating": true,
+    "windowInfo": [
+      {
+        "pid": 28908,
+        "floating": true,
+        "visible": false,
+        "bounds": {
+          "x": 794,
+          "y": 466,
+          "width": 461,
+          "height": 173
+        }
+      },
+      {
+        "pid": 27772,
+        "floating": false,
+        "visible": true,
+        "bounds": {
+          "x": 304,
+          "y": 92,
+          "width": 1440,
+          "height": 920
+        }
+      }
+    ],
+    "dom": [
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/files/rectangle/bru-no-coffee-2737047_1920.jpg\")",
+        "width": 693.5875244140625,
+        "height": 391.6000061035156
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/library/rectangle/ejaera-library-7598247_1920.jpg\")",
+        "width": 693.5875244140625,
+        "height": 391.6000061035156
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/components-vault/rectangle/img.png\")",
+        "width": 693.5875244140625,
+        "height": 391.6000061035156
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/secret-vault/rectangle/pexels-charldurand-6486122.jpg\")",
+        "width": 693.5875244140625,
+        "height": 391.6000061035156
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/intelligent-forms/rectangle/img.png\")",
+        "width": 693.5875244140625,
+        "height": 391.6000061035156
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/literature-reading/rectangle/pexels-pixabay-261857.jpg\")",
+        "width": 693.5875244140625,
+        "height": 391.6000061035156
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/agent/rectangle/rox_buwa-electronic-5902163_1920.jpg\")",
+        "width": 469.6125183105469,
+        "height": 189
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/mission-queue/rectangle/pexels-jakubzerdzicki-36950612.jpg\")",
+        "width": 469.6125183105469,
+        "height": 189
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/search/block/422737-google-485611_1920.jpg\")",
+        "width": 339.9875183105469,
+        "height": 391.6000061035156
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/graph/block/PixPin_2026-08-05_14-53-50.png\")",
+        "width": 340,
+        "height": 391.6000061035156
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/visualization/rectangle/sergeitokmakov-stock-6682491_1920.jpg\")",
+        "width": 228,
+        "height": 189
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/browser/rectangle/pexels-asphotography-218717.jpg\")",
+        "width": 228.0124969482422,
+        "height": 189
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/debug/rectangle/fernandoz-work-environment-10392555_1920.jpg\")",
+        "width": 469.6125183105469,
+        "height": 189
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/md-html/rectangle/pexels-blur-1853262_1920.jpg\")",
+        "width": 469.6125183105469,
+        "height": 189
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/settings/rectangle/pavlofox-macro-1452987_1920.jpg\")",
+        "width": 469.6125183105469,
+        "height": 189
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/skills/rectangle/mrha-pottery-10258355_1920.jpg\")",
+        "width": 469.6125183105469,
+        "height": 189
+      }
+    ],
+    "loadedImages": [
+      "agent/rectangle/brianpenny-artificial-intelligence-7450797_1920.jpg",
+      "agent/rectangle/rox_buwa-electronic-5902163_1920.jpg",
+      "browser/rectangle/pexels-asphotography-218717.jpg",
+      "browser/rectangle/pexels-deepanker70-1482061.jpg",
+      "components-vault/rectangle/img.png",
+      "components-vault/rectangle/img_1.png",
+      "debug/rectangle/fernandoz-work-environment-10392555_1920.jpg",
+      "debug/rectangle/stocksnap-coding-924920_1920.jpg",
+      "files/rectangle/bru-no-coffee-2737047_1920.jpg",
+      "files/rectangle/vargazs-folder-1049826_1920.jpg",
+      "graph/block/6db9dcb0f4e3bc1d662bb2aeff324500.jpg",
+      "graph/block/PixPin_2026-08-05_14-53-50.png",
+      "intelligent-forms/rectangle/img.png",
+      "intelligent-forms/rectangle/pexels-mikhail-nilov-7735708.jpg",
+      "library/rectangle/alexandra_koch-library-7976837_1920.jpg",
+      "library/rectangle/ejaera-library-7598247_1920.jpg",
+      "literature-reading/rectangle/pexels-pixabay-261857.jpg",
+      "md-html/rectangle/marijana1-science-3480102_1920.jpg",
+      "md-html/rectangle/pexels-blur-1853262_1920.jpg",
+      "mission-queue/rectangle/img.png",
+      "mission-queue/rectangle/pexels-jakubzerdzicki-36950612.jpg",
+      "search/block/422737-google-485611_1920.jpg",
+      "search/block/anatoly777-newspaper-3844071_1920.jpg",
+      "secret-vault/rectangle/pexels-charldurand-6486122.jpg",
+      "secret-vault/rectangle/pexels-indraprojectsofficial-27742642.jpg",
+      "settings/rectangle/pavlofox-macro-1452987_1920.jpg",
+      "skills/rectangle/mrha-pottery-10258355_1920.jpg",
+      "skills/rectangle/yousafbhutta-watercolor-7292245_1920.jpg",
+      "visualization/rectangle/sergeitokmakov-stock-6283760_1920.jpg",
+      "visualization/rectangle/sergeitokmakov-stock-6682491_1920.jpg"
+    ],
+    "errors": [],
+    "samples": [
+      [
+        {
+          "pid": 22180,
+          "rss": 170680320,
+          "uss": 76427264,
+          "commit": 97910784,
+          "type": "Browser",
+          "window": null
+        },
+        {
+          "pid": 31176,
+          "rss": 282611712,
+          "uss": 217591808,
+          "commit": 288428032,
+          "type": "GPU",
+          "window": null
+        },
+        {
+          "pid": 27284,
+          "rss": 61632512,
+          "uss": 18808832,
+          "commit": 24428544,
+          "type": "Utility",
+          "window": null
+        },
+        {
+          "pid": 27772,
+          "rss": 439414784,
+          "uss": 346656768,
+          "commit": 383348736,
+          "type": "Tab",
+          "window": "main"
+        },
+        {
+          "pid": 28908,
+          "rss": 285937664,
+          "uss": 206000128,
+          "commit": 224145408,
+          "type": "Tab",
+          "window": "floating"
+        }
+      ],
+      [
+        {
+          "pid": 22180,
+          "rss": 168398848,
+          "uss": 73543680,
+          "commit": 94040064,
+          "type": "Browser",
+          "window": null
+        },
+        {
+          "pid": 31176,
+          "rss": 273223680,
+          "uss": 208351232,
+          "commit": 278405120,
+          "type": "GPU",
+          "window": null
+        },
+        {
+          "pid": 27284,
+          "rss": 61665280,
+          "uss": 18808832,
+          "commit": 24428544,
+          "type": "Utility",
+          "window": null
+        },
+        {
+          "pid": 27772,
+          "rss": 403521536,
+          "uss": 310837248,
+          "commit": 345579520,
+          "type": "Tab",
+          "window": "main"
+        },
+        {
+          "pid": 28908,
+          "rss": 272465920,
+          "uss": 192364544,
+          "commit": 210890752,
+          "type": "Tab",
+          "window": "floating"
+        }
+      ],
+      [
+        {
+          "pid": 22180,
+          "rss": 168398848,
+          "uss": 73543680,
+          "commit": 94040064,
+          "type": "Browser",
+          "window": null
+        },
+        {
+          "pid": 31176,
+          "rss": 270635008,
+          "uss": 205762560,
+          "commit": 272031744,
+          "type": "GPU",
+          "window": null
+        },
+        {
+          "pid": 27284,
+          "rss": 61665280,
+          "uss": 18808832,
+          "commit": 24428544,
+          "type": "Utility",
+          "window": null
+        },
+        {
+          "pid": 27772,
+          "rss": 404578304,
+          "uss": 311894016,
+          "commit": 346398720,
+          "type": "Tab",
+          "window": "main"
+        },
+        {
+          "pid": 28908,
+          "rss": 272465920,
+          "uss": 192364544,
+          "commit": 210890752,
+          "type": "Tab",
+          "window": "floating"
+        }
+      ],
+      [
+        {
+          "pid": 22180,
+          "rss": 168464384,
+          "uss": 73609216,
+          "commit": 94040064,
+          "type": "Browser",
+          "window": null
+        },
+        {
+          "pid": 31176,
+          "rss": 277704704,
+          "uss": 212733952,
+          "commit": 277676032,
+          "type": "GPU",
+          "window": null
+        },
+        {
+          "pid": 27284,
+          "rss": 61665280,
+          "uss": 18808832,
+          "commit": 24428544,
+          "type": "Utility",
+          "window": null
+        },
+        {
+          "pid": 27772,
+          "rss": 405872640,
+          "uss": 313065472,
+          "commit": 347553792,
+          "type": "Tab",
+          "window": "main"
+        },
+        {
+          "pid": 28908,
+          "rss": 273211392,
+          "uss": 193101824,
+          "commit": 211677184,
+          "type": "Tab",
+          "window": "floating"
+        }
+      ],
+      [
+        {
+          "pid": 22180,
+          "rss": 168464384,
+          "uss": 73609216,
+          "commit": 94040064,
+          "type": "Browser",
+          "window": null
+        },
+        {
+          "pid": 31176,
+          "rss": 270761984,
+          "uss": 205881344,
+          "commit": 267350016,
+          "type": "GPU",
+          "window": null
+        },
+        {
+          "pid": 27284,
+          "rss": 61665280,
+          "uss": 18808832,
+          "commit": 24428544,
+          "type": "Utility",
+          "window": null
+        },
+        {
+          "pid": 27772,
+          "rss": 406355968,
+          "uss": 313655296,
+          "commit": 348258304,
+          "type": "Tab",
+          "window": "main"
+        },
+        {
+          "pid": 28908,
+          "rss": 272171008,
+          "uss": 192061440,
+          "commit": 209866752,
+          "type": "Tab",
+          "window": "floating"
+        }
+      ]
+    ]
+  },
+  {
+    "name": "blank-main",
+    "images": "blank",
+    "floating": false,
+    "windowInfo": [
+      {
+        "pid": 29296,
+        "floating": false,
+        "visible": true,
+        "bounds": {
+          "x": 304,
+          "y": 92,
+          "width": 1440,
+          "height": 920
+        }
+      }
+    ],
+    "dom": [
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/files/rectangle/bru-no-coffee-2737047_1920.jpg\")",
+        "width": 693.5875244140625,
+        "height": 391.6000061035156
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/library/rectangle/ejaera-library-7598247_1920.jpg\")",
+        "width": 693.5875244140625,
+        "height": 391.6000061035156
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/components-vault/rectangle/img.png\")",
+        "width": 693.5875244140625,
+        "height": 391.6000061035156
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/secret-vault/rectangle/pexels-charldurand-6486122.jpg\")",
+        "width": 693.5875244140625,
+        "height": 391.6000061035156
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/intelligent-forms/rectangle/img.png\")",
+        "width": 693.5875244140625,
+        "height": 391.6000061035156
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/literature-reading/rectangle/pexels-pixabay-261857.jpg\")",
+        "width": 693.5875244140625,
+        "height": 391.6000061035156
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/agent/rectangle/rox_buwa-electronic-5902163_1920.jpg\")",
+        "width": 469.6125183105469,
+        "height": 189
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/mission-queue/rectangle/pexels-jakubzerdzicki-36950612.jpg\")",
+        "width": 469.6125183105469,
+        "height": 189
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/search/block/422737-google-485611_1920.jpg\")",
+        "width": 339.9875183105469,
+        "height": 391.6000061035156
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/graph/block/PixPin_2026-08-05_14-53-50.png\")",
+        "width": 340,
+        "height": 391.6000061035156
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/visualization/rectangle/sergeitokmakov-stock-6682491_1920.jpg\")",
+        "width": 228,
+        "height": 189
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/browser/rectangle/pexels-asphotography-218717.jpg\")",
+        "width": 228.0124969482422,
+        "height": 189
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/debug/rectangle/fernandoz-work-environment-10392555_1920.jpg\")",
+        "width": 469.6125183105469,
+        "height": 189
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/md-html/rectangle/pexels-blur-1853262_1920.jpg\")",
+        "width": 469.6125183105469,
+        "height": 189
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/settings/rectangle/pavlofox-macro-1452987_1920.jpg\")",
+        "width": 469.6125183105469,
+        "height": 189
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/skills/rectangle/mrha-pottery-10258355_1920.jpg\")",
+        "width": 469.6125183105469,
+        "height": 189
+      }
+    ],
+    "loadedImages": [
+      "agent/rectangle/brianpenny-artificial-intelligence-7450797_1920.jpg",
+      "agent/rectangle/rox_buwa-electronic-5902163_1920.jpg",
+      "browser/rectangle/pexels-asphotography-218717.jpg",
+      "browser/rectangle/pexels-deepanker70-1482061.jpg",
+      "components-vault/rectangle/img.png",
+      "components-vault/rectangle/img_1.png",
+      "debug/rectangle/fernandoz-work-environment-10392555_1920.jpg",
+      "debug/rectangle/stocksnap-coding-924920_1920.jpg",
+      "files/rectangle/bru-no-coffee-2737047_1920.jpg",
+      "files/rectangle/vargazs-folder-1049826_1920.jpg",
+      "graph/block/6db9dcb0f4e3bc1d662bb2aeff324500.jpg",
+      "graph/block/PixPin_2026-08-05_14-53-50.png",
+      "intelligent-forms/rectangle/img.png",
+      "intelligent-forms/rectangle/pexels-mikhail-nilov-7735708.jpg",
+      "library/rectangle/alexandra_koch-library-7976837_1920.jpg",
+      "library/rectangle/ejaera-library-7598247_1920.jpg",
+      "literature-reading/rectangle/pexels-pixabay-261857.jpg",
+      "md-html/rectangle/marijana1-science-3480102_1920.jpg",
+      "md-html/rectangle/pexels-blur-1853262_1920.jpg",
+      "mission-queue/rectangle/img.png",
+      "mission-queue/rectangle/pexels-jakubzerdzicki-36950612.jpg",
+      "search/block/422737-google-485611_1920.jpg",
+      "search/block/anatoly777-newspaper-3844071_1920.jpg",
+      "secret-vault/rectangle/pexels-charldurand-6486122.jpg",
+      "secret-vault/rectangle/pexels-indraprojectsofficial-27742642.jpg",
+      "settings/rectangle/pavlofox-macro-1452987_1920.jpg",
+      "skills/rectangle/mrha-pottery-10258355_1920.jpg",
+      "skills/rectangle/yousafbhutta-watercolor-7292245_1920.jpg",
+      "visualization/rectangle/sergeitokmakov-stock-6283760_1920.jpg",
+      "visualization/rectangle/sergeitokmakov-stock-6682491_1920.jpg"
+    ],
+    "errors": [],
+    "samples": [
+      [
+        {
+          "pid": 29388,
+          "rss": 160526336,
+          "uss": 70381568,
+          "commit": 91140096,
+          "type": "Browser",
+          "window": null
+        },
+        {
+          "pid": 29140,
+          "rss": 284897280,
+          "uss": 219983872,
+          "commit": 262266880,
+          "type": "GPU",
+          "window": null
+        },
+        {
+          "pid": 9288,
+          "rss": 56836096,
+          "uss": 14794752,
+          "commit": 20176896,
+          "type": "Utility",
+          "window": null
+        },
+        {
+          "pid": 29296,
+          "rss": 442159104,
+          "uss": 355282944,
+          "commit": 389300224,
+          "type": "Tab",
+          "window": "main"
+        }
+      ],
+      [
+        {
+          "pid": 29388,
+          "rss": 160526336,
+          "uss": 70389760,
+          "commit": 91148288,
+          "type": "Browser",
+          "window": null
+        },
+        {
+          "pid": 29140,
+          "rss": 275931136,
+          "uss": 211177472,
+          "commit": 253403136,
+          "type": "GPU",
+          "window": null
+        },
+        {
+          "pid": 9288,
+          "rss": 56819712,
+          "uss": 14794752,
+          "commit": 20176896,
+          "type": "Utility",
+          "window": null
+        },
+        {
+          "pid": 29296,
+          "rss": 443826176,
+          "uss": 357117952,
+          "commit": 391315456,
+          "type": "Tab",
+          "window": "main"
+        }
+      ],
+      [
+        {
+          "pid": 29388,
+          "rss": 157237248,
+          "uss": 66478080,
+          "commit": 86286336,
+          "type": "Browser",
+          "window": null
+        },
+        {
+          "pid": 29140,
+          "rss": 289079296,
+          "uss": 223735808,
+          "commit": 266489856,
+          "type": "GPU",
+          "window": null
+        },
+        {
+          "pid": 9288,
+          "rss": 56819712,
+          "uss": 14770176,
+          "commit": 20119552,
+          "type": "Utility",
+          "window": null
+        },
+        {
+          "pid": 29296,
+          "rss": 410329088,
+          "uss": 323436544,
+          "commit": 356741120,
+          "type": "Tab",
+          "window": "main"
+        }
+      ],
+      [
+        {
+          "pid": 29388,
+          "rss": 157237248,
+          "uss": 66478080,
+          "commit": 86286336,
+          "type": "Browser",
+          "window": null
+        },
+        {
+          "pid": 29140,
+          "rss": 285720576,
+          "uss": 220835840,
+          "commit": 262922240,
+          "type": "GPU",
+          "window": null
+        },
+        {
+          "pid": 9288,
+          "rss": 56823808,
+          "uss": 14770176,
+          "commit": 20119552,
+          "type": "Utility",
+          "window": null
+        },
+        {
+          "pid": 29296,
+          "rss": 411316224,
+          "uss": 324284416,
+          "commit": 357523456,
+          "type": "Tab",
+          "window": "main"
+        }
+      ],
+      [
+        {
+          "pid": 29388,
+          "rss": 157237248,
+          "uss": 66478080,
+          "commit": 86286336,
+          "type": "Browser",
+          "window": null
+        },
+        {
+          "pid": 29140,
+          "rss": 272650240,
+          "uss": 207872000,
+          "commit": 249741312,
+          "type": "GPU",
+          "window": null
+        },
+        {
+          "pid": 9288,
+          "rss": 56823808,
+          "uss": 14770176,
+          "commit": 20119552,
+          "type": "Utility",
+          "window": null
+        },
+        {
+          "pid": 29296,
+          "rss": 411475968,
+          "uss": 324567040,
+          "commit": 357863424,
+          "type": "Tab",
+          "window": "main"
+        }
+      ]
+    ]
+  },
+  {
+    "name": "paired-original-both",
+    "images": "original",
+    "floating": true,
+    "windowInfo": [
+      {
+        "pid": 22788,
+        "floating": true,
+        "visible": false,
+        "bounds": {
+          "x": 794,
+          "y": 466,
+          "width": 461,
+          "height": 173
+        }
+      },
+      {
+        "pid": 27312,
+        "floating": false,
+        "visible": true,
+        "bounds": {
+          "x": 304,
+          "y": 92,
+          "width": 1440,
+          "height": 920
+        }
+      }
+    ],
+    "dom": [
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/files/rectangle/bru-no-coffee-2737047_1920.jpg\")",
+        "width": 693.5875244140625,
+        "height": 391.6000061035156
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/library/rectangle/ejaera-library-7598247_1920.jpg\")",
+        "width": 693.5875244140625,
+        "height": 391.6000061035156
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/components-vault/rectangle/img.png\")",
+        "width": 693.5875244140625,
+        "height": 391.6000061035156
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/secret-vault/rectangle/pexels-charldurand-6486122.jpg\")",
+        "width": 693.5875244140625,
+        "height": 391.6000061035156
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/intelligent-forms/rectangle/img.png\")",
+        "width": 693.5875244140625,
+        "height": 391.6000061035156
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/literature-reading/rectangle/pexels-pixabay-261857.jpg\")",
+        "width": 693.5875244140625,
+        "height": 391.6000061035156
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/agent/rectangle/rox_buwa-electronic-5902163_1920.jpg\")",
+        "width": 469.6125183105469,
+        "height": 189
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/mission-queue/rectangle/pexels-jakubzerdzicki-36950612.jpg\")",
+        "width": 469.6125183105469,
+        "height": 189
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/search/block/422737-google-485611_1920.jpg\")",
+        "width": 339.9875183105469,
+        "height": 391.6000061035156
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/graph/block/PixPin_2026-08-05_14-53-50.png\")",
+        "width": 340,
+        "height": 391.6000061035156
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/visualization/rectangle/sergeitokmakov-stock-6682491_1920.jpg\")",
+        "width": 228,
+        "height": 189
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/browser/rectangle/pexels-asphotography-218717.jpg\")",
+        "width": 228.0124969482422,
+        "height": 189
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/debug/rectangle/fernandoz-work-environment-10392555_1920.jpg\")",
+        "width": 469.6125183105469,
+        "height": 189
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/md-html/rectangle/pexels-blur-1853262_1920.jpg\")",
+        "width": 469.6125183105469,
+        "height": 189
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/settings/rectangle/pavlofox-macro-1452987_1920.jpg\")",
+        "width": 469.6125183105469,
+        "height": 189
+      },
+      {
+        "background": "url(\"http://127.0.0.1:5173/src/assets/images/home/skills/rectangle/mrha-pottery-10258355_1920.jpg\")",
+        "width": 469.6125183105469,
+        "height": 189
+      }
+    ],
+    "loadedImages": [
+      "agent/rectangle/brianpenny-artificial-intelligence-7450797_1920.jpg",
+      "agent/rectangle/rox_buwa-electronic-5902163_1920.jpg",
+      "browser/rectangle/pexels-asphotography-218717.jpg",
+      "browser/rectangle/pexels-deepanker70-1482061.jpg",
+      "components-vault/rectangle/img.png",
+      "components-vault/rectangle/img_1.png",
+      "debug/rectangle/fernandoz-work-environment-10392555_1920.jpg",
+      "debug/rectangle/stocksnap-coding-924920_1920.jpg",
+      "files/rectangle/bru-no-coffee-2737047_1920.jpg",
+      "files/rectangle/vargazs-folder-1049826_1920.jpg",
+      "graph/block/6db9dcb0f4e3bc1d662bb2aeff324500.jpg",
+      "graph/block/PixPin_2026-08-05_14-53-50.png",
+      "intelligent-forms/rectangle/img.png",
+      "intelligent-forms/rectangle/pexels-mikhail-nilov-7735708.jpg",
+      "library/rectangle/alexandra_koch-library-7976837_1920.jpg",
+      "library/rectangle/ejaera-library-7598247_1920.jpg",
+      "literature-reading/rectangle/pexels-pixabay-261857.jpg",
+      "md-html/rectangle/marijana1-science-3480102_1920.jpg",
+      "md-html/rectangle/pexels-blur-1853262_1920.jpg",
+      "mission-queue/rectangle/img.png",
+      "mission-queue/rectangle/pexels-jakubzerdzicki-36950612.jpg",
+      "search/block/422737-google-485611_1920.jpg",
+      "search/block/anatoly777-newspaper-3844071_1920.jpg",
+      "secret-vault/rectangle/pexels-charldurand-6486122.jpg",
+      "secret-vault/rectangle/pexels-indraprojectsofficial-27742642.jpg",
+      "settings/rectangle/bernhardfalkinger-gear-4913309_1920.jpg",
+      "settings/rectangle/pavlofox-macro-1452987_1920.jpg",
+      "skills/rectangle/mrha-pottery-10258355_1920.jpg",
+      "skills/rectangle/yousafbhutta-watercolor-7292245_1920.jpg",
+      "visualization/rectangle/sergeitokmakov-stock-6283760_1920.jpg",
+      "visualization/rectangle/sergeitokmakov-stock-6682491_1920.jpg"
+    ],
+    "errors": [],
+    "samples": [
+      [
+        {
+          "pid": 28328,
+          "rss": 165294080,
+          "uss": 74551296,
+          "commit": 95125504,
+          "type": "Browser",
+          "window": null
+        },
+        {
+          "pid": 28180,
+          "rss": 985874432,
+          "uss": 920809472,
+          "commit": 984780800,
+          "type": "GPU",
+          "window": null
+        },
+        {
+          "pid": 25652,
+          "rss": 63492096,
+          "uss": 20234240,
+          "commit": 26255360,
+          "type": "Utility",
+          "window": null
+        },
+        {
+          "pid": 27312,
+          "rss": 592461824,
+          "uss": 317829120,
+          "commit": 351109120,
+          "type": "Tab",
+          "window": "main"
+        },
+        {
+          "pid": 22788,
+          "rss": 277135360,
+          "uss": 197697536,
+          "commit": 216137728,
+          "type": "Tab",
+          "window": "floating"
+        }
+      ],
+      [
+        {
+          "pid": 28328,
+          "rss": 164339712,
+          "uss": 73584640,
+          "commit": 94138368,
+          "type": "Browser",
+          "window": null
+        },
+        {
+          "pid": 28180,
+          "rss": 1032724480,
+          "uss": 946290688,
+          "commit": 1007050752,
+          "type": "GPU",
+          "window": null
+        },
+        {
+          "pid": 25652,
+          "rss": 63348736,
+          "uss": 20086784,
+          "commit": 26243072,
+          "type": "Utility",
+          "window": null
+        },
+        {
+          "pid": 27312,
+          "rss": 644620288,
+          "uss": 327368704,
+          "commit": 359878656,
+          "type": "Tab",
+          "window": "main"
+        },
+        {
+          "pid": 22788,
+          "rss": 276254720,
+          "uss": 196808704,
+          "commit": 214835200,
+          "type": "Tab",
+          "window": "floating"
+        }
+      ],
+      [
+        {
+          "pid": 28328,
+          "rss": 164364288,
+          "uss": 73609216,
+          "commit": 94138368,
+          "type": "Browser",
+          "window": null
+        },
+        {
+          "pid": 28180,
+          "rss": 917667840,
+          "uss": 852602880,
+          "commit": 911212544,
+          "type": "GPU",
+          "window": null
+        },
+        {
+          "pid": 25652,
+          "rss": 63348736,
+          "uss": 20086784,
+          "commit": 26243072,
+          "type": "Utility",
+          "window": null
+        },
+        {
+          "pid": 27312,
+          "rss": 623013888,
+          "uss": 327065600,
+          "commit": 359780352,
+          "type": "Tab",
+          "window": "main"
+        },
+        {
+          "pid": 22788,
+          "rss": 271888384,
+          "uss": 192434176,
+          "commit": 209477632,
+          "type": "Tab",
+          "window": "floating"
+        }
+      ],
+      [
+        {
+          "pid": 28328,
+          "rss": 164397056,
+          "uss": 73637888,
+          "commit": 94154752,
+          "type": "Browser",
+          "window": null
+        },
+        {
+          "pid": 28180,
+          "rss": 1055719424,
+          "uss": 931639296,
+          "commit": 986509312,
+          "type": "GPU",
+          "window": null
+        },
+        {
+          "pid": 25652,
+          "rss": 63500288,
+          "uss": 20238336,
+          "commit": 26193920,
+          "type": "Utility",
+          "window": null
+        },
+        {
+          "pid": 27312,
+          "rss": 694489088,
+          "uss": 329682944,
+          "commit": 362348544,
+          "type": "Tab",
+          "window": "main"
+        },
+        {
+          "pid": 22788,
+          "rss": 271888384,
+          "uss": 192434176,
+          "commit": 209477632,
+          "type": "Tab",
+          "window": "floating"
+        }
+      ],
+      [
+        {
+          "pid": 28328,
+          "rss": 164421632,
+          "uss": 73662464,
+          "commit": 94154752,
+          "type": "Browser",
+          "window": null
+        },
+        {
+          "pid": 28180,
+          "rss": 987574272,
+          "uss": 922501120,
+          "commit": 976420864,
+          "type": "GPU",
+          "window": null
+        },
+        {
+          "pid": 25652,
+          "rss": 63504384,
+          "uss": 20238336,
+          "commit": 26193920,
+          "type": "Utility",
+          "window": null
+        },
+        {
+          "pid": 27312,
+          "rss": 635920384,
+          "uss": 330121216,
+          "commit": 362536960,
+          "type": "Tab",
+          "window": "main"
+        },
+        {
+          "pid": 22788,
+          "rss": 271953920,
+          "uss": 192499712,
+          "commit": 209477632,
+          "type": "Tab",
+          "window": "floating"
+        }
+      ]
+    ],
+    "paired": {
+      "before": [
+        [
+          {
+            "pid": 28328,
+            "rss": 164540416,
+            "uss": 73748480,
+            "commit": 94154752,
+            "type": "Browser",
+            "window": null
+          },
+          {
+            "pid": 28180,
+            "rss": 925077504,
+            "uss": 851509248,
+            "commit": 900055040,
+            "type": "GPU",
+            "window": null
+          },
+          {
+            "pid": 25652,
+            "rss": 63586304,
+            "uss": 20312064,
+            "commit": 26202112,
+            "type": "Utility",
+            "window": null
+          },
+          {
+            "pid": 27312,
+            "rss": 648151040,
+            "uss": 333844480,
+            "commit": 366587904,
+            "type": "Tab",
+            "window": "main"
+          },
+          {
+            "pid": 22788,
+            "rss": 271970304,
+            "uss": 192499712,
+            "commit": 209477632,
+            "type": "Tab",
+            "window": "floating"
+          }
+        ],
+        [
+          {
+            "pid": 28328,
+            "rss": 164540416,
+            "uss": 73748480,
+            "commit": 94154752,
+            "type": "Browser",
+            "window": null
+          },
+          {
+            "pid": 28180,
+            "rss": 934506496,
+            "uss": 860925952,
+            "commit": 907223040,
+            "type": "GPU",
+            "window": null
+          },
+          {
+            "pid": 25652,
+            "rss": 63586304,
+            "uss": 20312064,
+            "commit": 26202112,
+            "type": "Utility",
+            "window": null
+          },
+          {
+            "pid": 27312,
+            "rss": 649023488,
+            "uss": 334708736,
+            "commit": 367501312,
+            "type": "Tab",
+            "window": "main"
+          },
+          {
+            "pid": 22788,
+            "rss": 271970304,
+            "uss": 192499712,
+            "commit": 209477632,
+            "type": "Tab",
+            "window": "floating"
+          }
+        ],
+        [
+          {
+            "pid": 28328,
+            "rss": 164540416,
+            "uss": 73748480,
+            "commit": 94154752,
+            "type": "Browser",
+            "window": null
+          },
+          {
+            "pid": 28180,
+            "rss": 924717056,
+            "uss": 859639808,
+            "commit": 905531392,
+            "type": "GPU",
+            "window": null
+          },
+          {
+            "pid": 25652,
+            "rss": 63586304,
+            "uss": 20312064,
+            "commit": 26202112,
+            "type": "Utility",
+            "window": null
+          },
+          {
+            "pid": 27312,
+            "rss": 641384448,
+            "uss": 335572992,
+            "commit": 368300032,
+            "type": "Tab",
+            "window": "main"
+          },
+          {
+            "pid": 22788,
+            "rss": 271970304,
+            "uss": 192499712,
+            "commit": 209477632,
+            "type": "Tab",
+            "window": "floating"
+          }
+        ],
+        [
+          {
+            "pid": 28328,
+            "rss": 164700160,
+            "uss": 73830400,
+            "commit": 94191616,
+            "type": "Browser",
+            "window": null
+          },
+          {
+            "pid": 28180,
+            "rss": 890556416,
+            "uss": 825479168,
+            "commit": 871030784,
+            "type": "GPU",
+            "window": null
+          },
+          {
+            "pid": 25652,
+            "rss": 63586304,
+            "uss": 20312064,
+            "commit": 26202112,
+            "type": "Utility",
+            "window": null
+          },
+          {
+            "pid": 27312,
+            "rss": 641785856,
+            "uss": 335974400,
+            "commit": 368529408,
+            "type": "Tab",
+            "window": "main"
+          },
+          {
+            "pid": 22788,
+            "rss": 271970304,
+            "uss": 192499712,
+            "commit": 209477632,
+            "type": "Tab",
+            "window": "floating"
+          }
+        ],
+        [
+          {
+            "pid": 28328,
+            "rss": 164704256,
+            "uss": 73830400,
+            "commit": 94191616,
+            "type": "Browser",
+            "window": null
+          },
+          {
+            "pid": 28180,
+            "rss": 890818560,
+            "uss": 825741312,
+            "commit": 871030784,
+            "type": "GPU",
+            "window": null
+          },
+          {
+            "pid": 25652,
+            "rss": 63586304,
+            "uss": 20312064,
+            "commit": 26202112,
+            "type": "Utility",
+            "window": null
+          },
+          {
+            "pid": 27312,
+            "rss": 642142208,
+            "uss": 336330752,
+            "commit": 368898048,
+            "type": "Tab",
+            "window": "main"
+          },
+          {
+            "pid": 22788,
+            "rss": 271970304,
+            "uss": 192499712,
+            "commit": 209477632,
+            "type": "Tab",
+            "window": "floating"
+          }
+        ]
+      ],
+      "after": [
+        [
+          {
+            "pid": 28328,
+            "rss": 163069952,
+            "uss": 72052736,
+            "commit": 92442624,
+            "type": "Browser",
+            "window": null
+          },
+          {
+            "pid": 28180,
+            "rss": 941699072,
+            "uss": 876269568,
+            "commit": 919736320,
+            "type": "GPU",
+            "window": null
+          },
+          {
+            "pid": 25652,
+            "rss": 62590976,
+            "uss": 19529728,
+            "commit": 25296896,
+            "type": "Utility",
+            "window": null
+          },
+          {
+            "pid": 27312,
+            "rss": 642863104,
+            "uss": 337047552,
+            "commit": 369172480,
+            "type": "Tab",
+            "window": "main"
+          }
+        ],
+        [
+          {
+            "pid": 28328,
+            "rss": 163074048,
+            "uss": 72056832,
+            "commit": 92704768,
+            "type": "Browser",
+            "window": null
+          },
+          {
+            "pid": 28180,
+            "rss": 935686144,
+            "uss": 870256640,
+            "commit": 913698816,
+            "type": "GPU",
+            "window": null
+          },
+          {
+            "pid": 25652,
+            "rss": 62590976,
+            "uss": 19529728,
+            "commit": 25296896,
+            "type": "Utility",
+            "window": null
+          },
+          {
+            "pid": 27312,
+            "rss": 642826240,
+            "uss": 337006592,
+            "commit": 369131520,
+            "type": "Tab",
+            "window": "main"
+          }
+        ],
+        [
+          {
+            "pid": 28328,
+            "rss": 163090432,
+            "uss": 72073216,
+            "commit": 92704768,
+            "type": "Browser",
+            "window": null
+          },
+          {
+            "pid": 28180,
+            "rss": 935686144,
+            "uss": 870256640,
+            "commit": 913698816,
+            "type": "GPU",
+            "window": null
+          },
+          {
+            "pid": 25652,
+            "rss": 62590976,
+            "uss": 19529728,
+            "commit": 25296896,
+            "type": "Utility",
+            "window": null
+          },
+          {
+            "pid": 27312,
+            "rss": 642826240,
+            "uss": 337006592,
+            "commit": 369131520,
+            "type": "Tab",
+            "window": "main"
+          }
+        ],
+        [
+          {
+            "pid": 28328,
+            "rss": 163106816,
+            "uss": 72089600,
+            "commit": 92704768,
+            "type": "Browser",
+            "window": null
+          },
+          {
+            "pid": 28180,
+            "rss": 1017454592,
+            "uss": 908853248,
+            "commit": 952344576,
+            "type": "GPU",
+            "window": null
+          },
+          {
+            "pid": 25652,
+            "rss": 62590976,
+            "uss": 19529728,
+            "commit": 25296896,
+            "type": "Utility",
+            "window": null
+          },
+          {
+            "pid": 27312,
+            "rss": 688066560,
+            "uss": 339075072,
+            "commit": 371253248,
+            "type": "Tab",
+            "window": "main"
+          }
+        ],
+        [
+          {
+            "pid": 28328,
+            "rss": 161153024,
+            "uss": 70123520,
+            "commit": 90595328,
+            "type": "Browser",
+            "window": null
+          },
+          {
+            "pid": 28180,
+            "rss": 972713984,
+            "uss": 907284480,
+            "commit": 950661120,
+            "type": "GPU",
+            "window": null
+          },
+          {
+            "pid": 25652,
+            "rss": 61583360,
+            "uss": 18522112,
+            "commit": 24186880,
+            "type": "Utility",
+            "window": null
+          },
+          {
+            "pid": 27312,
+            "rss": 624422912,
+            "uss": 318603264,
+            "commit": 349310976,
+            "type": "Tab",
+            "window": "main"
+          }
+        ]
+      ]
+    }
+  }
+]

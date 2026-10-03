@@ -1,0 +1,93 @@
+[
+  {
+    "name": "original-both",
+    "ussMiB": 1418.2234375,
+    "minMiB": 1358.01953125,
+    "maxMiB": 1444.078125,
+    "groups": {
+      "Browser": 70.94765625,
+      "GPU": 835.17421875,
+      "Utility": 18.81171875,
+      "main": 310.490625,
+      "floating": 182.79921875
+    }
+  },
+  {
+    "name": "original-main",
+    "ussMiB": 1297.05625,
+    "minMiB": 1270.94140625,
+    "maxMiB": 1308.7578125,
+    "groups": {
+      "Browser": 66.46484375,
+      "GPU": 880.2671875,
+      "Utility": 14.79140625,
+      "main": 335.5328125,
+      "floating": 0
+    }
+  },
+  {
+    "name": "small-both",
+    "ussMiB": 1061.11328125,
+    "minMiB": 1028.60546875,
+    "maxMiB": 1106.35546875,
+    "groups": {
+      "Browser": 70.0890625,
+      "GPU": 484.09140625,
+      "Utility": 17.67578125,
+      "main": 304.67109375,
+      "floating": 184.5859375
+    }
+  },
+  {
+    "name": "small-main",
+    "ussMiB": 855.95234375,
+    "minMiB": 820.41015625,
+    "maxMiB": 883.94140625,
+    "groups": {
+      "Browser": 65.45234375,
+      "GPU": 465.20546875,
+      "Utility": 14.21171875,
+      "main": 311.0828125,
+      "floating": 0
+    }
+  },
+  {
+    "name": "blank-both",
+    "ussMiB": 779.55234375,
+    "minMiB": 765.203125,
+    "maxMiB": 825.390625,
+    "groups": {
+      "Browser": 70.71171875,
+      "GPU": 200.3328125,
+      "Utility": 17.9375,
+      "main": 304.43359375,
+      "floating": 186.13671875
+    }
+  },
+  {
+    "name": "blank-main",
+    "ussMiB": 606.99453125,
+    "minMiB": 585.2578125,
+    "maxMiB": 629.84765625,
+    "groups": {
+      "Browser": 64.8890625,
+      "GPU": 206.68125,
+      "Utility": 14.0953125,
+      "main": 321.32890625,
+      "floating": 0
+    }
+  },
+  {
+    "name": "paired-original-both",
+    "ussMiB": 1458.6859375,
+    "minMiB": 1397.89453125,
+    "maxMiB": 1491.6796875,
+    "groups": {
+      "Browser": 70.38984375,
+      "GPU": 872.39140625,
+      "Utility": 19.2421875,
+      "main": 311.2921875,
+      "floating": 185.3703125
+    }
+  }
+]
