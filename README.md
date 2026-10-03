@@ -1,5 +1,8 @@
-[![图标](editor/src/assets/images/亮色无底图标.png)](editor/src/assets/images/亮色无底图标.png)
-[![标题](editor/src/assets/images/亮色标题.png)](editor/src/assets/images/亮色标题.png)
+<p align="center">
+  <a href="editor/src/assets/images/亮色无底图标.png"><img src="editor/src/assets/images/亮色无底图标.png" alt="MetaWeave 图标" width="80" align="middle"></a>
+  <a href="editor/src/assets/images/亮色标题.png"><img src="editor/src/assets/images/亮色标题.png" alt="MetaWeave" width="240" align="middle"></a>
+</p>
+
 > v1.1.0 - 2026.10.2
 ![AI Native](https://img.shields.io/badge/AI-native-8A2BE2) ![Multimodal](https://img.shields.io/badge/knowledge-multimodal-FF6F61) [![GitHub Release](https://img.shields.io/github/v/release/xiao-Huahuo/MetaWeave?include_prereleases)](https://github.com/xiao-Huahuo/MetaWeave/releases/latest) ![Agent](https://img.shields.io/badge/system-AI_Agent-8B5CF6) ![AgenticRAG](https://img.shields.io/badge/retrieval-AgenticRAG-7C3AED) ![Multi Agent](https://img.shields.io/badge/Agent-multi--agent-8B5CF6) ![Knowledge Base](https://img.shields.io/badge/product-knowledge_base-0EA5E9) ![Knowledge Graph](https://img.shields.io/badge/knowledge-graph-2563EB) ![Markdown](https://img.shields.io/badge/editor-Markdown-000000?logo=markdown&logoColor=white) ![LaTeX](https://img.shields.io/badge/typesetting-LaTeX-008080?logo=latex&logoColor=white) ![MCP](https://img.shields.io/badge/protocol-MCP-8B5CF6) ![PaddleOCR](https://img.shields.io/badge/OCR-PaddleOCR-005BAC) [![DSH Runtime SDK](https://img.shields.io/badge/DSH_Runtime_SDK-47f9438-4224EB)](https://github.com/deepseek-ai/deepseek-harness/commit/47f943859bef60e4160492346772ded9b24f765a)
 # MetaWeave 元织
