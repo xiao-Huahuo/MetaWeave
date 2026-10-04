@@ -481,6 +481,7 @@ async def save_appearance_config(body: dict[str, Any]) -> dict[str, Any]:
     try:
         return svc.save_appearance_config(
             user_id=user_id,
+            theme_mode=body.get("theme_mode"),
             theme_primary_color=body.get("theme_primary_color"),
             theme_soft_color=body.get("theme_soft_color"),
             tag_colors=body.get("tag_colors"),
@@ -935,6 +936,25 @@ async def delete_memory(memory_id: str) -> dict[str, Any]:
 
 
 # ---- 安全配置（敏感词库） ----
+
+
+@router.get("/settings/safety/config")
+def get_safety_config(user_id: str = Query(..., min_length=DEFAULT_BUSINESS_LIMITS.nonempty_min_length)) -> dict[str, bool]:
+    """Read the authenticated user's independent safety policy."""
+    return _require_settings_service().get_safety_config(user_id=user_id)
+
+
+@router.put("/settings/safety/config")
+def save_safety_config(body: dict[str, Any]) -> dict[str, bool]:
+    """Save account switches while leaving the shared word content unchanged."""
+    try:
+        return _require_settings_service().save_safety_config(
+            user_id=str(body.get("user_id") or ""),
+            sensitive_words_enabled=body.get("sensitive_words_enabled"),
+            safety_enabled=body.get("safety_enabled"),
+        )
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc)) from exc
 
 
 @router.get("/settings/safety/sensitive-words")

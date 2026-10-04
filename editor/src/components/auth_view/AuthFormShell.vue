@@ -3,7 +3,7 @@
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import IcIcon from '@/components/common/IcIcon.vue'
 import lightLogo from '@/assets/images/亮色无底图标.png'
-const props = defineProps<{ page: number; message: string; registering?: boolean }>()
+const props = defineProps<{ page: number; message: string; registering?: boolean; busy?: boolean; onboarding?: boolean; credentialsChanged?: boolean }>()
 const emit = defineEmits<{ navigate: [offset: number]; confirm: [] }>()
 const sliding = ref(false)
 const form = ref<HTMLFormElement | null>(null)
@@ -36,7 +36,7 @@ let fallback: ReturnType<typeof setTimeout> | undefined
 const pageNumber = computed(() => String(props.page + 1).padStart(2, '0'))
 /** Ignore repeated navigation during the same bounded transition, including reduced-motion mode. */
 function navigate(offset: number) {
-  if (sliding.value || props.page + offset < 0 || props.page + offset > 4) return
+  if (props.busy || !props.onboarding || sliding.value || props.page + offset < 0 || props.page + offset > 4) return
   sliding.value = !window.matchMedia('(prefers-reduced-motion: reduce)').matches
   emit('navigate', offset)
   if (sliding.value) fallback = setTimeout(finish, 700)
@@ -46,6 +46,11 @@ function finish() {
   sliding.value = false
   if (fallback) clearTimeout(fallback)
   fallback = undefined
+}
+/** Focus may scroll to an off-screen transformed page; keep X at origin and preserve normal Y scrolling. */
+function keepHorizontalOrigin(event: Event) {
+  const viewport = event.currentTarget as HTMLElement
+  if (viewport.scrollLeft !== 0) viewport.scrollLeft = 0
 }
 onBeforeUnmount(() => { finish(); resizeObserver?.disconnect() })
 </script>
@@ -57,21 +62,21 @@ onBeforeUnmount(() => { finish(); resizeObserver?.disconnect() })
         <button
           type="button"
           aria-label="上一页"
-          :disabled="page === 0 || sliding"
+          :disabled="!onboarding || page === 0 || sliding || busy"
           @click="navigate(-1)"
         >
           <IcIcon name="arrow-left" :size="18" /></button
         ><button
           type="button"
           aria-label="下一页"
-          :disabled="page === 4 || sliding"
+          :disabled="!onboarding || page === 4 || sliding || busy || (page === 0 && credentialsChanged)"
           @click="navigate(1)"
         >
           <IcIcon name="arrow-right" :size="18" /></button
         ><span class="auth-page-number" aria-live="polite">{{ pageNumber }}</span>
       </div>
     </header>
-    <div class="auth-viewport">
+    <div class="auth-viewport" @scroll="keepHorizontalOrigin">
       <div
         ref="track"
         class="auth-track"
@@ -84,7 +89,7 @@ onBeforeUnmount(() => { finish(); resizeObserver?.disconnect() })
           :key="index"
           class="auth-page"
           :class="{ active: page === index - 1 }"
-          :disabled="page !== index - 1 || sliding"
+          :disabled="page !== index - 1 || sliding || busy"
           :inert="page !== index - 1"
           :aria-hidden="page !== index - 1"
         >
@@ -93,8 +98,9 @@ onBeforeUnmount(() => { finish(); resizeObserver?.disconnect() })
       </div>
     </div>
     <footer ref="footer" class="auth-footer">
-      <p v-if="message" role="status">{{ message }}</p>
-      <button v-if="page < 4" class="auth-button" type="submit">确定</button>
+      <p v-if="message" role="status" :title="message">{{ message }}</p>
+      <span v-if="busy" class="auth-confirm-loader" role="status" aria-label="正在验证或保存" />
+      <button v-if="page < 4" class="auth-button" type="submit" :disabled="busy">确定</button>
     </footer>
   </form>
 </template>

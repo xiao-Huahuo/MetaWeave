@@ -189,6 +189,15 @@
 .auth-entry .auth-footer > .auth-button {
   min-width: 84px;
 }
+.auth-entry .auth-confirm-loader {
+  width: 18px;
+  height: 18px;
+  border: 2px solid var(--color-border);
+  border-top-color: var(--color-primary);
+  border-radius: 50%;
+  animation: auth-confirm-spin 800ms linear infinite;
+}
+@keyframes auth-confirm-spin { to { transform: rotate(360deg); } }
 .auth-entry button:focus-visible {
   outline: 2px solid var(--color-primary);
   outline-offset: 3px;
@@ -435,6 +444,15 @@
 
 /* Login and library selection share one height; registration retains its own content height. */
 .auth-entry .auth-form-compact .auth-viewport { overflow: hidden; }
+/* Keep notices beside Confirm so the fixed-height login retains its register link. */
+.auth-entry .auth-form-compact .auth-footer > p {
+  flex: 1 1 0;
+  min-width: 0;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
 .auth-entry .auth-directory-row { display: flex; align-items: flex-end; gap: 10px; }
 .auth-entry .auth-directory-row .auth-field { flex: 1; min-width: 0; }
 .auth-entry .auth-directory-button { display: grid; place-items: center; flex: 0 0 50px; width: 50px; height: 50px; padding: 0; border: 2px solid var(--color-border); border-radius: 50%; background: transparent; color: var(--color-text); cursor: pointer; }

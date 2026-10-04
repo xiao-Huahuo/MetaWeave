@@ -15,24 +15,8 @@ from typing import Any, Literal
 
 from pydantic import BaseModel, Field
 
-from agent_service.core.agent_config import DEFAULT_BUSINESS_LIMITS
 
 VaultItemType = Literal["login", "card", "identity", "secure_note"]
-
-
-class VaultUnlockRequest(BaseModel):
-    """设置或验证主密码的请求。"""
-
-    user_id: str = Field(min_length=DEFAULT_BUSINESS_LIMITS.nonempty_min_length)
-    master_password: str = Field(min_length=DEFAULT_BUSINESS_LIMITS.vault_password_min_chars)
-
-
-class VaultPasswordResetRequest(BaseModel):
-    """重置主密码的请求，可选旧密码用于用户自行验证。"""
-
-    user_id: str = Field(min_length=DEFAULT_BUSINESS_LIMITS.nonempty_min_length)
-    new_password: str = Field(min_length=DEFAULT_BUSINESS_LIMITS.vault_password_min_chars)
-    old_password: str = ""
 
 
 class VaultItemCreate(BaseModel):

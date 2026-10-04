@@ -1242,7 +1242,20 @@ class AgentConfig:
         terminal_read_default_lines: 终端文本读取命令默认返回行数。
         terminal_read_max_lines: 终端文本读取命令允许的最大行数。
         vault_password_min_chars: 密码库主密码允许的最少字符数。
-        vault_unlock_token_minutes: 密码库临时解锁令牌有效分钟数。
+        auth_username_max_chars: 规范化登录名称最大字符数。
+        auth_user_id_digits: 由登录名称和持久化创建时间编码得到的固定用户标识位数。
+        auth_fernet_key_chars: 直接派生 Fernet key 的 Base64 字符数。
+        auth_onboarding_first_step: 注册成功后第一个待填写初始化页面编号。
+        auth_onboarding_complete_step: 五个初始化页面全部完成后的状态编号。
+        auth_password_max_chars: 登录密码最大字符数，防止超大输入消耗派生资源。
+        auth_device_id_max_chars: 桌面设备标识最大字符数。
+        auth_token_bytes: 不透明访问及设备凭据的随机字节数。
+        auth_access_session_hours: 内存解密会话固定有效小时数。
+        auth_remember_days: 手动认证后设备自动登录的固定有效天数。
+        auth_failure_limit: 单个身份在一个认证窗口内允许的尝试次数。
+        auth_failure_window_seconds: 认证限流固定窗口秒数。
+        auth_registration_collision_retries: 八位用户标识碰撞时的最大事务重试次数。
+        auth_remembered_blob_max_bytes: 操作系统加密凭据密文最大字节数。
         vault_salt_bytes: 密码库密码哈希盐的字节数。
         vault_password_kdf_iterations: 密码库密码校验哈希的 PBKDF2 迭代次数。
         vault_encryption_kdf_iterations: 密码库内容加密密钥的 PBKDF2 迭代次数。
@@ -1459,10 +1472,23 @@ class AgentConfig:
         terminal_read_default_lines: int = 40
         terminal_read_max_lines: int = 1000
         vault_password_min_chars: int = 8
-        vault_unlock_token_minutes: int = 30
+        auth_username_max_chars: int = 64
+        auth_user_id_digits: int = 8
+        auth_fernet_key_chars: int = 44
+        auth_onboarding_first_step: int = 2
+        auth_onboarding_complete_step: int = 6
+        auth_password_max_chars: int = 1024
+        auth_device_id_max_chars: int = 128
+        auth_token_bytes: int = 32
+        auth_access_session_hours: int = 8
+        auth_remember_days: int = 30
+        auth_failure_limit: int = 10
+        auth_failure_window_seconds: int = 900
+        auth_registration_collision_retries: int = 32
+        auth_remembered_blob_max_bytes: int = 16384
         vault_salt_bytes: int = 16
-        vault_password_kdf_iterations: int = 260000
-        vault_encryption_kdf_iterations: int = 390000
+        vault_password_kdf_iterations: int = 600000
+        vault_encryption_kdf_iterations: int = 600000
         vault_encryption_key_bytes: int = 32
         vault_tag_name_max_chars: int = 128
         vault_asset_filename_max_chars: int = 120
@@ -1543,6 +1569,8 @@ class AgentConfig:
         uvicorn_timeout_keep_alive: Uvicorn HTTP Keep-Alive 超时秒数。
         grpc_host: gRPC 监听地址,默认 [::] (IPv6 全接口)。
         grpc_port: gRPC 监听端口,默认 50051。
+        desktop_auth_nonce: Electron 主进程启动时传入的设备凭据接口随机授权值。
+        frontend_origin: 受管开发界面的完整可信 Origin，用于凭据跨域和 CSRF 检查。
         """
 
         http_host: str = "0.0.0.0"
@@ -1550,6 +1578,8 @@ class AgentConfig:
         uvicorn_timeout_keep_alive: int = 0
         grpc_host: str = "[::]"
         grpc_port: int = 50051
+        desktop_auth_nonce: str = ""
+        frontend_origin: str = "http://127.0.0.1:5173"
 
     @dataclass(slots=True)
     class DshConfig:
@@ -2053,6 +2083,8 @@ class AgentConfig:
             "AGENT_UVICORN_KEEP_ALIVE": ("server", "uvicorn_timeout_keep_alive", int),
             "AGENT_GRPC_HOST": ("server", "grpc_host", str),
             "AGENT_GRPC_PORT": ("server", "grpc_port", int),
+            "AGENT_DESKTOP_AUTH_NONCE": ("server", "desktop_auth_nonce", str),
+            "AGENT_FRONTEND_ORIGIN": ("server", "frontend_origin", str),
         }
         # BusinessLimitsConfig 字段统一使用 AGENT_LIMIT_<字段名大写> 环境变量,
         # 避免每新增一条限制都复制一份映射并遗漏进程级覆盖能力。

@@ -35,6 +35,7 @@ export const homeImageSets: ReadonlyMap<string, HomeImageSet> = (() => {
     const match = path.match(/\/home\/([^/]+)\/(block|rectangle)\/[^/]+$/)
     if (!match) continue
     const [, name, shape] = match
+    if (!name || !shape) continue
     let set = map.get(name)
     if (!set) {
       set = { block: [], rectangle: [] }

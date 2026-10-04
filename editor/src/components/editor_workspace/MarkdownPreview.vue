@@ -65,7 +65,7 @@ interface SourceMarkdownTable {
 
 const settingsStore = useSettingsStore()
 const workspaceStore = useWorkspaceStore()
-const embeddedVditorI18n = (window as unknown as { VditorI18n: Record<string, string> }).VditorI18n
+const embeddedVditorI18n = (window as unknown as { VditorI18n: ITips }).VditorI18n
 
 type VditorPreviewInternals = Vditor & {
   vditor?: {
@@ -1085,7 +1085,8 @@ onMounted(() => {
     instance = new Vditor(previewHost.value, {
       i18n: embeddedVditorI18n,
       _lutePath: lutePath,
-      icon: '',
+      // Vditor's runtime accepts empty to skip icon-script loading; its type lists named packs only.
+      icon: '' as IOptions['icon'],
       value: preparePreviewMarkdown(props.content),
       height: '100%',
       mode: 'sv',

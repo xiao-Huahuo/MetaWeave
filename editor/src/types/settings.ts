@@ -2,8 +2,8 @@
  * Settings DTOs for the editor front-end.
  *
  * Usage:
- * These types mirror the future persisted user settings endpoints while the
- * current front-end keeps data in localStorage.
+ * These types mirror persisted backend user settings. The renderer holds only
+ * the active account's cache during its in-memory authenticated session.
  */
 
 /** Theme mode applied to documentElement. */
@@ -16,6 +16,9 @@ export type SidebarDisplayMode = 'icons' | 'management'
 export interface UserSettingsProfile {
   /** Stable user identifier shared with the existing console front-end. */
   userId: string
+  /** Account-specific content checks, resolved from backend defaults and overrides. */
+  sensitiveWordsEnabled?: boolean
+  safetyEnabled?: boolean
   /** Local absolute path of the knowledge root. */
   knowledgeDir: string
   /** Active backend knowledge library id. */

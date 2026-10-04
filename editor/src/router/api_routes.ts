@@ -7,6 +7,12 @@
  */
 
 export const API_ROUTES = {
+  AUTH_REGISTER: '/auth/register',
+  AUTH_LOGIN: '/auth/login',
+  AUTH_CURRENT: '/auth/me',
+  AUTH_LOGOUT: '/auth/logout',
+  AUTH_ONBOARDING: '/auth/onboarding',
+  AUTH_PASSWORD: '/auth/password',
   MCP_CLIENT: '/settings/mcp/client',
   MCP_CONNECTIONS: '/settings/mcp/client/connections',
   MCP_CONNECTION: (id: string) => '/settings/mcp/client/connections/' + encodeURIComponent(id),
@@ -21,6 +27,7 @@ export const API_ROUTES = {
   MCP_RECORDS: '/settings/mcp/server/records',
   MCP_VERIFY: '/settings/mcp/server/verify',
   SETTINGS_PROFILE: '/settings/profile',
+  SETTINGS_SAFETY_CONFIG: '/settings/safety/config',
   SETTINGS_ONBOARDING_DEFAULTS: '/settings/onboarding/defaults',
   SETTINGS_KNOWLEDGE_DIR: '/settings/profile/knowledge-dir',
   SETTINGS_FONT_CONFIG: '/settings/appearance/font',
@@ -99,12 +106,6 @@ export const API_ROUTES = {
   LIBRARY_TAGS: '/library/tags',
   LIBRARY_COVER_UPLOAD: '/library/assets/cover',
   COMPONENT_LIBRARY_ITEMS: '/component-library/components',
-  VAULT_STATUS: '/vault/status',
-  VAULT_DEBUG_MASTER_PASSWORD: '/vault/debug/master-password',
-  VAULT_SETUP: '/vault/setup',
-  VAULT_UNLOCK: '/vault/unlock',
-  VAULT_RESET_PASSWORD: '/vault/reset-password',
-  VAULT_LOCK: '/vault/lock',
   VAULT_ITEMS: '/vault/items',
   VAULT_ITEM_PURGE: '/vault/items/purge',
   VAULT_ITEM_TRASH: '/vault/items/trash',

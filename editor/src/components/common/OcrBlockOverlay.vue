@@ -23,7 +23,8 @@ const emit = defineEmits<{
   blockSelect: [blockId: string]
 }>()
 
-const visibleBlocks = computed(() => props.blocks.filter((block) => (
+// The length/finite checks establish a four-coordinate rectangle for SVG arithmetic.
+const visibleBlocks = computed(() => props.blocks.filter((block): block is ScannerOcrBlock & { bbox: [number, number, number, number] } => (
   block.page === props.page
   && block.bbox.length === 4
   && block.bbox.every(Number.isFinite)

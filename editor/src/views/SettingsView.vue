@@ -23,6 +23,7 @@ import FloatingSettingsSection from '@/components/settings_view/FloatingSettings
 import SkillView from '@/views/SkillView.vue'
 import { DEFAULT_TAG_COLORS, useSettingsStore } from '@/stores/settings'
 import { useWorkspaceStore } from '@/stores/workspace'
+import { useAuthStore } from '@/stores/auth'
 import type { ThemeMode } from '@/types/settings'
 
 const mcpSection = ref<InstanceType<typeof McpSettingsSection> | null>(null)
@@ -33,6 +34,7 @@ function selectSettingsTab(tab: SettingsTabKey) {
 }
 const settingsStore = useSettingsStore()
 const workspaceStore = useWorkspaceStore()
+const authStore = useAuthStore()
 
 const SETTINGS_ACTIVE_TAB_KEY = 'agent_editor_settings_active_tab'
 const persistedSettingsTab = localStorage.getItem(SETTINGS_ACTIVE_TAB_KEY)
@@ -408,9 +410,20 @@ async function selectKnowledgeDirectory(): Promise<void> {
   }
 }
 
-function handleLogout() {
+/** Explicit logout revokes the server session and clears the desktop remembered credential. */
+async function handleLogout() {
+  workspaceStore.stopFileWatcher()
   workspaceStore.setMainView('editor')
-  settingsStore.clearUserId()
+  try { await authStore.logout() }
+  catch (error) { workspaceStore.showToast(error instanceof Error ? error.message : '退出登录失败') }
+}
+
+/** Persist theme mode for this account while retaining the centralized theme preview. */
+async function handleSetThemeMode(mode: ThemeMode) {
+  const previous = settingsStore.themeMode
+  settingsStore.setThemeMode(mode)
+  try { await settingsStore.saveAppearanceSettings({ themeMode: mode }) }
+  catch (error) { settingsStore.setThemeMode(previous); workspaceStore.showToast(error instanceof Error ? error.message : '保存主题失败') }
 }
 
 const themeOptions: Array<{ value: ThemeMode; label: string }> = [
@@ -633,7 +646,7 @@ const savedModelConfigs = ref<SavedLLMConfig[]>([])
 
 /** Store only backend-resolved values so unsaved drafts are never shown as active models. */
 function applyEffectiveModelConfig(config: LLMConfigResponse) {
-  const modelName = (config.effective_model_name || '').trim().toLowerCase().replaceAll(':', '/')
+  const modelName = (config.effective_model_name || '').trim().toLowerCase().replace(/:/gu, '/')
   dshModelAvailable.value = Boolean(
     config.effective_model_source === 'remote' &&
     config.effective_api_key?.trim() && config.effective_base_url?.trim() &&
@@ -892,7 +905,7 @@ onBeforeUnmount(() => {
         @set-sidebar-display-mode="settingsStore.setSidebarDisplayMode"
         @set-background-cover="handleSetBackgroundCover"
         @set-show-backlinks="handleSetShowBacklinks"
-        @set-theme-mode="settingsStore.setThemeMode"
+        @set-theme-mode="handleSetThemeMode"
         @reset-background-cover="handleResetBackgroundCover"
       />
 

@@ -40,7 +40,7 @@ type HomeImageShape = 'block' | 'rectangle'
 
 function pickRandom(pool: readonly string[], exclude?: string): string | null {
   if (pool.length === 0) return null
-  if (pool.length === 1) return pool[0]
+  if (pool.length === 1) return pool[0] ?? null
   const candidates = exclude ? pool.filter((url) => url !== exclude) : [...pool]
   return candidates[Math.floor(Math.random() * candidates.length)] ?? null
 }
@@ -65,7 +65,8 @@ function computeBrightness(url: string): Promise<number> {
           const data = ctx.getImageData(0, 0, SAMPLE_SIZE, SAMPLE_SIZE).data
           let sum = 0
           for (let i = 0; i < data.length; i += 4) {
-            sum += 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2]
+            // Canvas ImageData contains complete RGBA groups, so each pixel has all three channels.
+            sum += 0.299 * data[i]! + 0.587 * data[i + 1]! + 0.114 * data[i + 2]!
           }
           resolve(sum / (data.length / 4) / 255)
         } catch {

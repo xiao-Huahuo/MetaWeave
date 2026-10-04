@@ -84,7 +84,7 @@ describe('SearchPalette toolbar variant', () => {
     expect(wrapper.text()).toContain('组件库')
     expect(wrapper.text()).toContain('文献库')
 
-    await wrapper.findAll('.source-toggle-btn')[2].trigger('mousedown')
+    await wrapper.findAll('.source-toggle-btn')[2]!.trigger('mousedown')
     expect(workspaceStore.searchSources).toEqual(['files', 'library', 'literature'])
   })
 

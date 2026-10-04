@@ -60,13 +60,13 @@ class OutputAuditor:
         self.config = config
         self._sensitive_checker = sensitive_checker
 
-    def audit(self, output_text: str, *, user_input: str = "") -> OutputAuditResult:
+    def audit(self, output_text: str, *, user_input: str = "", sensitive_enabled: bool | None = None) -> OutputAuditResult:
         """对 Agent 输出文本做安全审核。"""
 
-        if self._sensitive_checker is None:
+        if self._sensitive_checker is None or sensitive_enabled is False:
             return OutputAuditResult(verdict="pass", original_output=output_text, reason="敏感词检查器未配置,跳过")
 
-        result = self._sensitive_checker.check(output_text)
+        result = self._sensitive_checker.check(output_text, enabled=sensitive_enabled)
         if not result.has_hits:
             return OutputAuditResult(verdict="pass", original_output=output_text)
 

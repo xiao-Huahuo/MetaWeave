@@ -138,7 +138,7 @@ class ModelRuntimeMixin:
         try:
             logger.info("启用短问直答路径 | user=%s session=%s msg_count=%d", user_id, session_id, len(runtime_messages))
             safety_started_at = time.perf_counter()
-            input_audit = self.safety_service.audit_input(user_prompt, llm_config=llm_config)
+            input_audit = self.safety_service.audit_input(user_prompt, llm_config=llm_config, user_id=user_id)
             safety_input_trace = {
                 "node": "safety_input",
                 "event": "blocked" if input_audit.blocked else "passed",
@@ -331,7 +331,7 @@ class ModelRuntimeMixin:
                 "token_usage": token_usage,
             }
             output_safety_started_at = time.perf_counter()
-            output_audit = self.safety_service.audit_output(content, user_input=user_prompt)
+            output_audit = self.safety_service.audit_output(content, user_input=user_prompt, user_id=user_id)
             if output_audit.blocked or output_audit.sanitized:
                 content = output_audit.safe_output
                 citation_metadata = self._build_citation_metadata(content, citation_map)

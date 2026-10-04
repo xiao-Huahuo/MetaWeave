@@ -238,15 +238,18 @@ class KnowledgePreviewMixin:
             raise ValueError("file not found")
         mime_type = self._resolve_raw_mime_type(target)
         return target, mime_type
-    def resolve_knowledge_asset_for_response(self, *, path: str) -> tuple[Path, str]:
+    def resolve_knowledge_asset_for_response(self, *, user_id: str, path: str) -> tuple[Path, str]:
         """
         解析知识库预览导出的临时 asset 路径。
 
         path: assets/knowledge 下的相对路径,例如 pdf_preview/<hash>/image.png。
         """
 
-        root = (self.config.storage.assets_dir / "knowledge").resolve()
-        target = self._resolve_child_path(root=root, relative_path=path)
+        prefix = user_id + "/"
+        if not path.startswith(prefix):
+            raise ValueError("asset not found")
+        root = (self.config.storage.assets_dir / "knowledge" / user_id).resolve()
+        target = self._resolve_child_path(root=root, relative_path=path[len(prefix):])
         if not target.is_file():
             raise ValueError("asset not found")
         mime_type = self._resolve_raw_mime_type(target)
@@ -670,7 +673,7 @@ class KnowledgePreviewMixin:
         relative_path = self._relative_path(path=target, root=root)
         asset_key = hashlib.sha256(f"{user_id}:{relative_path}".encode("utf-8")).hexdigest()[:24]
         # Continuous pages use a separate cache because PDF text extraction refreshes pdf_preview.
-        output_dir = self.config.storage.assets_dir / "knowledge" / "pdf_pages" / asset_key
+        output_dir = self.config.storage.assets_dir / "knowledge" / user_id / "pdf_pages" / asset_key
         output_dir.mkdir(parents=True, exist_ok=True)
         output_path = output_dir / f"preview-page-{page}.png"
         if not output_path.is_file() or output_path.stat().st_mtime_ns < target.stat().st_mtime_ns:
@@ -697,8 +700,8 @@ class KnowledgePreviewMixin:
         """提取 PDF 渲染 Markdown,并从已灌库 frontmatter 读取文本模式正文。"""
 
         asset_key = hashlib.sha256(f"{user_id}:{relative_path}".encode("utf-8")).hexdigest()[:24]
-        image_output_dir = self.config.storage.assets_dir / "knowledge" / "pdf_preview" / asset_key
-        image_public_prefix = f"/knowledge/assets/pdf_preview/{asset_key}"
+        image_output_dir = self.config.storage.assets_dir / "knowledge" / user_id / "pdf_preview" / asset_key
+        image_public_prefix = f"/knowledge/assets/{user_id}/pdf_preview/{asset_key}"
         try:
             pdf_pages = self._pdf_pages(user_id=user_id, relative_path=relative_path, path=path)
         except Exception as exc:

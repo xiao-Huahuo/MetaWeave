@@ -1,10 +1,42 @@
 /// <reference types="vite/client" />
 
+/** Desktop renderer declarations; auth exposes sessions without vault/device secrets. */
+
 declare module '@fontsource/jetbrains-mono'
+
+/** Public login state shared by the trusted main and floating application renderers. */
+interface DesktopAuthState {
+  token: string
+  user_id: string
+  username: string
+  onboarding_step: number
+  onboarding_completed: boolean
+  expires_at: string
+  remembered: boolean
+  notice?: string
+}
+
+/** Remembered credentials never leave main, even when expired or unavailable. */
+interface DesktopAuthRestoreResult {
+  status: 'available' | 'expired' | 'missing' | 'unavailable'
+  username?: string
+  state?: DesktopAuthState
+  notice?: string
+}
 
 interface AgentEditorDesktopApi {
   isDesktop: boolean
   platform: NodeJS.Platform
+  /** Public configured API origin, shared with the main-process login transport. */
+  backendOrigin: string
+  auth: {
+    register: (credentials: { username: string; password: string }) => Promise<DesktopAuthState>
+    login: (credentials: { username: string; password: string }) => Promise<DesktopAuthState>
+    restore: () => Promise<DesktopAuthRestoreResult>
+    logout: () => Promise<{ ok: boolean; notice?: string }>
+    getSession: () => Promise<DesktopAuthState | null>
+    onSession: (callback: (state: DesktopAuthState | null) => void) => () => void
+  }
   minimize: () => void
   toggleMaximize: () => Promise<boolean>
   beginWindowMove: (screenX: number, screenY: number) => Promise<boolean>

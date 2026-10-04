@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends
 from agent_service.api.rest.deps import bind_application_services
 
 from agent_service.api.rest.health import router as health_router
+from agent_service.api.rest.auth import router as auth_router
 from agent_service.api.rest.sessions import router as sessions_router
 from agent_service.api.rest.agent import router as agent_router
 from agent_service.api.rest.debug import router as debug_router
@@ -32,6 +33,7 @@ from agent_service.api.rest.activity import router as activity_router
 
 router = APIRouter(dependencies=[Depends(bind_application_services)])
 router.include_router(health_router)
+router.include_router(auth_router)
 router.include_router(sessions_router)
 router.include_router(agent_router)
 router.include_router(debug_router)

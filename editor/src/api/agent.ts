@@ -6,7 +6,7 @@
  * chat endpoint as the console front-end.
  */
 
-import { ApiError, apiDelete, apiGet, apiPost, apiPostForm, apiPut, buildApiUrl, streamLines } from '@/api/client'
+import { applyApiAuthHeaders, ApiError, apiDelete, apiGet, apiPost, apiPostForm, apiPut, buildApiUrl, streamLines } from '@/api/client'
 import type { ApiRequestInit } from '@/api/client'
 import { API_ROUTES } from '@/router/api_routes'
 import type { MarkdownHtmlVisualizationPayload } from '@/types/knowledge'
@@ -182,6 +182,8 @@ export function uploadAgentAttachment(
   return new Promise((resolve, reject) => {
     const request = new XMLHttpRequest()
     request.open('POST', buildApiUrl(API_ROUTES.AGENT_ATTACHMENTS_UPLOAD))
+    request.withCredentials = true
+    applyApiAuthHeaders().forEach((value, name) => request.setRequestHeader(name, value))
     request.timeout = 600_000
     request.upload.onprogress = (event) => {
       if (event.lengthComputable && event.total > 0) {

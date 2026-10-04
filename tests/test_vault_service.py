@@ -2,8 +2,7 @@
 密码库服务测试。
 
 功能说明:
-验证密码库主密码二次解锁、独立 JWT、敏感字段加密存储、回收站、导入导出
-和 token 用户隔离。
+验证统一登录解密会话、敏感字段加密存储、回收站、导入导出和账号隔离。
 
 使用说明:
 在项目根目录执行 `python -m pytest tests/test_vault_service.py`。
@@ -19,7 +18,8 @@ from sqlmodel import Session, select
 from tests.db_test_utils import create_test_engine as create_engine
 
 from agent_service.core.agent_config import AgentConfig
-from agent_service.models.vault import VaultItem
+from agent_service.models.vault import VaultAsset, VaultItem
+from agent_service.services.auth.service import AuthService
 from agent_service.services.vault.service import VaultService
 
 
@@ -28,6 +28,7 @@ def make_service(tmp_path: Path) -> VaultService:
 
     config = AgentConfig.load_config(
         {
+            "limits": {"vault_password_kdf_iterations": 100, "vault_encryption_kdf_iterations": 100},
             "storage": {
                 "base_data_dir": str(tmp_path / "runtime"),
                 "assets_dir": str(tmp_path / "runtime" / "assets"),
@@ -42,10 +43,11 @@ def make_service(tmp_path: Path) -> VaultService:
 
 
 def unlock_session(service: VaultService, user_id: str = "u1"):
-    """设置主密码并返回服务端解锁会话。"""
+    """注册统一账号并返回同密码派生的解密会话。"""
 
-    token = service.setup(user_id=user_id, master_password="correct horse")["token"]
-    return service.verify_token(token)
+    auth = AuthService(config=service.config, engine=service.engine)
+    token = auth.register(username=user_id, password="correct horse")["token"]
+    return auth.verify_session(token)
 
 
 def test_vault_encrypts_sensitive_payload_and_lists_after_unlock(tmp_path: Path) -> None:
@@ -75,13 +77,12 @@ def test_vault_encrypts_sensitive_payload_and_lists_after_unlock(tmp_path: Path)
     assert service.get_item(session=session, item_id=created["item_id"])["item"]["fields"]["password"] == "secret"
 
 
-def test_vault_token_scope_and_user_isolation(tmp_path: Path) -> None:
-    """密码库 token 必须是 vault scope,且不能跨 user_id 读取。"""
+def test_vault_authenticated_account_isolation(tmp_path: Path) -> None:
+    """统一账号的解密会话不能跨 user_id 读取。"""
 
     service = make_service(tmp_path)
     session_u1 = unlock_session(service, "u1")
-    token_u2 = service.setup(user_id="u2", master_password="correct horse")["token"]
-    session_u2 = service.verify_token(token_u2)
+    session_u2 = unlock_session(service, "u2")
     item = service.create_item(
         session=session_u1,
         item_type="secure_note",
@@ -132,16 +133,112 @@ def test_vault_import_converts_mismatched_item_to_secure_note(tmp_path: Path) ->
     assert items[0]["item_type"] == "secure_note"
 
 
-def test_vault_debug_master_password_is_saved_on_setup_and_unlock(tmp_path: Path) -> None:
-    """调试接口可以读取最近一次设置或成功解锁写入的主密码。"""
+def test_vault_no_longer_exposes_independent_credentials_or_plaintext_debug(tmp_path: Path) -> None:
+    """密码库只消费统一登录会话，旧密码设置/解锁/调试入口已删除。"""
 
     service = make_service(tmp_path)
-    service.setup(user_id="u1", master_password="first-password")
-    assert service.debug_master_password(user_id="u1")["master_password"] == "first-password"
+    for method in ("setup", "unlock", "reset_master_password", "debug_master_password", "verify_token", "lock"):
+        assert not hasattr(service, method)
 
-    service.unlock(user_id="u1", master_password="first-password")
-    result = service.debug_master_password(user_id="u1")
 
-    assert result["configured"] is True
-    assert result["available"] is True
-    assert result["master_password"] == "first-password"
+@pytest.mark.parametrize("operation", ["create", "update"])
+def test_vault_mutation_rolls_back_item_and_tags_when_attachment_fails(tmp_path: Path, monkeypatch, operation: str) -> None:
+    """A tag/asset failure must not commit ciphertext outside the password writer guard."""
+    service = make_service(tmp_path)
+    session = unlock_session(service)
+    original = service.create_item(session=session, item_type="secure_note",
+                                   fields={"name": "original", "note": "hidden"}, tags=["old"], asset_ids=[])["item"]
+
+    def fail_attachment(**kwargs):
+        """Inject the failure after tag changes but before the transaction commits."""
+        raise ValueError("attachment failed")
+
+    monkeypatch.setattr(service, "_attach_assets", fail_attachment)
+    with pytest.raises(ValueError, match="attachment failed"):
+        if operation == "create":
+            service.create_item(session=session, item_type="secure_note",
+                                fields={"name": "new", "note": "secret"}, tags=["new"], asset_ids=[])
+        else:
+            service.update_item(session=session, item_id=original["item_id"],
+                                payload={"fields": {"name": "changed", "note": "changed"}, "tags": ["new"], "asset_ids": []})
+    items = service.list_items(session=session)["items"]
+    assert len(items) == 1
+    assert items[0]["name"] == "original" and items[0]["tags"] == ["old"]
+
+
+def test_stale_vault_session_rejects_asset_before_writing_files(tmp_path: Path) -> None:
+    """A password-rotated key must not leave an unowned uploaded file on disk."""
+    service = make_service(tmp_path)
+    stale = unlock_session(service)
+    auth = AuthService(config=service.config, engine=service.engine)
+    token = auth.login(username="u1", password="correct horse")["token"]
+    auth.change_password(token, "correct horse", "new correct horse")
+    with pytest.raises(ValueError, match="expired"):
+        service.upload_asset(session=stale, filename="photo.png", content=b"image", mime_type="image/png")
+    assert not any(path.is_file() for path in service.assets_root.rglob("*"))
+
+
+def create_item_with_asset(service, session):
+    """Create real encrypted metadata and a tracked image file for purge failures."""
+    asset = service.upload_asset(session=session, filename="photo.png", content=b"private image", mime_type="image/png")["asset"]
+    path = Path(service.get_asset(session=session, asset_id=asset["asset_id"]).storage_path)
+    item = service.create_item(session=session, item_type="secure_note",
+        fields={"name": "private", "note": "keep intact", "asset_ids": [asset["asset_id"]]}, tags=[], asset_ids=[asset["asset_id"]])["item"]
+    return item, asset, path
+
+
+def test_purge_validates_every_owner_before_removing_any_file(tmp_path: Path) -> None:
+    """A mixed owner batch fails as one unit and leaves earlier own images intact."""
+    service = make_service(tmp_path)
+    own = unlock_session(service)
+    other = unlock_session(service, "other")
+    item, _, path = create_item_with_asset(service, own)
+    foreign = service.create_item(session=other, item_type="secure_note", fields={"name": "foreign", "note": "hidden"}, tags=[], asset_ids=[])["item"]
+    with pytest.raises(ValueError, match="not found"):
+        service.purge_items(session=own, item_ids=[item["item_id"], foreign["item_id"]])
+    assert path.exists()
+    assert service.get_item(session=own, item_id=item["item_id"])["item"]["fields"]["note"] == "keep intact"
+
+
+def test_purge_sql_commit_failure_never_deletes_image_files(tmp_path: Path, monkeypatch) -> None:
+    """File deletion starts only after the entire metadata transaction succeeds."""
+    service = make_service(tmp_path)
+    session = unlock_session(service)
+    item, asset, path = create_item_with_asset(service, session)
+
+    def fail_commit(database):
+        """Inject a real transaction failure after service mutation preparation."""
+        raise RuntimeError("database commit failed")
+
+    monkeypatch.setattr(Session, "commit", fail_commit)
+    with pytest.raises(RuntimeError, match="database commit failed"):
+        service.purge_items(session=session, item_ids=[item["item_id"]])
+    assert path.exists()
+    with Session(service.engine) as db:
+        assert db.get(VaultItem, item["item_id"]) is not None
+        assert db.get(VaultAsset, asset["asset_id"]) is not None
+
+
+def test_purge_locked_file_remains_tracked_and_startup_retries(tmp_path: Path, monkeypatch) -> None:
+    """Pending cleanup is durable and never makes a deleted item's asset accessible."""
+    service = make_service(tmp_path)
+    session = unlock_session(service)
+    item, asset, path = create_item_with_asset(service, session)
+
+    def locked_file(storage_path):
+        """Model the actual Windows open-file deletion failure."""
+        raise PermissionError("file is in use")
+
+    monkeypatch.setattr(service, "_delete_asset_file", locked_file)
+    with pytest.raises(ValueError, match="cleanup"):
+        service.purge_items(session=session, item_ids=[item["item_id"]])
+    assert path.exists()
+    with Session(service.engine) as db:
+        assert db.get(VaultItem, item["item_id"]) is None
+        assert db.get(VaultAsset, asset["asset_id"]) is not None
+    with pytest.raises(ValueError, match="not found"):
+        service.get_asset(session=session, asset_id=asset["asset_id"])
+    VaultService(config=service.config, engine=service.engine)
+    assert not path.exists()
+    with Session(service.engine) as db:
+        assert db.get(VaultAsset, asset["asset_id"]) is None

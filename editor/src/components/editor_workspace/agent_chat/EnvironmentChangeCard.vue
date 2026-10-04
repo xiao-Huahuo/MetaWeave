@@ -9,7 +9,7 @@
 import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 
 import IcIcon from '@/components/common/IcIcon.vue'
-import { fetchSessionChanges } from '@/api/agentChanges'
+import { fetchSessionChanges, type AgentChangeSnapshot } from '@/api/agentChanges'
 import { fetchSessionState, saveSessionEnvironment } from '@/api/session'
 import { fetchGitHistory, fetchGitStatus } from '@/api/git'
 import type { SourceItem } from '@/stores/chat'
@@ -37,7 +37,7 @@ async function load() {
   if (changes.status === 'fulfilled') snapshot.value = changes.value.change_snapshot
   if (!snapshot.value && sessionState.status === 'fulfilled') {
     const saved = sessionState.value.session_state?.change_snapshot
-    if (saved && typeof saved === 'object') snapshot.value = saved as typeof snapshot.value
+    if (saved && typeof saved === 'object') snapshot.value = saved as AgentChangeSnapshot
   }
   const savedEnvironment = sessionState.status === 'fulfilled'
     ? sessionState.value.session_state?.environment as Record<string, string> | undefined

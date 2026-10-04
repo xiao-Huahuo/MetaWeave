@@ -166,6 +166,7 @@ logger = logging.getLogger(__name__)
 
 
 from agent_service.api.grpc.handlers.agent import AgentGrpcHandlerMixin
+from agent_service.api.grpc.handlers.auth import AuthGrpcHandlerMixin
 from agent_service.api.grpc.handlers.agent_queue import AgentQueueGrpcHandlerMixin
 from agent_service.api.grpc.handlers.automation import AutomationGrpcHandlerMixin
 from agent_service.api.grpc.handlers.component_library import ComponentLibraryGrpcHandlerMixin
@@ -188,7 +189,7 @@ from agent_service.api.grpc.mappers.responses import (
 
 from agent_service.api.grpc.handlers.mcp import McpGrpcHandlerMixin
 
-class AgentServiceServicer(McpGrpcHandlerMixin, GrpcErrorMapperMixin, GrpcResponseMapperMixin, AgentGrpcHandlerMixin, AgentQueueGrpcHandlerMixin, AutomationGrpcHandlerMixin, ComponentLibraryGrpcHandlerMixin, GitGrpcHandlerMixin, KnowledgeGrpcHandlerMixin, LatexGrpcHandlerMixin, SessionsGrpcHandlerMixin, SettingsGrpcHandlerMixin, SmartFormsGrpcHandlerMixin, UserDataGrpcHandlerMixin, VaultGrpcHandlerMixin, BaseServicer):
+class AgentServiceServicer(AuthGrpcHandlerMixin, McpGrpcHandlerMixin, GrpcErrorMapperMixin, GrpcResponseMapperMixin, AgentGrpcHandlerMixin, AgentQueueGrpcHandlerMixin, AutomationGrpcHandlerMixin, ComponentLibraryGrpcHandlerMixin, GitGrpcHandlerMixin, KnowledgeGrpcHandlerMixin, LatexGrpcHandlerMixin, SessionsGrpcHandlerMixin, SettingsGrpcHandlerMixin, SmartFormsGrpcHandlerMixin, UserDataGrpcHandlerMixin, VaultGrpcHandlerMixin, BaseServicer):
     """AgentService gRPC Servicer。"""
 
     def __init__(
@@ -205,6 +206,7 @@ class AgentServiceServicer(McpGrpcHandlerMixin, GrpcErrorMapperMixin, GrpcRespon
         privacy_service: PrivacyService | None = None,
         feedback_service: FeedbackService | None = None,
         vault_service: VaultService | None = None,
+        auth_service: Any = None,
         agent_change_service: AgentChangeService | None = None,
         agent_queue_service: AgentQueueService | None = None,
         automation_service: AutomationService | None = None,
@@ -232,6 +234,7 @@ class AgentServiceServicer(McpGrpcHandlerMixin, GrpcErrorMapperMixin, GrpcRespon
         self._privacy_service = privacy_service
         self._feedback_service = feedback_service
         self._vault_service = vault_service
+        self._auth_service = auth_service
         self._agent_change_service = agent_change_service
         self._agent_queue_service = agent_queue_service
         self._automation_service = automation_service
@@ -242,6 +245,10 @@ class AgentServiceServicer(McpGrpcHandlerMixin, GrpcErrorMapperMixin, GrpcRespon
         self._latex_service = latex_service
         self._model_management_service = model_management_service
         self._attachment_service = attachment_service
+        # Auth-less instances support isolated handler unit checks only. The
+        # generated registration boundary refuses to expose them as a transport.
+        if auth_service is not None:
+            self._install_rpc_auth()
 
     def shutdown(self) -> None:
         self._agent.close()

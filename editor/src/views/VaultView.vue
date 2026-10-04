@@ -2,9 +2,8 @@
   Password vault page.
 
   Usage:
-  Fourth knowledge-menu surface for a Bitwarden-like vault. It keeps a vault
-  token in sessionStorage for the 30-minute unlock window and clears only that
-  token when the user locks the vault.
+  Fourth knowledge-menu surface for the encrypted vault. It uses the global
+  application session and the login password; no separate unlock or credential cache.
 -->
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref, watch } from 'vue'
@@ -13,16 +12,12 @@ import {
   createVaultItem,
   exportVaultItems,
   getVaultItem,
-  getVaultStatus,
   importVaultItems,
   listVaultItems,
   listVaultTags,
-  lockVaultToken,
   purgeVaultItems,
   restoreVaultItems,
-  setupVault,
   trashVaultItems,
-  unlockVault,
   updateVaultItem,
   type VaultItem,
   type VaultItemType,
@@ -31,22 +26,19 @@ import {
 import VaultFilterPanel from '@/components/vault_view/VaultFilterPanel.vue'
 import VaultItemEditor from '@/components/vault_view/VaultItemEditor.vue'
 import VaultTable from '@/components/vault_view/VaultTable.vue'
-import VaultUnlockPanel from '@/components/vault_view/VaultUnlockPanel.vue'
 import IcIcon from '@/components/common/IcIcon.vue'
-import { useSettingsStore } from '@/stores/settings'
+import { useAuthStore } from '@/stores/auth'
 import { useWorkspaceStore } from '@/stores/workspace'
 
 defineOptions({ name: 'VaultView' })
 
 withDefaults(defineProps<{ mobile?: boolean }>(), { mobile: false })
 
-const settingsStore = useSettingsStore()
+const authStore = useAuthStore()
 const workspaceStore = useWorkspaceStore()
 
-const configured = ref(false)
 const loading = ref(false)
-const token = ref('')
-const expiresAt = ref('')
+const token = computed(() => authStore.session?.token ?? '')
 const items = ref<VaultItem[]>([])
 const tags = ref<VaultTag[]>([])
 const query = ref('')
@@ -63,7 +55,6 @@ const contextOpen = ref(false)
 const contextStyle = ref({ left: '0px', top: '0px' })
 const typeCounts = ref<Record<string, number>>({ login: 0, card: 0, identity: 0, secure_note: 0 })
 
-const tokenKey = computed(() => `metaweave_vault_token_${settingsStore.profile.userId}`)
 const selectedItemIds = computed(() => [...selectedIds.value])
 
 watch([query, selectedTag, selectedType, inTrash], () => {
@@ -71,8 +62,6 @@ watch([query, selectedTag, selectedType, inTrash], () => {
 })
 
 onMounted(async () => {
-  await loadStatus()
-  restoreToken()
   if (token.value) await refresh()
   document.addEventListener('click', closeContext)
 })
@@ -80,74 +69,6 @@ onMounted(async () => {
 onUnmounted(() => {
   document.removeEventListener('click', closeContext)
 })
-
-async function loadStatus() {
-  if (!settingsStore.profile.userId) return
-  const status = await getVaultStatus(settingsStore.profile.userId)
-  configured.value = status.configured
-}
-
-function restoreToken() {
-  try {
-    const raw = sessionStorage.getItem(tokenKey.value)
-    if (!raw) return
-    const payload = JSON.parse(raw) as { token: string; expires_at: string }
-    if (new Date(payload.expires_at).getTime() > Date.now()) {
-      token.value = payload.token
-      expiresAt.value = payload.expires_at
-    } else {
-      sessionStorage.removeItem(tokenKey.value)
-    }
-  } catch {
-    sessionStorage.removeItem(tokenKey.value)
-  }
-}
-
-function saveToken(nextToken: string, nextExpiresAt: string) {
-  token.value = nextToken
-  expiresAt.value = nextExpiresAt
-  sessionStorage.setItem(tokenKey.value, JSON.stringify({ token: nextToken, expires_at: nextExpiresAt }))
-}
-
-async function unlock(password: string) {
-  if (!settingsStore.profile.userId) return
-  loading.value = true
-  try {
-    const response = await unlockVault(settingsStore.profile.userId, password)
-    saveToken(response.token, response.expires_at)
-    await refresh()
-  } catch (error) {
-    workspaceStore.showToast(error instanceof Error ? error.message : '解锁失败')
-  } finally {
-    loading.value = false
-  }
-}
-
-async function setup(password: string) {
-  if (!settingsStore.profile.userId) return
-  loading.value = true
-  try {
-    const response = await setupVault(settingsStore.profile.userId, password)
-    configured.value = true
-    saveToken(response.token, response.expires_at)
-    await refresh()
-  } catch (error) {
-    workspaceStore.showToast(error instanceof Error ? error.message : '设置失败')
-  } finally {
-    loading.value = false
-  }
-}
-
-async function lockVault() {
-  if (token.value) {
-    await lockVaultToken(token.value).catch(() => {})
-  }
-  token.value = ''
-  expiresAt.value = ''
-  items.value = []
-  selectedIds.value = new Set()
-  sessionStorage.removeItem(tokenKey.value)
-}
 
 async function refresh() {
   if (!token.value) return
@@ -167,8 +88,7 @@ async function refresh() {
     typeCounts.value = itemResponse.type_counts
     selectedIds.value = new Set([...selectedIds.value].filter((id) => itemResponse.items.some((item) => item.item_id === id)))
   } catch (error) {
-    await lockVault()
-    workspaceStore.showToast(error instanceof Error ? error.message : '密码库已锁定')
+    workspaceStore.showToast(error instanceof Error ? error.message : '读取密码库失败')
   } finally {
     loading.value = false
   }
@@ -299,14 +219,7 @@ async function contextDelete() {
 </script>
 
 <template>
-  <VaultUnlockPanel
-    v-if="!token"
-    :configured="configured"
-    :loading="loading"
-    @unlock="unlock"
-    @setup="setup"
-  />
-  <section v-else class="vault-view" :class="{ mobile, 'sidebar-collapsed': !sidebarOpen }">
+  <section class="vault-view" :class="{ mobile, 'sidebar-collapsed': !sidebarOpen }">
     <VaultFilterPanel
       class="vault-filter-sidebar"
       :title="inTrash ? '回收站' : '密码库'"
@@ -348,7 +261,6 @@ async function contextDelete() {
           <button class="selection-action" type="button" :disabled="selectedIds.size === 0" @click="exportSelected()"><IcIcon name="upload" :size="17" /><span>导出 JSON</span></button>
         </template>
         <button class="new-btn" type="button" @click="openNew"><IcIcon name="add" :size="17" /><span>新建</span></button>
-        <button class="lock-btn" type="button" @click="lockVault"><IcIcon name="shield" :size="17" /><span>锁定</span></button>
       </div>
     </header>
     <div class="vault-main">
@@ -469,28 +381,6 @@ async function contextDelete() {
 
 .new-btn:hover {
   background: color-mix(in srgb, var(--color-primary) 84%, white);
-}
-
-.lock-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-4);
-  height: 28px;
-  border: 1px solid var(--color-danger);
-  border-radius: 999px;
-  background: transparent;
-  color: var(--color-danger);
-  padding: 0 var(--space-10);
-  font: inherit;
-  font-size: inherit;
-  cursor: pointer;
-  transition: background 180ms ease, border-color 180ms ease, color 180ms ease;
-}
-
-.lock-btn:hover {
-  border-color: var(--color-danger);
-  background: var(--color-danger);
-  color: #fff;
 }
 
 .vault-switch {

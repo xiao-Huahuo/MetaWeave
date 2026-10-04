@@ -8,12 +8,18 @@
 
 from __future__ import annotations
 
+# Local device revocation must run before web/model imports and without opening ports.
 import sys
+if __name__ == "__main__" and sys.argv[1:2] == ["--forget-device"]:
+    from agent_service.services.auth.device_cli import main as forget_device_main
+    raise SystemExit(forget_device_main(sys.argv[2:]))
+
+
 import warnings
 from pathlib import Path
 from typing import Any
 
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.concurrency import run_in_threadpool
 
@@ -76,11 +82,12 @@ from agent_service.core.lifespan import agent_service_lifespan
 from agent_service.services.activity.tracking import classify_activity, should_inspect_activity_request
 
 
+_runtime_config = AgentConfig.load_config(ensure_directories=False, ensure_models=False)
 app = FastAPI(title="Agent-Core-Service", lifespan=agent_service_lifespan)
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["null"],
-    allow_origin_regex=r"^(https?://(127\.0\.0\.1|localhost)(:\d+)?|null)$",
+    allow_origins=[_runtime_config.server.frontend_origin, f"http://127.0.0.1:{_runtime_config.server.http_port}", f"http://localhost:{_runtime_config.server.http_port}"],
+    allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
     allow_private_network=True,
@@ -110,7 +117,8 @@ async def _record_daily_activity(request: Any, call_next: Any) -> Any:
     user_id = str(body.get("user_id") or request.query_params.get("user_id") or "").strip()
     if not user_id and request.url.path.startswith("/vault/"):
         try:
-            user_id = str(services.vault_service.verify_token(request.headers.get("Authorization", "")).user_id)
+            from agent_service.api.rest.auth import request_token
+            user_id = str(services.auth_service.verify_session(request_token(request)).user_id)
         except ValueError:
             user_id = ""
     if user_id:
@@ -124,14 +132,78 @@ async def _allow_local_private_network_requests(request: Any, call_next: Any) ->
 
     response = await call_next(request)
     origin = request.headers.get("origin", "")
-    if origin == "null" or origin.startswith("http://127.0.0.1") or origin.startswith("http://localhost"):
+    from agent_service.api.rest.auth import trusted_origins
+    if origin in trusted_origins(_runtime_config):
         response.headers["Access-Control-Allow-Private-Network"] = "true"
     return response
 
 
 app.include_router(rest_router)
 
-_runtime_config = AgentConfig.load_config(ensure_directories=False, ensure_models=False)
+@app.middleware("http")
+async def _protect_authenticated_streams(request: Any, call_next: Any) -> Any:
+    """A stream must stop emitting private data once its account session is revoked."""
+    response = await call_next(request)
+    if response.headers.get("content-type", "").startswith("text/event-stream"):
+        from agent_service.api.rest.auth import request_token
+        from agent_service.services.auth.service import AuthError
+        from starlette.concurrency import run_in_threadpool
+        token = request_token(request)
+        services = getattr(request.app.state, "services", None)
+        original = response.body_iterator
+        async def authenticated_stream():
+            try:
+                async for chunk in original:
+                    try:
+                        if services is None:
+                            return
+                        await run_in_threadpool(services.auth_service.verify_session, token)
+                    except AuthError:
+                        return
+                    yield chunk
+            finally:
+                close = getattr(original, "aclose", None)
+                if close is not None:
+                    await close()
+        response.body_iterator = authenticated_stream()
+    return response
+
+
+@app.middleware("http")
+async def _protect_business_files(request: Any, call_next: Any) -> Any:
+    """Authenticate static business assets; public frontend bundles remain accessible."""
+    from starlette.responses import JSONResponse
+    prefixes = ("/knowledge/assets/", "/downloads/", "/library/assets/", "/visualizations/")
+    if request.url.path.startswith(prefixes):
+        from agent_service.api.rest.auth import request_token
+        from agent_service.services.auth.service import AuthError
+        from starlette.concurrency import run_in_threadpool
+        services = getattr(request.app.state, "services", None)
+        if services is None:
+            return JSONResponse({"detail": "Service unavailable"}, status_code=503)
+        try:
+            identity = await run_in_threadpool(services.auth_service.verify_session, request_token(request))
+        except (AuthError, HTTPException) as exc:
+            return JSONResponse({"detail": exc.detail if isinstance(exc, HTTPException) else str(exc)}, status_code=exc.status_code)
+        from urllib.parse import unquote
+        roots = {"/knowledge/assets/": services.config.storage.assets_dir / "knowledge", "/library/assets/": services.config.storage.assets_dir / "library", "/downloads/": services.config.storage.assets_dir / "downloads", "/visualizations/": services.config.storage.base_data_dir / "visualizations"}
+        for prefix, root in roots.items():
+            if request.url.path.startswith(prefix):
+                relative = unquote(request.url.path[len(prefix):])
+                owner_root = (root / identity.user_id).resolve()
+                target = (root / relative).resolve()
+                if not target.is_relative_to(owner_root):
+                    return JSONResponse({"detail": "Resource not found"}, status_code=404)
+                break
+        response = await call_next(request)
+        response.headers["Cache-Control"] = "no-store"
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        # Visualization scripts keep working in a unique origin, without account cookies.
+        response.headers["Content-Security-Policy"] = "sandbox allow-scripts" if request.url.path.startswith("/visualizations/") else "sandbox"
+        return response
+    return await call_next(request)
+
+
 _knowledge_assets_dir = _runtime_config.storage.assets_dir / "knowledge"
 _knowledge_assets_dir.mkdir(parents=True, exist_ok=True)
 _downloads_dir = _runtime_config.storage.assets_dir / "downloads"
@@ -181,7 +253,13 @@ if _static_dir is not None:
     async def _spa_fallback(full_path: str) -> FileResponse:
         """对非 API 路径返回静态文件或 Vue SPA 的 index.html。"""
 
-        file_path = _static_dir / full_path
+        from fastapi import HTTPException
+        api_prefixes = ("auth", "vault", "settings", "agent", "sessions", "knowledge", "library", "scanner", "debug", "mcp", "smart-forms")
+        if full_path.split("/", 1)[0] in api_prefixes:
+            raise HTTPException(status_code=404, detail="Endpoint not found")
+        file_path = (_static_dir / full_path).resolve()
+        if not file_path.is_relative_to(_static_dir.resolve()):
+            raise HTTPException(status_code=404, detail="File not found")
         if file_path.is_file():
             return FileResponse(file_path)
         return FileResponse(_static_dir / "index.html")

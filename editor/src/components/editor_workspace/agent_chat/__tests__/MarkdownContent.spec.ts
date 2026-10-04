@@ -85,7 +85,7 @@ describe('MarkdownContent source links', () => {
       props: { content: '[网站](https://github.com/private/path?token=secret#part)' },
     })
     const image = wrapper.get('.markdown-link-icon img')
-    const iconUrl = new URL(image.attributes('src'))
+    const iconUrl = new URL(image.attributes('src')!)
     expect(iconUrl.origin).toBe('https://t0.gstatic.com')
     expect(iconUrl.searchParams.get('url')).toBe('https://github.com')
     expect(image.attributes('referrerpolicy')).toBe('no-referrer')

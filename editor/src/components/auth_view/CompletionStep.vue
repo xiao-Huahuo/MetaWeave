@@ -1,6 +1,6 @@
-<!-- Completion-page visual framework; entry remains unavailable until real authentication is connected. -->
+<!-- Completion marks persisted onboarding complete only after the explicit entry button succeeds. -->
 <script setup lang="ts">
-defineProps<{ active: boolean }>()
+defineProps<{ active: boolean; busy?: boolean }>()
 defineEmits<{ enter: [] }>()
 </script>
 <template>
@@ -13,6 +13,6 @@ defineEmits<{ enter: [] }>()
       />
     </div>
     <h1>完成</h1>
-    <button class="auth-button" type="button" @click="$emit('enter')">进入主页</button>
+    <button class="auth-button" type="button" :disabled="busy" @click="$emit('enter')">进入主页</button>
   </section>
 </template>

@@ -858,7 +858,7 @@ function handleChangeUpdated(event: CustomEvent<AgentChangeSnapshot>) {
       :mode="props.mode"
       :class="{ 'mobile-floating': props.mobileMain }"
       :user-id="userId"
-      :selected-session-id="activeSessionId"
+      :selected-session-id="activeSessionId ?? undefined"
       :streaming-session-ids="sessionStore.streamingSessionIds"
       @close="closeSessionDrawer"
       @create="startNewConversationDraft"

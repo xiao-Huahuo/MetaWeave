@@ -374,7 +374,7 @@ describe('SmartFormsView', () => {
   })
 
   it('exports the current form as a zip archive', async () => {
-    const createObjectUrl = vi.fn(() => 'blob:smart-form')
+    const createObjectUrl = vi.fn((_blob: Blob) => 'blob:smart-form')
     const revokeObjectUrl = vi.fn()
     const anchorClick = vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => undefined)
     Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: createObjectUrl })

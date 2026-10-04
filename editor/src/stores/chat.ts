@@ -25,6 +25,7 @@ import type { AgentTaskList } from '@/api/taskList'
 import { useSessionStore } from '@/stores/session'
 import { useTaskListStore } from '@/stores/taskList'
 import { useWorkspaceStore } from '@/stores/workspace'
+import { useSettingsStore } from '@/stores/settings'
 import type { MarkdownHtmlVisualizationPayload } from '@/types/knowledge'
 import { SEARCH_SOURCES, type SearchMatchMode, type UnifiedSearchResult } from '@/types/unifiedSearch'
 
@@ -563,8 +564,10 @@ const createChatStore = (storeId: string) => defineStore(storeId, () => {
   async function syncHistory(sessionId: string, userId: string) {
     if (historySyncing || loadedSessionId.value !== sessionId) return
     historySyncing = true
+    const requestId = historyRequestId
     try {
       const restored = restoreHistoryMessages(await fetchMessages(sessionId, userId))
+      if (requestId !== historyRequestId || loadedSessionId.value !== sessionId) return
       const existingById = new Map(messages.value.map((message) => [message.message_id, message]))
       messages.value = restored.map((message) => {
         const existing = message.message_id ? existingById.get(message.message_id) : undefined
@@ -1139,6 +1142,8 @@ const createChatStore = (storeId: string) => defineStore(storeId, () => {
   }
 
   function clear() {
+    historyRequestId += 1
+    loadingHistory.value = false
     streamAbortController?.abort()
     historyAbortController?.abort()
     cancelPendingFlush()
@@ -1413,6 +1418,13 @@ const createChatStore = (storeId: string) => defineStore(storeId, () => {
       console.error('删除上传附件失败:', error)
     }
   }
+
+  /** Every isolated Agent surface releases its owned polling and private messages on an account change. */
+  watch(() => useSettingsStore().profile.userId, () => {
+    stopChildAgentWatcher()
+    setWindowSyncSessionId('')
+    clear()
+  }, { flush: 'sync' })
 
   return {
     messages,

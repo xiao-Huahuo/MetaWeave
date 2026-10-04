@@ -6,8 +6,9 @@
  * The same user_id sees the same sessions in console and editor.
  */
 
-import { computed, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { defineStore } from 'pinia'
+import { useSettingsStore } from '@/stores/settings'
 
 import {
   clearAllSessions,
@@ -34,6 +35,8 @@ export const useSessionStore = defineStore('session', () => {
   /** Shared request used when several mounted components load the same user concurrently. */
   let pendingLoad: Promise<void> | null = null
   let pendingLoadUserId = ''
+  /** Account revision prevents old list/create results from crossing a logout or user switch. */
+  let accountRevision = 0
 
   /** Cross-window signal: mirrors the session id for the floating Agent window. */
   const ACTIVE_SESSION_KEY = 'agent_editor_active_session_id'
@@ -62,10 +65,12 @@ export const useSessionStore = defineStore('session', () => {
     }
 
     const request = (async () => {
+      const requestAccountRevision = accountRevision
       const requestMutationVersion = localMutationVersion
       isLoading.value = true
       try {
         const nextSessions = await listSessions(userId)
+        if (requestAccountRevision !== accountRevision) return
         loadedUserId = userId
         sessions.value = requestMutationVersion === localMutationVersion
           ? nextSessions
@@ -78,7 +83,7 @@ export const useSessionStore = defineStore('session', () => {
           currentSessionId.value = null
         }
       } finally {
-        isLoading.value = false
+        if (requestAccountRevision === accountRevision) isLoading.value = false
       }
     })()
     pendingLoad = request
@@ -94,7 +99,9 @@ export const useSessionStore = defineStore('session', () => {
   }
 
   async function create(userId: string, sessionName?: string): Promise<string> {
+    const requestAccountRevision = accountRevision
     const session = await createSession(userId, sessionName)
+    if (requestAccountRevision !== accountRevision) throw new DOMException('Account changed', 'AbortError')
     localMutationVersion += 1
     sessions.value = [session, ...sessions.value.filter((item) => item.session_id !== session.session_id)]
     freshSessionIds.value = [...new Set([...freshSessionIds.value, session.session_id])]
@@ -170,7 +177,19 @@ export const useSessionStore = defineStore('session', () => {
     }
   }
 
+  /** Clear renderer selection/history only; persistent conversations remain in the database. */
+  function resetForAccount(): void {
+    accountRevision += 1
+    localMutationVersion += 1
+    sessions.value = []; currentSessionId.value = null
+    streamingSessionIds.value = []; freshSessionIds.value = []; isLoading.value = false
+    loadedUserId = ''; pendingLoad = null; pendingLoadUserId = ''
+    localStorage.removeItem(ACTIVE_SESSION_KEY)
+  }
+  watch(() => useSettingsStore().profile.userId, resetForAccount, { flush: 'sync' })
+
   return {
+    resetForAccount,
     sessions,
     currentSessionId,
     isLoading,

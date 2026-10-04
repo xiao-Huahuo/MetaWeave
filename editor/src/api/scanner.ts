@@ -5,7 +5,7 @@
  * knowledge library, and retrieves binary export payloads.
  */
 
-import { apiDelete, apiGet, apiPatch, apiPost, apiPostForm, buildApiUrl } from '@/api/client'
+import { apiFetch, apiDelete, apiGet, apiPatch, apiPost, apiPostForm, buildApiUrl } from '@/api/client'
 import { API_ROUTES } from '@/router/api_routes'
 
 export type ScannerVariant = 'ocr' | 'no_ocr'
@@ -109,7 +109,7 @@ export function saveScanToKnowledge(userId: string, scanId: string, variant: Sca
 
 /** Download the Markdown or ZIP response as a Blob for native save-as. */
 export async function fetchScanExport(userId: string, scanId: string, variant: ScannerVariant): Promise<{ filename: string; blob: Blob }> {
-  const response = await fetch(buildApiUrl(`${API_ROUTES.SCANNER}/${encodeURIComponent(scanId)}/export`, { user_id: userId, variant }))
+  const response = await apiFetch(buildApiUrl(`${API_ROUTES.SCANNER}/${encodeURIComponent(scanId)}/export`, { user_id: userId, variant }))
   if (!response.ok) throw new Error(`导出失败 (${response.status})`)
   const disposition = response.headers.get('Content-Disposition') ?? ''
   const encodedName = disposition.match(/filename\*=UTF-8''([^;]+)/i)?.[1]
@@ -118,7 +118,7 @@ export async function fetchScanExport(userId: string, scanId: string, variant: S
 
 /** Request one server-built ZIP containing every selected scanner projection. */
 export async function fetchScanBatchExport(userId: string, items: Array<{ scan_id: string; variant: ScannerVariant }>): Promise<{ filename: string; blob: Blob }> {
-  const response = await fetch(buildApiUrl(`${API_ROUTES.SCANNER}/export-batch`), {
+  const response = await apiFetch(buildApiUrl(`${API_ROUTES.SCANNER}/export-batch`), {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ user_id: userId, items }),

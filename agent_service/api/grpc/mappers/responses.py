@@ -313,7 +313,9 @@ class GrpcResponseMapperMixin:
         """从 Struct payload 中校验 vault token。"""
 
         try:
-            return self._require_vault_service(context).verify_token(str(payload.get("token", "")))
+            from agent_service.services.vault.service import VaultSession
+            identity = self._grpc_auth_session(context)
+            return VaultSession(identity.user_id, identity.fernet_key, identity.password_version)
         except ValueError as exc:
             context.abort(grpc.StatusCode.UNAUTHENTICATED, str(exc))
     def _vault_item_ids_call(self, request: Struct, context: grpc.ServicerContext, function: Any) -> Struct:

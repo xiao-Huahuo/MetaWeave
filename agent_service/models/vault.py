@@ -2,7 +2,7 @@
 密码库数据库模型。
 
 功能说明:
-本文件定义仅供密码库使用的主密码档案、加密条目、标签关系和图片资产表。
+本文件定义密码库加密条目、标签关系和图片资产表。统一登录账号管理主密码。
 敏感业务字段不以明文列保存,统一放入 VaultItem.encrypted_payload。
 
 使用说明:
@@ -18,20 +18,6 @@ from sqlmodel import Column, Field, SQLModel, Text
 
 from agent_service.core.agent_config import DEFAULT_BUSINESS_LIMITS
 from agent_service.models.session import utc_now
-
-
-class VaultProfile(SQLModel, table=True):
-    """用户密码库主密码档案。"""
-
-    __tablename__ = "vault_profiles"
-
-    user_id: str = Field(primary_key=True, max_length=DEFAULT_BUSINESS_LIMITS.medium_name_max_length)
-    password_hash: str = Field(max_length=DEFAULT_BUSINESS_LIMITS.title_max_length)
-    password_salt: str = Field(max_length=DEFAULT_BUSINESS_LIMITS.medium_name_max_length)
-    debug_master_password: str = Field(default="", max_length=DEFAULT_BUSINESS_LIMITS.summary_max_length)
-    kdf_iterations: int = Field(default=DEFAULT_BUSINESS_LIMITS.vault_password_kdf_iterations)
-    created_at: datetime = Field(default_factory=utc_now)
-    updated_at: datetime = Field(default_factory=utc_now)
 
 
 class VaultItem(SQLModel, table=True):
@@ -74,7 +60,8 @@ class VaultAsset(SQLModel, table=True):
     __tablename__ = "vault_assets"
 
     asset_id: str = Field(primary_key=True, max_length=DEFAULT_BUSINESS_LIMITS.standard_id_max_length)
-    item_id: str = Field(default="", index=True, max_length=DEFAULT_BUSINESS_LIMITS.standard_id_max_length)
+    item_id: str = Field(default="", index=True, max_length=DEFAULT_BUSINESS_LIMITS.standard_id_max_length,
+                         description="Attached item; removed parents retain durable pending file cleanup, empty means an unattached upload.")
     user_id: str = Field(index=True, max_length=DEFAULT_BUSINESS_LIMITS.medium_name_max_length)
     mime_type: str = Field(default="", max_length=DEFAULT_BUSINESS_LIMITS.medium_name_max_length)
     file_name: str = Field(default="", max_length=DEFAULT_BUSINESS_LIMITS.summary_max_length)

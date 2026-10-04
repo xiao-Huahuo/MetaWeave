@@ -62,6 +62,9 @@ class UserSettingsRecord(SQLModel, table=True):
     # 用户显式开启后，主 Agent才可调度 DSH，并在界面启动后后台安装 Runtime。
     dsh_coding_agent_enabled: bool = Field(default=False)
     long_term_memory_enabled: bool = Field(default=True)
+    # User-scoped audit switches; shared word dictionaries do not determine account policy.
+    sensitive_words_enabled: bool = Field(default=True)
+    safety_enabled: bool = Field(default=True)
     knowledge_ignore_patterns: str = Field(default=DEFAULT_VIDEO_IGNORE_PATTERNS, sa_column=Column(Text))
     disabled_tools: str = Field(default="", sa_column=Column(Text))
     # MCP user overrides; empty fields inherit process defaults.
@@ -74,6 +77,8 @@ class UserSettingsRecord(SQLModel, table=True):
     # Legacy clients still read/write this field; the service mirrors the UI size into it.
     font_size_percent: int = Field(default=DEFAULT_BUSINESS_LIMITS.default_font_size_percent)
     theme_primary_color: str = Field(default="", max_length=DEFAULT_BUSINESS_LIMITS.short_status_max_length)
+    # Account-level theme selection, shared by onboarding and subsequent settings views.
+    theme_mode: str = Field(default="light", max_length=DEFAULT_BUSINESS_LIMITS.short_status_max_length)
     theme_soft_color: str = Field(default="", max_length=DEFAULT_BUSINESS_LIMITS.short_status_max_length)
     tag_colors: str = Field(default="", sa_column=Column(Text))
     tag_colors_translucent: bool | None = Field(default=None, nullable=True)

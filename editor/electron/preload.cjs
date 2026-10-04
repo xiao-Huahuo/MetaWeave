@@ -12,6 +12,21 @@ const { contextBridge, ipcRenderer, webUtils } = require('electron')
 contextBridge.exposeInMainWorld('agentEditorDesktop', {
   isDesktop: true,
   platform: process.platform,
+  // The renderer shares main's public loopback API origin; launch authorization stays private.
+  backendOrigin: process.env.METAWEAVE_BACKEND_URL || 'http://127.0.0.1:8002',
+  // Private vault material remains inside main; this bridge returns session fields only.
+  auth: {
+    register: (credentials) => ipcRenderer.invoke('auth:register', credentials),
+    login: (credentials) => ipcRenderer.invoke('auth:login', credentials),
+    restore: () => ipcRenderer.invoke('auth:restore'),
+    logout: () => ipcRenderer.invoke('auth:logout'),
+    getSession: () => ipcRenderer.invoke('auth:get-session'),
+    onSession: (callback) => {
+      const handler = (_event, state) => callback(state)
+      ipcRenderer.on('auth:session-changed', handler)
+      return () => ipcRenderer.removeListener('auth:session-changed', handler)
+    },
+  },
   minimize: () => ipcRenderer.send('window:minimize'),
   toggleMaximize: () => ipcRenderer.invoke('window:toggle-maximize'),
   beginWindowMove: (screenX, screenY) => ipcRenderer.invoke('window:begin-move', { screenX, screenY }),

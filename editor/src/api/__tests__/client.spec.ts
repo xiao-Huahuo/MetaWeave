@@ -5,10 +5,11 @@
  */
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { ApiError, apiGet, streamLines } from '../client'
+import { apiGet, setApiSessionToken, streamLines } from '../client'
 
 describe('streamLines scheduling', () => {
   afterEach(() => {
+    setApiSessionToken('')
     vi.unstubAllGlobals()
     vi.restoreAllMocks()
   })
@@ -86,10 +87,28 @@ describe('streamLines scheduling', () => {
 
     const slow = apiGet('/slow', undefined, { timeoutMs: 5 })
     const independent = apiGet('/independent', undefined, { timeoutMs: 1000 })
-    await expect(slow).rejects.toEqual(expect.objectContaining<ApiError>({ status: 408 }))
+    await expect(slow).rejects.toEqual(expect.objectContaining({ status: 408 }))
     expect(signals[0]?.aborted).toBe(true)
     expect(signals[1]?.aborted).toBe(false)
     resolveSecond?.(new Response('{}', { status: 200, headers: { 'Content-Type': 'application/json' } }))
     await expect(independent).resolves.toEqual({})
+  })
+
+  it('rejects buffered events from an old session and cancels the underlying stream before releasing it', async () => {
+    const cancel = vi.fn()
+    const body = new ReadableStream<Uint8Array>({
+      start(controller) {
+        controller.enqueue(new TextEncoder().encode('data: {"index":1}\n\ndata: {"index":2}\n\n'))
+      },
+      cancel,
+    })
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(body)))
+    setApiSessionToken('first-session')
+    const stream = streamLines('/agent/stream')
+    await expect(stream.next()).resolves.toMatchObject({ value: { index: 1 } })
+    setApiSessionToken('second-session')
+    await expect(stream.next()).resolves.toMatchObject({ done: true })
+    expect(cancel).toHaveBeenCalledOnce()
+    expect(body.locked).toBe(false)
   })
 })

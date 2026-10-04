@@ -43,7 +43,9 @@ const APPEARANCE_PREVIEW_EVENT = 'metaweave:appearance-preview'
 
 const DEFAULT_PROFILE: UserSettingsProfile = {
   userId: '',
-  knowledgeDir: 'D:/Knowledge',
+  sensitiveWordsEnabled: true,
+  safetyEnabled: true,
+  knowledgeDir: '',
   activeLibraryId: '',
   knowledgeLibraries: [],
   knowledgeWatchEnabled: true,
@@ -212,6 +214,8 @@ function mapKnowledgeLibrary(library: SettingsKnowledgeLibraryResponse): Knowled
 function mapBackendProfile(profileResponse: SettingsProfileResponse): Partial<UserSettingsProfile> {
   return {
     userId: profileResponse.user_id,
+    sensitiveWordsEnabled: profileResponse.sensitive_words_enabled !== false,
+    safetyEnabled: profileResponse.safety_enabled !== false,
     knowledgeDir: profileResponse.knowledge_dir,
     activeLibraryId: profileResponse.active_library_id ?? '',
     knowledgeLibraries: (profileResponse.knowledge_libraries ?? []).map(mapKnowledgeLibrary),
@@ -277,15 +281,9 @@ function normalizeFloatingPinMode(mode: string | null): 'off' | 'normal' | 'glob
 }
 
 function loadProfile(): UserSettingsProfile {
-  const raw = localStorage.getItem(PROFILE_KEY)
-  if (!raw) {
-    return normalizeProfile(DEFAULT_PROFILE)
-  }
-  try {
-    return normalizeProfile({ ...DEFAULT_PROFILE, ...JSON.parse(raw) } as UserSettingsProfile)
-  } catch {
-    return normalizeProfile(DEFAULT_PROFILE)
-  }
+  // Remove the legacy business cache once; identities and settings now come exclusively from the backend.
+  localStorage.removeItem(PROFILE_KEY)
+  return normalizeProfile(DEFAULT_PROFILE)
 }
 
 export const useSettingsStore = defineStore('settings', () => {
@@ -295,7 +293,7 @@ export const useSettingsStore = defineStore('settings', () => {
   /** Global color scheme token for CSS variable selection. */
   const colorScheme = ref('editor-default')
 
-  /** User profile settings shared by future backend settings endpoints. */
+  /** Active account settings loaded from formal backend endpoints; never stored in the browser. */
   const profile = ref<UserSettingsProfile>(loadProfile())
 
   /** Chat bubble rendering mode shared by the editor Agent panel. */
@@ -443,10 +441,6 @@ export const useSettingsStore = defineStore('settings', () => {
     window.dispatchEvent(new CustomEvent(APPEARANCE_PREVIEW_EVENT))
   }
 
-  function persistProfile() {
-    localStorage.setItem(PROFILE_KEY, JSON.stringify({ ...profile.value, backgroundCoverUrl: '' }))
-  }
-
   /** Restore persisted theme and attach system color-scheme listener. */
   function initTheme() {
     applyTheme()
@@ -524,10 +518,9 @@ export const useSettingsStore = defineStore('settings', () => {
     if (broadcast) window.agentEditorDesktop?.windowSync?.('agent-access-mode', agentAccessMode.value)
   }
 
-  /** Update local profile values until backend settings are connected. */
+  /** Update the active renderer cache after backend reads or an explicitly reversible preview. */
   function updateProfile(nextProfile: Partial<UserSettingsProfile>) {
     profile.value = normalizeProfile({ ...profile.value, ...nextProfile })
-    persistProfile()
     applyFonts()
     applyAppearanceColors()
     applyAppearanceBackground()
@@ -597,6 +590,7 @@ export const useSettingsStore = defineStore('settings', () => {
   }
 
   async function saveAppearanceSettings(params: {
+    themeMode?: ThemeMode
     themePrimaryColor?: string
     themeSoftColor?: string
     tagColors?: string[]
@@ -624,6 +618,7 @@ export const useSettingsStore = defineStore('settings', () => {
     }
     try {
       const result = await saveAppearanceConfig(profile.value.userId, {
+        themeMode: params.themeMode,
         themePrimaryColor: nextThemePrimaryColor,
         themeSoftColor: nextThemeSoftColor,
         tagColors: params.tagColors === undefined ? undefined : (resetTagColors ? [] : nextTagColors),
@@ -662,16 +657,20 @@ export const useSettingsStore = defineStore('settings', () => {
   /** Replace local profile fields with a backend settings response. */
   function applyBackendProfile(profileResponse: SettingsProfileResponse) {
     updateProfile(mapBackendProfile(profileResponse))
+    if (profileResponse.theme_mode) setThemeMode(profileResponse.theme_mode)
   }
 
   /** Set the local user id required before entering the editor shell. */
   function setUserId(userId: string) {
-    updateProfile({ userId })
+    if (profile.value.userId !== userId) profile.value = normalizeProfile({ ...DEFAULT_PROFILE, userId })
   }
 
   /** Clear the local user id and return the app to the entry gate. */
   function clearUserId() {
-    updateProfile({ userId: '' })
+    profile.value = normalizeProfile(DEFAULT_PROFILE)
+    applyFonts()
+    applyAppearanceColors()
+    applyAppearanceBackground()
   }
 
   /** Refresh the cached user profile from the backend before entering the app. */

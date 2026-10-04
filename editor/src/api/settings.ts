@@ -11,6 +11,9 @@ import { API_ROUTES } from '@/router/api_routes'
 
 export interface SettingsProfileResponse {
   user_id: string
+  theme_mode?: 'light' | 'dark' | 'system'
+  sensitive_words_enabled?: boolean
+  safety_enabled?: boolean
   knowledge_dir: string
   active_library_id?: string
   active_knowledge_library?: SettingsKnowledgeLibraryResponse | null
@@ -160,6 +163,7 @@ export function saveFontConfig(
 
 export interface AppearanceConfigResponse {
   user_id: string
+  theme_mode?: 'light' | 'dark' | 'system'
   theme_primary_color: string
   theme_soft_color: string
   tag_colors: string[]
@@ -171,10 +175,11 @@ export interface AppearanceConfigResponse {
 
 export function saveAppearanceConfig(
   userId: string,
-  params: { themePrimaryColor?: string; themeSoftColor?: string; tagColors?: string[]; tagColorsTranslucent?: boolean | null; backgroundCoverUrl?: string; showBacklinks?: boolean },
+  params: { themeMode?: 'light' | 'dark' | 'system'; themePrimaryColor?: string; themeSoftColor?: string; tagColors?: string[]; tagColorsTranslucent?: boolean | null; backgroundCoverUrl?: string; showBacklinks?: boolean },
 ): Promise<AppearanceConfigResponse> {
   const body: {
     user_id: string
+    theme_mode?: 'light' | 'dark' | 'system'
     theme_primary_color?: string
     theme_soft_color?: string
     tag_colors?: string[]
@@ -184,6 +189,7 @@ export function saveAppearanceConfig(
   } = {
     user_id: userId,
   }
+  if (params.themeMode !== undefined) body.theme_mode = params.themeMode
   if (params.themePrimaryColor !== undefined) body.theme_primary_color = params.themePrimaryColor
   if (params.themeSoftColor !== undefined) body.theme_soft_color = params.themeSoftColor
   if (params.tagColors !== undefined) body.tag_colors = params.tagColors
@@ -474,6 +480,19 @@ export function deleteMemory(memoryId: string): Promise<{ ok: boolean }> {
 
 export interface MemoryConfigResponse {
   long_term_memory_enabled: boolean
+}
+
+/** Effective account-specific audit preferences; the shared word list remains separate. */
+export interface SafetyConfigResponse {
+  user_id: string
+  sensitive_words_enabled: boolean
+  safety_enabled: boolean
+}
+export function fetchSafetyConfig(userId: string): Promise<SafetyConfigResponse> {
+  return apiGet(API_ROUTES.SETTINGS_SAFETY_CONFIG, { user_id: userId })
+}
+export function saveSafetyConfig(userId: string, config: Partial<Omit<SafetyConfigResponse, 'user_id'>>): Promise<SafetyConfigResponse> {
+  return apiPut(API_ROUTES.SETTINGS_SAFETY_CONFIG, { user_id: userId, ...config })
 }
 
 export function fetchMemoryConfig(userId: string): Promise<MemoryConfigResponse> {

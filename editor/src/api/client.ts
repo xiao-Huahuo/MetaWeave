@@ -1,12 +1,38 @@
 /*
- * HTTP client helper for planned editor API calls.
+ * Shared authenticated HTTP client for editor API calls.
  *
  * Usage:
- * Stores should import apiGet/apiPost/apiPut/apiPatch/apiDelete once the
- * backend endpoints are connected. The current mock UI does not call them yet.
+ * Stores import the request helpers; bearer state stays in memory and every
+ * request owns its timeout/cancellation while streams own their reader lifetime.
  */
 
 type QueryValue = string | number | boolean | undefined | null
+
+/** App session exists only in this renderer's memory; desktop persistence belongs to safeStorage. */
+let sessionToken = ''
+export function setApiSessionToken(token: string): void { sessionToken = token }
+export function getApiSessionToken(): string { return sessionToken }
+
+/** Attach the current application session to JSON, binary, upload and streaming requests. */
+export function applyApiAuthHeaders(headers?: HeadersInit): Headers {
+  const result = new Headers(headers)
+  if (sessionToken && !result.has('Authorization')) result.set('Authorization', `Bearer ${sessionToken}`)
+  return result
+}
+
+/** Shared fetch boundary for endpoints that return binary data or streaming bodies. */
+export async function apiFetch(path: string | URL, init: RequestInit = {}): Promise<Response> {
+  const apiOrigin = new URL(getApiOrigin()).origin
+  const trusted = new URL(path, getApiOrigin()).origin === apiOrigin
+  const headers = trusted ? applyApiAuthHeaders(init.headers) : new Headers(init.headers)
+  const requestedToken = headers.get('Authorization')?.replace(/^Bearer\s+/iu, '') ?? ''
+  const response = await fetch(path, { credentials: trusted ? 'include' : 'same-origin', ...init, headers })
+  if (requestedToken && requestedToken !== sessionToken) throw new DOMException('Account session changed', 'AbortError')
+  if (response.status === 401 && requestedToken && requestedToken === sessionToken) {
+    window.dispatchEvent(new CustomEvent('metaweave:session-expired'))
+  }
+  return response
+}
 
 export class ApiError extends Error {
   status: number
@@ -19,11 +45,11 @@ export class ApiError extends Error {
 }
 
 function getApiOrigin(): string {
+  if (window.agentEditorDesktop?.isDesktop) {
+    return window.agentEditorDesktop.backendOrigin || 'http://127.0.0.1:8002'
+  }
   if (import.meta.env.VITE_AGENT_API_BASE) {
     return import.meta.env.VITE_AGENT_API_BASE
-  }
-  if (window.agentEditorDesktop?.isDesktop) {
-    return 'http://127.0.0.1:8002'
   }
   if (window.location.protocol === 'file:') {
     return 'http://127.0.0.1:8002'
@@ -48,26 +74,27 @@ export type ApiRequestInit = RequestInit & {
 }
 
 async function request<T>(path: string, init?: ApiRequestInit): Promise<T> {
+  const requestedToken = sessionToken
   const controller = new AbortController()
   const timeoutId = setTimeout(() => controller.abort(), init?.timeoutMs ?? REQUEST_TIMEOUT)
   const isFormData = init?.body instanceof FormData
   const { timeoutMs: _timeoutMs, ...fetchInit } = init ?? {}
+  const signal = fetchInit.signal ? AbortSignal.any([controller.signal, fetchInit.signal]) : controller.signal
   try {
-    const response = await fetch(path, {
+    const headers = new Headers(fetchInit.headers)
+    if (!isFormData && !headers.has('Content-Type')) headers.set('Content-Type', 'application/json')
+    const response = await apiFetch(path, {
       ...fetchInit,
-      headers: isFormData
-        ? fetchInit.headers
-        : {
-            'Content-Type': 'application/json',
-            ...fetchInit.headers,
-          },
-      signal: controller.signal,
+      headers,
+      signal,
     })
     if (!response.ok) {
       const detail = await readErrorDetail(response)
       throw new ApiError(response.status, `Request failed: ${response.status} ${detail || response.statusText}`)
     }
-    return await readJsonResponse<T>(response, path)
+    const payload = await readJsonResponse<T>(response, path)
+    if (requestedToken && requestedToken !== sessionToken) throw new DOMException('Account session changed', 'AbortError')
+    return payload
   } catch (error: unknown) {
     if (controller.signal.aborted) {
       throw new ApiError(408, `接口 ${path} 请求超时`)
@@ -178,7 +205,8 @@ export async function* streamLines(
   path: string,
   options: RequestInit = {},
 ): AsyncGenerator<Record<string, unknown>> {
-  const response = await fetch(path, options)
+  const requestedToken = sessionToken
+  const response = await apiFetch(path, options)
   if (!response.ok) {
     throw new ApiError(response.status, 'SSE stream connection failed')
   }
@@ -215,7 +243,7 @@ export async function* streamLines(
       buffer = parts.pop() ?? ''
 
       for (const part of parts) {
-        if (signal?.aborted) {
+        if (signal?.aborted || (requestedToken && requestedToken !== sessionToken)) {
           return
         }
         const trimmed = part.trim()
@@ -250,6 +278,7 @@ export async function* streamLines(
     throw error
   } finally {
     signal?.removeEventListener('abort', cancelReader)
+    await cancelReader()
     reader.releaseLock()
   }
 }

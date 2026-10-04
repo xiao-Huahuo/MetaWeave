@@ -49,6 +49,7 @@ from agent_service.services.task_list.service import TaskListService
 from agent_service.services.todo.service import TodoService
 from agent_service.services.unified_search import UnifiedSearchService
 from agent_service.services.vault.service import VaultService
+from agent_service.services.auth.service import AuthService
 from agent_service.services.vision.service import VisionModelService
 
 logger = logging.getLogger(__name__)
@@ -82,6 +83,7 @@ class ApplicationServices:
     component_library_service: ComponentLibraryService
     unified_search_service: UnifiedSearchService
     vault_service: VaultService
+    auth_service: AuthService
     favorite_service: FavoriteService
     scanner_service: ScannerService
     privacy_service: PrivacyService
@@ -119,6 +121,7 @@ class ApplicationServices:
         self.agent_queue_scheduler.shutdown()
         self.dsh_executor.shutdown()
         self.dsh_runtime_manager.shutdown()
+        self.auth_service.close()
 
 
 def create_application_services(config: AgentConfig, *, database_engine: Engine) -> ApplicationServices:
@@ -157,6 +160,7 @@ def create_application_services(config: AgentConfig, *, database_engine: Engine)
         change_service=agent_change_service,
         settings_service=settings_service,
     )
+    agent.safety_service.settings_service = settings_service
     logger.info("AgentCore 初始化完成 | graph_diagram=%s", agent.graph_diagram_path)
     skill_service = SkillService(config=config, settings_service=settings_service)
     agent.skill_service = skill_service
@@ -193,6 +197,7 @@ def create_application_services(config: AgentConfig, *, database_engine: Engine)
         legacy_engine=settings_service.engine,
     )
     vault_service = VaultService(config=config, engine=settings_service.engine)
+    auth_service = AuthService(config=config, engine=database_engine)
     favorite_service = FavoriteService(engine=database_engine, create_tables=False)
     scanner_service = ScannerService(
         engine=database_engine,
@@ -279,6 +284,7 @@ def create_application_services(config: AgentConfig, *, database_engine: Engine)
         component_library_service=component_library_service,
         unified_search_service=unified_search_service,
         vault_service=vault_service,
+        auth_service=auth_service,
         favorite_service=favorite_service,
         scanner_service=scanner_service,
         privacy_service=privacy_service,

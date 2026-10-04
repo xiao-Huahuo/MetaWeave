@@ -7,9 +7,9 @@
  */
 
 import { defineStore } from 'pinia'
-import { computed, ref, watch } from 'vue'
+import { computed, onScopeDispose, ref, watch } from 'vue'
 
-import { ApiError, buildApiUrl } from '@/api/client'
+import { ApiError, buildApiUrl, getApiSessionToken } from '@/api/client'
 import { updateCurrentDocumentContext } from '@/api/agent'
 import { searchAllLibraries } from '@/api/unifiedSearch'
 import type { GraphDocStatus, KnowledgeIngestionJob } from '@/api/knowledge'
@@ -310,6 +310,12 @@ async function readFilePreview(file: File): Promise<string> {
 }
 
 export const useWorkspaceStore = defineStore('workspace', () => {
+  /** Account epoch owns every asynchronous renderer write, including same-path loads after switching users. */
+  let accountRevision = 0
+  function accountSnapshot() { return { revision: accountRevision, userId: useSettingsStore().profile.userId, token: getApiSessionToken() } }
+  function accountIsCurrent(owner: ReturnType<typeof accountSnapshot>): boolean {
+    return owner.revision === accountRevision && owner.userId === useSettingsStore().profile.userId && owner.token === getApiSessionToken()
+  }
   /** Recursive knowledge file tree loaded from the backend. */
   const tree = ref<KnowledgeFileNode[]>([])
 
@@ -600,10 +606,12 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   }
 
   async function pollGraphStatus() {
+    const owner = accountSnapshot()
     const userId = useSettingsStore().profile.userId
     if (!userId) return
     try {
       const status = await getKnowledgeGraphStatus(userId)
+      if (!accountIsCurrent(owner)) return
       const docs = status.docs ?? []
       graphProgressDetail.value = status.message || '正在抽取知识图谱'
       graphProgressStats.value = { current: status.current, total: status.total }
@@ -630,6 +638,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
         completeGraphQueue('failed', status.total, status.current, status.message || '图谱抽取失败')
       }
     } catch {
+      if (!accountIsCurrent(owner)) return
       stopGraphPolling()
       graphQueue.value = []
       graphQueuePlannedTotal = 0
@@ -2006,6 +2015,11 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     if (_searchTimer !== null) {
       clearTimeout(_searchTimer)
     }
+    if (!value.trim()) {
+      _searchTimer = null
+      void performSearch(value)
+      return
+    }
     _searchTimer = setTimeout(() => {
       _searchTimer = null
       performSearch(value)
@@ -2119,9 +2133,11 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   }
 
   async function loadIngestionJobs(): Promise<KnowledgeIngestionJob[]> {
+    const owner = accountSnapshot()
     const userId = useSettingsStore().profile.userId
     if (!userId) return []
     const response = await listKnowledgeIngestionJobs(userId)
+    if (!accountIsCurrent(owner)) return []
     syncPersistentIngestionJobs(response.jobs)
     return response.jobs
   }
@@ -2641,6 +2657,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   }
 
   async function loadKnowledgeTree() {
+    const owner = accountSnapshot()
     const settingsStore = useSettingsStore()
     if (!settingsStore.profile.userId) {
       return
@@ -2649,6 +2666,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     treeLoading.value = true
     try {
       const response = await listKnowledgeFiles(settingsStore.profile.userId)
+      if (!accountIsCurrent(owner)) return
       tree.value = response.tree
       // 新加载的文件树默认保持全部文件夹折叠，由用户操作决定后续展开状态。
       expandedPaths.value = new Set()
@@ -2659,11 +2677,12 @@ export const useWorkspaceStore = defineStore('workspace', () => {
       }
       syncCurrentDocumentContext()
     } finally {
-      treeLoading.value = false
+      if (accountIsCurrent(owner)) treeLoading.value = false
     }
   }
 
   async function loadKnowledgeTrash() {
+    const owner = accountSnapshot()
     const settingsStore = useSettingsStore()
     if (!settingsStore.profile.userId) {
       trashEntries.value = []
@@ -2672,11 +2691,13 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     trashLoading.value = true
     try {
       const response = await listKnowledgeTrash(settingsStore.profile.userId)
+      if (!accountIsCurrent(owner)) return
       trashEntries.value = response.entries
     } catch (err: unknown) {
+      if (!accountIsCurrent(owner)) return
       showToast(err instanceof ApiError ? err.message : '最近删除加载失败')
     } finally {
-      trashLoading.value = false
+      if (accountIsCurrent(owner)) trashLoading.value = false
     }
   }
 
@@ -2710,6 +2731,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   }
 
   async function loadFileContent(path: string): Promise<void> {
+    const owner = accountSnapshot()
     if (_pendingContentLoads.has(path)) return
     _pendingContentLoads.add(path)
     isFileLoading.value = true
@@ -2726,7 +2748,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
       const settingsStore = useSettingsStore()
       const response = await readKnowledgeFile(settingsStore.profile.userId, path, controller.signal)
       // Stale guard: if user switched away while this request was in-flight, skip.
-      if (selectedPath.value !== path) return
+      if (!accountIsCurrent(owner) || selectedPath.value !== path) return
       contentByPath.value = { ...contentByPath.value, [path]: response.content }
       const nextPreview = { ...previewByPath.value }
       delete nextPreview[path]
@@ -2734,6 +2756,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
       const tab = openTabs.value.find((t) => t.path === path)
       if (tab) tab.mtime = response.mtime
     } catch (err: unknown) {
+      if (!accountIsCurrent(owner)) return
       if (err instanceof DOMException && err.name === 'AbortError') {
         if (timedOut) {
           showToast(`文件加载超时 (${path})`)
@@ -2745,7 +2768,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
       showToast(msg)
     } finally {
       clearTimeout(timeoutTimer)
-      _pendingContentLoads.delete(path)
+      if (accountIsCurrent(owner)) _pendingContentLoads.delete(path)
       if (_contentAbort === controller) {
         _contentAbort = null
         isFileLoading.value = false
@@ -2755,6 +2778,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   }
 
   async function loadFilePreview(path: string): Promise<void> {
+    const owner = accountSnapshot()
     if (_pendingPreviewLoads.has(path)) return
     _pendingPreviewLoads.add(path)
     isFileLoading.value = true
@@ -2771,7 +2795,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
       const settingsStore = useSettingsStore()
       const response = await previewKnowledgeFile(settingsStore.profile.userId, path, controller.signal)
       // Stale guard: if user switched away while this request was in-flight, skip.
-      if (selectedPath.value !== path) return
+      if (!accountIsCurrent(owner) || selectedPath.value !== path) return
       previewByPath.value = { ...previewByPath.value, [path]: response }
       const resolvedPipeline = resolveEditorFilePipeline(path, response.kind)
       if (!resolvedPipeline.modes.some((item) => item.mode === editorMode.value)) {
@@ -2783,6 +2807,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
       const tab = openTabs.value.find((t) => t.path === path)
       if (tab) tab.mtime = response.mtime
     } catch (err: unknown) {
+      if (!accountIsCurrent(owner)) return
       // Silent abort — user navigated away from this file.
       if (err instanceof DOMException && err.name === 'AbortError') {
         if (timedOut) {
@@ -2817,7 +2842,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
       }
     } finally {
       clearTimeout(timeoutTimer)
-      _pendingPreviewLoads.delete(path)
+      if (accountIsCurrent(owner)) _pendingPreviewLoads.delete(path)
       if (_previewAbort === controller) {
         _previewAbort = null
         isFileLoading.value = false
@@ -2827,17 +2852,20 @@ export const useWorkspaceStore = defineStore('workspace', () => {
   }
 
   function startFileWatcher() {
+    const owner = accountSnapshot()
     const settingsStore = useSettingsStore()
     if (!settingsStore.profile.userId || fileEvents.value || typeof EventSource === 'undefined') {
       return
     }
-    const eventSource = new EventSource(buildKnowledgeEventsUrl(settingsStore.profile.userId))
+    const eventSource = new EventSource(buildKnowledgeEventsUrl(settingsStore.profile.userId), { withCredentials: true })
     eventSource.addEventListener('tree_dirty', async () => {
+      if (!accountIsCurrent(owner)) return
       if (ignoreNextTreeEvent.value > 0) {
         ignoreNextTreeEvent.value -= 1
         return
       }
       await loadKnowledgeTree()
+      if (!accountIsCurrent(owner)) return
       markOpenTabsDirty()
       // 重置外部修改文件的索引和图谱状态为未入库
       for (const tab of openTabs.value) {
@@ -2850,7 +2878,7 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     })
     eventSource.onerror = () => {
       eventSource.close()
-      fileEvents.value = null
+      if (fileEvents.value === eventSource) fileEvents.value = null
     }
     fileEvents.value = eventSource
   }
@@ -2938,7 +2966,49 @@ export const useWorkspaceStore = defineStore('workspace', () => {
     return path === parentPath || path.startsWith(`${parentPath}/`)
   }
 
+  /** Release only renderer-owned resources and private caches; backend files and jobs stay intact. */
+  function resetForAccount(): void {
+    accountRevision += 1
+    stopFileWatcher()
+    stopGraphPolling()
+    stopIngestionProgressPulse()
+    _contentAbort?.abort(); _contentAbort = null
+    _previewAbort?.abort(); _previewAbort = null
+    for (const timer of [ingestionProgressTimer, graphProgressTimer, toastTimer, _searchTimer, currentDocumentContextTimer]) {
+      if (timer !== null) clearTimeout(timer)
+    }
+    ingestionProgressTimer = graphProgressTimer = toastTimer = _searchTimer = null
+    currentDocumentContextTimer = null
+    _pendingContentLoads.clear(); _pendingPreviewLoads.clear()
+    tree.value = []; openTabs.value = []; contentByPath.value = {}; previewByPath.value = {}
+    selectedPath.value = ''; selectedTreePath.value = ''; selectionAnchorPath.value = ''
+    selectedTreePaths.value = new Set(); expandedPaths.value = new Set(); treeSelectionCleared.value = false
+    treeLoading.value = trashLoading.value = isFileLoading.value = refreshing.value = false
+    trashEntries.value = []; recentFileVisits.value = []; recentFileHistoryKey = ''
+    chatMessages.value = []; pendingAgentPrompt.value = ''; pendingAgentReference.value = ''; pendingAgentNewConversation.value = false
+    markdownHtmlVisualization.value = null; markdownHtmlVisualizationOpen.value = false; markdownHtmlVisualizationCustomRequirement.value = ''
+    searchRequestId += 1
+    searchQuery.value = ''; searchResults.value = null; searchSidebarResult.value = null; searchHistory.value = []
+    searching.value = searchOpen.value = false; searchError.value = ''
+    ingestionQueue.value = []; ingestionHistory.value = []; graphQueue.value = []; graphHistory.value = []
+    trackedIngestionJobIds.clear(); graphRequestedIngestionJobIds.clear(); completedIngestionQueueItems = []
+    ingestionFileChunksByPath.clear(); activeIngestionRuns = lastIngestionQueueProcessed = ingestionQueuePlannedTotal = graphQueuePlannedTotal = 0
+    ingestionProgressVisible.value = graphProgressVisible.value = graphRebuildPending.value = false
+    ingestionProgress.value = graphProgress.value = 0; ingestionProgressDetail.value = graphProgressDetail.value = ''
+    ingestionProgressStats.value = { succeeded: 0, total: 0, failed: 0 }; graphProgressStats.value = { current: 0, total: 0 }
+    cancelConflict(); fileClipboard.value = null; commandPaletteOpen.value = false
+    browserSidebarOpen.value = editorSidebarOpen.value = false; browserSidebarUrl.value = ''; browserSidebarNavigationId.value = 0
+    pendingLibraryParentId.value = ''; pendingMainSearchResult.value = null; pendingLiteratureEntry.value = null
+    toastMessage.value = ''; toastVisible.value = false; ignoreNextTreeEvent.value = 0; mainView.value = 'home'
+    // These old unscoped browser caches could expose the previous account after application restart.
+    for (const key of [GRAPH_HISTORY_KEY, INGESTION_HISTORY_KEY, SEARCH_HISTORY_KEY]) localStorage.removeItem(key)
+  }
+  resetForAccount()
+  watch(() => useSettingsStore().profile.userId, resetForAccount, { flush: 'sync' })
+  onScopeDispose(resetForAccount)
+
   return {
+    resetForAccount,
     tree,
     recentFileVisits,
     expandedPaths,

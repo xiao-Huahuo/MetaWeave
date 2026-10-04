@@ -254,7 +254,7 @@ def download_file(url: str, save_to_knowledge: bool = False) -> str:
     import urllib.request
 
     runtime = get_tool_runtime()
-    downloads_dir = runtime.config.storage.assets_dir / "downloads"
+    downloads_dir = runtime.config.storage.assets_dir / "downloads" / runtime.user_id
     downloads_dir.mkdir(parents=True, exist_ok=True)
 
     try:
@@ -269,7 +269,7 @@ def download_file(url: str, save_to_knowledge: bool = False) -> str:
     filename = f"{uuid.uuid4().hex}{ext}"
     local_path = downloads_dir / filename
     local_path.write_bytes(content)
-    local_url = f"/downloads/{filename}"
+    local_url = f"/downloads/{runtime.user_id}/{filename}"
 
     if not save_to_knowledge:
         return (

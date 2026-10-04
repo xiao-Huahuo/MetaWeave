@@ -6,7 +6,7 @@
  * registry exposed by the running backend.
  */
 
-import { apiGet } from '@/api/client'
+import { apiFetch, apiGet } from '@/api/client'
 import { API_ROUTES } from '@/router/api_routes'
 
 export interface AgentToolProperty {
@@ -42,7 +42,7 @@ export async function fetchAgentTools(): Promise<AgentToolListResponse> {
 }
 
 async function fetchAgentToolsFromBackendOrigin(): Promise<AgentToolListResponse> {
-  const response = await fetch(`http://127.0.0.1:8002${API_ROUTES.AGENT_TOOLS}`, { cache: 'no-store' })
+  const response = await apiFetch(`http://127.0.0.1:8002${API_ROUTES.AGENT_TOOLS}`, { cache: 'no-store' })
   if (!response.ok) {
     throw new Error(`Request failed: ${response.status} ${response.statusText}`)
   }

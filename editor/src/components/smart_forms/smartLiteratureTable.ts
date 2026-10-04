@@ -129,7 +129,7 @@ export const FIGURES_COLUMN: SmartColumn = withBuiltinDescription({
   id: 'figures', title: '图表', type: 'readonly_text', removable: true, editable: false, width: 240,
 })
 
-export const BUILTIN_COLUMNS: SmartColumn[] = [
+export const BUILTIN_COLUMNS: SmartColumn[] = ([
   FIGURES_COLUMN,
   { id: 'formulas', title: '公式', type: 'smart_text', removable: true, editable: true, width: 260, tone: 'violet' },
   { id: 'paper_type', title: '文献类型', type: 'smart_tag', removable: true, editable: true, width: 200, options: ['研究论文', '综述论文', '方法论文', '病例报告'], tone: 'green' },
@@ -149,15 +149,15 @@ export const BUILTIN_COLUMNS: SmartColumn[] = [
   { id: 'future_work', title: '未来展望', type: 'smart_text', removable: true, editable: true, width: 240, tone: 'violet' },
   { id: 'doi', title: 'DOI', type: 'smart_text', removable: true, editable: true, width: 180, tone: 'neutral' },
   { id: 'url', title: 'URL', type: 'smart_text', removable: true, editable: true, width: 200, tone: 'neutral' },
-].map(withBuiltinDescription)
+] satisfies SmartColumn[]).map(withBuiltinDescription)
 
-const REQUIRED_COLUMNS: SmartColumn[] = [
+const REQUIRED_COLUMNS: SmartColumn[] = ([
   { id: 'row_index', title: '序号', type: 'index', removable: false, editable: false, width: INDEX_COLUMN_WIDTH },
   { id: 'literature_file', title: '文献上传', type: 'file', removable: true, editable: false, width: 168 },
   { id: 'literature_content', title: '文献内容', type: 'readonly_text', removable: true, editable: false, width: 240 },
   FIGURES_COLUMN,
   { id: 'title', title: '标题', type: 'smart_text', removable: false, editable: true, width: 230, tone: 'blue' },
-].map(withBuiltinDescription)
+] satisfies SmartColumn[]).map(withBuiltinDescription)
 
 /** Separator between multiple tags inside a tag-like cell value. */
 const TAG_SEPARATOR = ';'

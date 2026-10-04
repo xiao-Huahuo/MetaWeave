@@ -2,6 +2,7 @@
 
 ``upgrade_database`` 在业务 Service 构造前执行。空数据库直接升级；无版本表的旧
 SQLite 数据库先验证核心表、创建一致性备份，再 stamp 基线并执行幂等兼容迁移。
+用户明确要求清空旧账号的 0020 重置升级不保留包含旧凭据的备份。
 未知结构会被拒绝，禁止猜测性修改用户数据。
 """
 
@@ -15,6 +16,7 @@ from pathlib import Path
 
 from alembic import command
 from alembic.config import Config
+from alembic.script import ScriptDirectory
 from sqlalchemy import inspect, text
 from sqlalchemy.engine import Engine
 from sqlmodel import SQLModel
@@ -26,7 +28,12 @@ from agent_service.core.db.engine import database_url
 logger = logging.getLogger(__name__)
 
 BASELINE_REVISION = "20260829_0001"
+ACCOUNT_RESET_REVISION = "20261004_0020"
 POST_BASELINE_TABLES = {
+    "accounts",
+    "auth_access_sessions",
+    "auth_devices",
+    "auth_attempts",
     "mcp_connections",
     "mcp_credentials",
     "mcp_access_records",
@@ -81,7 +88,9 @@ def _validate_legacy_schema(engine: Engine) -> None:
     """确认无版本旧库至少包含当前模型的全部业务表。"""
 
     actual_tables = set(inspect(engine).get_table_names())
-    expected_tables = set(SQLModel.metadata.tables) - POST_BASELINE_TABLES
+    # Unversioned legacy databases still own the independent vault profile that
+    # historical revision 0002 expects before the global-account reset drops it.
+    expected_tables = (set(SQLModel.metadata.tables) - POST_BASELINE_TABLES) | {"vault_profiles"}
     missing_tables = sorted(expected_tables - actual_tables)
     if missing_tables:
         raise RuntimeError(f"未知旧数据库结构，缺少业务表: {', '.join(missing_tables)}")
@@ -98,7 +107,11 @@ def upgrade_database(*, config: AgentConfig, engine: Engine) -> None:
         return
     if "alembic_version" not in tables:
         _validate_legacy_schema(engine)
-        _backup_sqlite_database(config)
+        pending = ScriptDirectory.from_config(alembic_config).iterate_revisions("head", BASELINE_REVISION)
+        if any(revision.revision == ACCOUNT_RESET_REVISION for revision in pending):
+            logger.info("Explicit account reset migration: old-user backup omitted")
+        else:
+            _backup_sqlite_database(config)
         command.stamp(alembic_config, BASELINE_REVISION)
         engine.dispose()
         with engine.connect() as connection:

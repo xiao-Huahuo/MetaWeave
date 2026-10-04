@@ -158,6 +158,37 @@ from agent_service.api.grpc.mappers.responses import (
 logger = logging.getLogger(__name__)
 
 class SettingsGrpcHandlerMixin:
+    def GetSafetyConfig(self, request: Struct, context: grpc.ServicerContext) -> Struct:  # noqa: N802
+        """Return durable per-account sensitive-word and safety audit preferences."""
+        user_id = self._require_struct_user_id(request=request, context=context)
+        return ParseDict(self._require_settings_service(context).get_safety_config(user_id=user_id), Struct())
+
+    def SaveSafetyConfig(self, request: Struct, context: grpc.ServicerContext) -> Struct:  # noqa: N802
+        """Save only explicitly supplied, typed safety overrides."""
+        payload = MessageToDict(request)
+        for name in ("sensitive_words_enabled", "safety_enabled"):
+            if name in payload and not isinstance(payload[name], bool):
+                context.abort(grpc.StatusCode.INVALID_ARGUMENT, "Safety preferences must be boolean")
+        user_id = self._require_struct_user_id(request=request, context=context)
+        result = self._require_settings_service(context).save_safety_config(user_id=user_id,
+            sensitive_words_enabled=payload.get("sensitive_words_enabled"), safety_enabled=payload.get("safety_enabled"))
+        return ParseDict(result, Struct())
+
+    def GetMemoryConfig(self, request: Struct, context: grpc.ServicerContext) -> Struct:  # noqa: N802
+        """Return the persistent account-level long-term memory preference."""
+        user_id = self._require_struct_user_id(request=request, context=context)
+        return ParseDict(self._require_settings_service(context).get_memory_config(user_id=user_id), Struct())
+
+    def SaveMemoryConfig(self, request: Struct, context: grpc.ServicerContext) -> Struct:  # noqa: N802
+        """Require a real boolean before changing the persistent memory preference."""
+        payload = MessageToDict(request)
+        if not isinstance(payload.get("long_term_memory_enabled"), bool):
+            context.abort(grpc.StatusCode.INVALID_ARGUMENT, "long_term_memory_enabled must be boolean")
+        user_id = self._require_struct_user_id(request=request, context=context)
+        result = self._require_settings_service(context).save_memory_config(user_id=user_id,
+            long_term_memory_enabled=payload["long_term_memory_enabled"])
+        return ParseDict(result, Struct())
+
     def EnsureUserProfile(  # noqa: N802
         self, request: UserProfileRequest, context: grpc.ServicerContext,
     ) -> UserProfileResponse:
@@ -184,6 +215,9 @@ class SettingsGrpcHandlerMixin:
             vision_understanding_enabled=bool(profile.get("vision_understanding_enabled")),
             auto_ingest_on_upload=bool(profile.get("auto_ingest_on_upload")),
             vlm_enabled=bool(profile.get("vlm_enabled")),
+            theme_mode=str(profile.get("theme_mode", "light")),
+            safety_enabled=bool(profile.get("safety_enabled", True)),
+            sensitive_words_enabled=bool(profile.get("sensitive_words_enabled", True)),
         )
 
     def GetKnowledgeIngestionConfig(self, request: Struct, context: grpc.ServicerContext) -> Struct:  # noqa: N802
@@ -381,6 +415,7 @@ class SettingsGrpcHandlerMixin:
         try:
             result = self._require_settings_service(context).save_appearance_config(
                 user_id=str(payload.get("user_id") or ""),
+                theme_mode=(str(payload["theme_mode"]) if "theme_mode" in payload else None),
                 theme_primary_color=(
                     str(payload["theme_primary_color"])
                     if "theme_primary_color" in payload

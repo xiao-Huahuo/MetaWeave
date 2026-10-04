@@ -68,6 +68,7 @@ class SafetyService:
         sensitive_words_path: str | Path | None = None,
     ) -> None:
         self.config = config
+        self.settings_service = None
         self.sensitive_words_path = (
             Path(sensitive_words_path).expanduser().resolve()
             if sensitive_words_path is not None
@@ -89,6 +90,7 @@ class SafetyService:
         user_input: str,
         *,
         llm_config: dict[str, Any] | None = None,
+        user_id: str = "",
     ) -> InputAuditResult:
         """
         对用户输入执行完整输入审核流水线。
@@ -98,11 +100,12 @@ class SafetyService:
         audit_text = self._extract_user_question_for_audit(user_input)
 
         # 安全审核系统一键关闭
-        if self._sensitive_checker and self._sensitive_checker.safety_disabled:
+        policy = self.settings_service.get_safety_config(user_id=user_id) if self.settings_service and user_id else None
+        if (policy is not None and not policy["safety_enabled"]) or (policy is None and self._sensitive_checker and self._sensitive_checker.safety_disabled):
             return InputAuditResult(passed=True)
 
         if self._sensitive_checker is not None:
-            sensitive_result = self._sensitive_checker.check(audit_text)
+            sensitive_result = self._sensitive_checker.check(audit_text, enabled=policy["sensitive_words_enabled"] if policy else None)
             if sensitive_result.blocked:
                 logger.warning(
                     "输入审核拦截(敏感词) | categories=%s input_len=%d",
@@ -246,14 +249,15 @@ class SafetyService:
             )
         return "对不起,我不能回答这个问题,因为这超出了我能讨论的范围。如需其他帮助请随时告诉我。"
 
-    def audit_output(self, output_text: str, *, user_input: str = "") -> OutputAuditResult:
+    def audit_output(self, output_text: str, *, user_input: str = "", user_id: str = "") -> OutputAuditResult:
         """对 Agent 输出执行 Layer 3 输出审核。"""
 
         # 安全审核系统一键关闭
-        if self._sensitive_checker and self._sensitive_checker.safety_disabled:
+        policy = self.settings_service.get_safety_config(user_id=user_id) if self.settings_service and user_id else None
+        if (policy is not None and not policy["safety_enabled"]) or (policy is None and self._sensitive_checker and self._sensitive_checker.safety_disabled):
             return OutputAuditResult(verdict="pass", original_output=output_text)
 
-        result = self._output_auditor.audit(output_text, user_input=user_input)
+        result = self._output_auditor.audit(output_text, user_input=user_input, sensitive_enabled=policy["sensitive_words_enabled"] if policy else None)
         if result.blocked or result.sanitized:
             logger.warning(
                 "输出审核 | blocked=%s sanitized=%s output_len=%d",

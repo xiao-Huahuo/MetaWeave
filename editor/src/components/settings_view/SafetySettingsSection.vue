@@ -8,10 +8,11 @@
 -->
 <script setup lang="ts">
 import { computed, onMounted, reactive, ref } from 'vue'
-import { getVaultDebugMasterPassword, getVaultStatus, resetVaultPassword, type VaultStatusResponse } from '@/api/vault'
-import VaultPasswordResetDialog from '@/components/vault_view/VaultPasswordResetDialog.vue'
-import { fetchSensitiveWords, saveSensitiveWords } from '@/api/settings'
+import { changeAccountPassword } from '@/api/auth'
+import AccountPasswordDialog from '@/components/settings_view/AccountPasswordDialog.vue'
+import { fetchSensitiveWords, saveSensitiveWords, fetchSafetyConfig, saveSafetyConfig } from '@/api/settings'
 import { useSettingsStore } from '@/stores/settings'
+import { useAuthStore } from '@/stores/auth'
 
 interface CategoryData {
   name: string
@@ -36,6 +37,7 @@ const data = reactive<WordData>({
 })
 
 const settingsStore = useSettingsStore()
+const authStore = useAuthStore()
 const categoryKeys = ref<string[]>([])
 const newCategoryKey = ref('')
 const newCategoryName = ref('')
@@ -44,12 +46,7 @@ const newRegexText = ref<Record<string, string>>({})
 const saving = ref(false)
 const saveMsg = ref('')
 const loading = ref(true)
-const vaultDebugLoading = ref(false)
-const vaultDebug = ref<VaultStatusResponse | null>(null)
-const vaultPasswordDebug = ref('')
-const vaultDebugPasswordVisible = ref(false)
 const vaultResetOpen = ref(false)
-const vaultAdminResetOpen = ref(false)
 const vaultResetSaving = ref(false)
 
 const categoryEntries = computed(() => categoryKeys.value
@@ -66,12 +63,12 @@ function showMessage(text: string, duration = 2000) {
 async function loadData() {
   loading.value = true
   try {
-    const raw = await fetchSensitiveWords()
+    const [raw, config] = await Promise.all([fetchSensitiveWords(), fetchSafetyConfig(settingsStore.profile.userId)])
     if (raw && typeof raw === 'object') {
       const r = raw as Record<string, unknown>
       if (typeof r._description === 'string') data._description = r._description
-      data._sensitive_words_disabled = r._sensitive_words_disabled === true
-      data._safety_disabled = r._safety_disabled === true
+      data._sensitive_words_disabled = !config.sensitive_words_enabled
+      data._safety_disabled = !config.safety_enabled
       const cats = r.categories
       if (cats && typeof cats === 'object') {
         data.categories = cats as Record<string, CategoryData>
@@ -154,11 +151,14 @@ async function handleSave() {
   try {
     const payload: Record<string, unknown> = {
       _description: data._description,
-      _sensitive_words_disabled: data._sensitive_words_disabled,
-      _safety_disabled: data._safety_disabled,
       categories: data.categories,
     }
     await saveSensitiveWords(payload)
+    const config = await saveSafetyConfig(settingsStore.profile.userId, {
+      sensitive_words_enabled: !data._sensitive_words_disabled,
+      safety_enabled: !data._safety_disabled,
+    })
+    settingsStore.updateProfile({ sensitiveWordsEnabled: config.sensitive_words_enabled, safetyEnabled: config.safety_enabled })
     showMessage('已保存')
   } catch {
     showMessage('保存失败')
@@ -167,44 +167,19 @@ async function handleSave() {
   }
 }
 
-async function handleFetchVaultPasswordDebug() {
-  const userId = settingsStore.profile.userId
-  if (!userId) {
-    vaultPasswordDebug.value = '当前没有用户 ID'
-    return
-  }
-  vaultDebugLoading.value = true
-  vaultPasswordDebug.value = ''
-  try {
-    const [status, debug] = await Promise.all([
-      getVaultStatus(userId),
-      getVaultDebugMasterPassword(userId),
-    ])
-    vaultDebug.value = status
-    vaultPasswordDebug.value = debug.available ? debug.master_password : debug.message
-    vaultDebugPasswordVisible.value = debug.available
-  } catch (error) {
-    vaultPasswordDebug.value = error instanceof Error ? error.message : '读取密码库调试信息失败'
-    vaultDebugPasswordVisible.value = false
-  } finally {
-    vaultDebugLoading.value = false
-  }
-}
-
-async function submitVaultPasswordReset(withOldPassword: boolean, oldPassword: string, nextPassword: string, confirmation: string) {
+/** The login password is also the vault password; a successful change forces fresh manual authentication. */
+async function submitPasswordChange(oldPassword: string, nextPassword: string, confirmation: string) {
   const userId = settingsStore.profile.userId
   if (!userId) return showMessage('当前没有用户 ID')
   if (nextPassword.length < 8) return showMessage('新密码至少需要 8 位')
   if (nextPassword !== confirmation) return showMessage('两次新密码不一致')
   vaultResetSaving.value = true
   try {
-    await resetVaultPassword(userId, nextPassword, withOldPassword ? oldPassword : '')
+    await changeAccountPassword(oldPassword, nextPassword)
     vaultResetOpen.value = false
-    vaultAdminResetOpen.value = false
-    vaultPasswordDebug.value = ''
-    showMessage('密码库密码已重设，请使用新密码重新解锁')
+    await authStore.logout()
   } catch (error) {
-    showMessage(error instanceof Error ? error.message : '重设密码库密码失败')
+    showMessage(error instanceof Error ? error.message : '修改登录密码失败')
   } finally {
     vaultResetSaving.value = false
   }
@@ -215,27 +190,9 @@ onMounted(loadData)
 
 <template>
   <div class="setting-section">
-    <h3>密码库</h3>
-    <div class="vault-debug-card">
-      <div class="vault-debug-main">
-        <strong>密码库调试</strong>
-        <span>当前用户: {{ settingsStore.profile.userId || '未设置' }}</span>
-        <span v-if="vaultDebug">
-          状态: {{ vaultDebug.configured ? '已设置主密码' : '未设置主密码' }} · 条目 {{ vaultDebug.item_count }}
-        </span>
-      </div>
-      <button class="save-model-btn" :disabled="vaultDebugLoading" type="button" @click="handleFetchVaultPasswordDebug">
-        {{ vaultDebugLoading ? '获取中...' : '获取密码库主密码' }}
-      </button>
-      <button class="secondary-model-btn" type="button" @click="vaultAdminResetOpen = !vaultAdminResetOpen">重设密码库密码</button>
-      <button class="secondary-model-btn vault-reset-toggle vault-reset-inside" type="button" @click="vaultResetOpen = true">重置密码</button>
-      <p v-if="vaultPasswordDebug" class="vault-debug-result" :class="{ secret: vaultDebugPasswordVisible }">
-        {{ vaultDebugPasswordVisible ? `主密码: ${vaultPasswordDebug}` : vaultPasswordDebug }}
-      </p>
-    </div>
-    <button class="secondary-model-btn vault-reset-toggle" type="button" @click="vaultResetOpen = true">重置密码</button>
-    <VaultPasswordResetDialog :open="vaultResetOpen" :saving="vaultResetSaving" :require-old-password="true" @close="vaultResetOpen = false" @submit="(oldPassword, nextPassword, confirmation) => submitVaultPasswordReset(true, oldPassword, nextPassword, confirmation)" />
-    <VaultPasswordResetDialog :open="vaultAdminResetOpen" :saving="vaultResetSaving" :require-old-password="false" @close="vaultAdminResetOpen = false" @submit="(_oldPassword, nextPassword, confirmation) => submitVaultPasswordReset(false, '', nextPassword, confirmation)" />
+    <h3>登录密码</h3>
+    <button class="secondary-model-btn vault-reset-toggle" type="button" @click="vaultResetOpen = true">修改密码</button>
+    <AccountPasswordDialog :open="vaultResetOpen" :saving="vaultResetSaving" @close="vaultResetOpen = false" @submit="submitPasswordChange" />
 
     <div class="safety-heading-row">
       <h3>安全审核词库</h3>
@@ -246,7 +203,7 @@ onMounted(loadData)
     </div>
     <p class="safety-desc">{{ data._description }}</p>
 
-    <!-- 勾选表示功能开启，接口的 *_disabled 标志按反向值保存。 -->
+    <!-- 勾选表示当前账号开启功能；共享词库保存不会覆盖其他账号的开关。 -->
     <div class="safety-global-toggles">
       <div class="safety-global-row" :class="{ 'safety-global-risk': sensitiveDisabled }">
         <label class="safety-global-label" for="sensitive-words-enabled">敏感词库</label>
@@ -275,7 +232,7 @@ onMounted(loadData)
         </span>
       </div>
       <div v-if="safetyDisabled" class="safety-global-warning">
-        ⚠ 安全审核系统已关闭，敏感词库、意图审核、输出审核全部绕过
+        安全审核系统已关闭，敏感词库、意图审核、输出审核全部绕过
       </div>
     </div>
 
@@ -397,18 +354,6 @@ onMounted(loadData)
 </template>
 
 <style scoped>
-.vault-debug-card {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto auto;
-  gap: var(--space-8);
-  align-items: center;
-  margin-bottom: var(--space-16);
-  padding: var(--space-10);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  background: var(--color-canvas);
-}
-
 .secondary-model-btn {
   height: 28px;
   border: 1px solid var(--color-border);
@@ -424,35 +369,6 @@ onMounted(loadData)
 .secondary-model-btn:hover { border-color: var(--color-primary); color: var(--color-primary); }
 .vault-reset-toggle { margin: 0 0 var(--space-8); }
 
-
-.vault-debug-main {
-  display: grid;
-  gap: 2px;
-  min-width: 0;
-}
-
-.vault-debug-main strong {
-  color: var(--color-text);
-  font-size: calc(13px * var(--font-scale));
-}
-
-.vault-debug-main span,
-.vault-debug-result {
-  color: var(--color-text-muted);
-  font-size: calc(11px * var(--font-scale));
-  line-height: 1.45;
-}
-
-.vault-debug-result {
-  grid-column: 1 / -1;
-  margin: 0;
-}
-
-.vault-debug-result.secret {
-  color: var(--color-danger);
-  font-family: var(--font-code);
-  user-select: text;
-}
 
 .safety-desc {
   margin: -4px 0 var(--space-10);
@@ -749,7 +665,6 @@ onMounted(loadData)
 </style>
 
 <style scoped>
-.vault-debug-card,
 .safety-global-toggles,
 .safety-category-card {
   border: 0;
@@ -757,21 +672,6 @@ onMounted(loadData)
   outline-offset: 2px;
   border-radius: 28px;
   box-shadow: 0 0 0 2px var(--library-form-ring);
-}
-
-.vault-debug-card {
-  position: relative;
-  padding-bottom: var(--space-16);
-}
-
-.vault-reset-inside {
-  grid-column: 1 / -1;
-  justify-self: end;
-  margin-top: var(--space-4);
-}
-
-.setting-section > .vault-reset-toggle {
-  display: none;
 }
 
 .safety-heading-row {

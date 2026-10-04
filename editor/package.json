@@ -6,9 +6,9 @@
   "main": "electron/main.cjs",
   "scripts": {
     "dev": "vite",
-    "dev:electron": "run-p dev electron",
+    "dev:electron": "node scripts/dev-electron.cjs",
     "electron": "electron electron/main.cjs",
-    "build": "run-p type-check \"build-only {@}\" --",
+    "build": "run-s type-check \"build-only {@}\" --",
     "build:backend": "cd .. && pyinstaller --clean AgentService.spec",
     "prepare:electron-runtime": "node node_modules/electron/install.js",
     "prebuild:win-installer": "npm run prepare:electron-runtime",

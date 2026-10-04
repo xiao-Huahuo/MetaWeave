@@ -21,5 +21,5 @@ function hashString(value: string): number {
 
 export function getChildAgentAvatar(runId: string): string {
   if (avatars.length === 0) return ''
-  return avatars[hashString(runId) % avatars.length]
+  return avatars[hashString(runId) % avatars.length] ?? ''
 }

@@ -8,6 +8,7 @@
 """
 
 from agent_service.models.longterm_memory_spec import LongTermMemorySpec, LongTermMemorySpecBase
+from agent_service.models.account import Account, AccountBase, AuthAccessSession, AuthAttempt, AuthDevice
 from agent_service.models.attachment import SessionAttachmentRecord
 from agent_service.models.agent_change import AgentChangeSnapshotRecord
 from agent_service.models.agent_queue import AgentQueueSettingsRecord, AgentQueueTaskRecord
@@ -35,9 +36,14 @@ from agent_service.models.user_settings import (
     UserSystemPromptEntry,
     UserVlmConfigPreset,
 )
-from agent_service.models.vault import VaultAsset, VaultItem, VaultItemTag, VaultProfile, VaultTag
+from agent_service.models.vault import VaultAsset, VaultItem, VaultItemTag, VaultTag
 
 __all__ = [
+    "Account",
+    "AccountBase",
+    "AuthAccessSession",
+    "AuthAttempt",
+    "AuthDevice",
     "LongTermMemorySpec",
     "LongTermMemorySpecBase",
     "SessionAttachmentRecord",
@@ -81,6 +87,5 @@ __all__ = [
     "VaultAsset",
     "VaultItem",
     "VaultItemTag",
-    "VaultProfile",
     "VaultTag",
 ]

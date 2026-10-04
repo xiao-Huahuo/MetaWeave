@@ -32,7 +32,6 @@ export interface CarouselSlide {
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 
-import type { WorkspaceMainView } from '@/types/knowledge'
 import CarouselSlide from './CarouselSlide.vue'
 
 const props = defineProps<{

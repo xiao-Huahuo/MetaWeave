@@ -357,7 +357,7 @@ watch(() => workspaceStore.markdownHtmlVisualization, (visualization) => {
     </Transition>
 
     <section
-      v-if="showVisualizationResult"
+      v-if="showVisualizationResult && workspaceStore.markdownHtmlVisualization"
       class="visualization-result"
     >
       <header class="result-header">

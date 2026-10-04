@@ -1,25 +1,32 @@
-<!-- Password vault reset dialog. Used by the settings security section. -->
+<!-- Global account password change dialog; the old password is always required and fields are ephemeral. -->
 <script setup lang="ts">
-import { ref } from 'vue'
+import { onBeforeUnmount, ref, watch } from 'vue'
 
 import FormHeightTransition from '@/components/common/FormHeightTransition.vue'
 import IcIcon from '@/components/common/IcIcon.vue'
 
-defineOptions({ name: 'VaultPasswordResetDialog' })
+defineOptions({ name: 'AccountPasswordDialog' })
 
-const props = defineProps<{ open: boolean; requireOldPassword: boolean; saving: boolean }>()
+const props = defineProps<{ open: boolean; saving: boolean }>()
 const emit = defineEmits<{ close: []; submit: [oldPassword: string, newPassword: string, confirmation: string] }>()
 
 const oldPassword = ref('')
 const newPassword = ref('')
 const confirmation = ref('')
 
-function close() {
+/** Erase sensitive inputs on close, successful completion, and component disposal. */
+function clearFields() {
   oldPassword.value = ''
   newPassword.value = ''
   confirmation.value = ''
+}
+function close() {
+  if (props.saving) return
+  clearFields()
   emit('close')
 }
+watch(() => props.open, (open) => { if (!open) clearFields() })
+onBeforeUnmount(clearFields)
 
 function submit() {
   emit('submit', oldPassword.value, newPassword.value, confirmation.value)
@@ -29,15 +36,15 @@ function submit() {
 <template>
   <div v-if="open" class="reset-backdrop" @click.self="close">
     <form class="reset-panel" @submit.prevent="submit">
-      <header><h3>{{ requireOldPassword ? '重置密码' : '重设密码库密码' }}</h3><button type="button" title="关闭" @click="close"><IcIcon name="close" :size="16" /></button></header>
-      <FormHeightTransition :watch-key="requireOldPassword ? 'with-old-password' : 'without-old-password'">
+      <header><h3>修改登录密码</h3><button type="button" title="关闭" :disabled="saving" @click="close"><IcIcon name="close" :size="16" /></button></header>
+      <FormHeightTransition watch-key="account-password">
         <main>
-          <label v-if="requireOldPassword" class="field required"><span><IcIcon name="shield" :size="14" />旧密码</span><input class="form-input-surface" v-model="oldPassword" type="password" autocomplete="current-password" /></label>
-          <label class="field required"><span><IcIcon name="shield" :size="14" />新密码</span><input class="form-input-surface" v-model="newPassword" type="password" autocomplete="new-password" /></label>
-          <label class="field required"><span><IcIcon name="check" :size="14" />确认新密码</span><input class="form-input-surface" v-model="confirmation" type="password" autocomplete="new-password" /></label>
+          <label class="field required"><span><IcIcon name="shield" :size="14" />旧密码</span><input class="form-input-surface" v-model="oldPassword" type="password" autocomplete="current-password" required :disabled="saving" /></label>
+          <label class="field required"><span><IcIcon name="shield" :size="14" />新密码</span><input class="form-input-surface" v-model="newPassword" type="password" autocomplete="new-password" required minlength="8" :disabled="saving" /></label>
+          <label class="field required"><span><IcIcon name="check" :size="14" />确认新密码</span><input class="form-input-surface" v-model="confirmation" type="password" autocomplete="new-password" required minlength="8" :disabled="saving" /></label>
         </main>
       </FormHeightTransition>
-      <footer><button type="button" @click="close">取消</button><button class="save-btn" :disabled="saving" type="submit">{{ saving ? '重设中...' : '确认重设' }}</button></footer>
+      <footer><button type="button" :disabled="saving" @click="close">取消</button><button class="save-btn" :disabled="saving" type="submit">{{ saving ? '修改中...' : '确认修改' }}</button></footer>
     </form>
   </div>
 </template>

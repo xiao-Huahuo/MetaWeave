@@ -22,9 +22,8 @@ describe('Vault API client', () => {
     await createVaultItem('vault-token', { item_type: 'login', fields: { name: '账号', password: '密码' }, tags: [] })
 
     const [, request] = fetchMock.mock.calls[0] as [string, RequestInit]
-    expect(request.headers).toMatchObject({
-      Authorization: 'Bearer vault-token',
-      'Content-Type': 'application/json',
-    })
+    const headers = new Headers(request.headers)
+    expect(headers.get('Authorization')).toBe('Bearer vault-token')
+    expect(headers.get('Content-Type')).toBe('application/json')
   })
 })

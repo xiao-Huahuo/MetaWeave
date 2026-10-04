@@ -46,7 +46,7 @@ afterEach(() => { wrapper?.unmount(); vi.clearAllMocks() })
 
 describe('scanner original preview', () => {
   it('retains the loaded preview across unchanged history polling responses', async () => {
-    vi.mocked(previewKnowledgeFile).mockResolvedValue({ kind: 'image', path: record.ocr_preview_path! })
+    vi.mocked(previewKnowledgeFile).mockResolvedValue({ kind: 'image', path: record.ocr_preview_path!, mtime: '', size: 0, extension: '.png', readonly: true })
     wrapper = mountResult()
     await flushPromises()
     expect(previewKnowledgeFile).toHaveBeenCalledTimes(1)
@@ -61,7 +61,7 @@ describe('scanner original preview', () => {
   })
 
   it('reloads when the OCR preview path or selected variant changes', async () => {
-    vi.mocked(previewKnowledgeFile).mockResolvedValue({ kind: 'image', path: record.ocr_preview_path! })
+    vi.mocked(previewKnowledgeFile).mockResolvedValue({ kind: 'image', path: record.ocr_preview_path!, mtime: '', size: 0, extension: '.png', readonly: true })
     wrapper = mountResult()
     await flushPromises()
     await wrapper.setProps({ record: { ...record, ocr_preview_path: 'history/new-ocr.png' } })

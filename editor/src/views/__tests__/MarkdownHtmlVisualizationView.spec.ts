@@ -105,10 +105,10 @@ describe('MarkdownHtmlVisualizationView', () => {
     await wrapper.get('button[aria-haspopup="menu"]').trigger('click')
 
     const modeButtons = wrapper.findAll('.mode-pill .mode-button')
-    await modeButtons[1].trigger('click')
+    await modeButtons[1]!.trigger('click')
     expect(workspaceStore.markdownHtmlVisualizationMode).toBe('insight')
 
-    await modeButtons[0].trigger('click')
+    await modeButtons[0]!.trigger('click')
     expect(workspaceStore.markdownHtmlVisualizationMode).toBe('structure')
 
     await wrapper.get('.preset-grid button:nth-child(3)').trigger('click')

@@ -136,7 +136,7 @@ describe('SearchPage four-library results', () => {
     await flushPromises()
     searchAllLibraries.mockClear()
 
-    await wrapper.findAll('.presentation-switch button')[1].trigger('click')
+    await wrapper.findAll('.presentation-switch button')[1]!.trigger('click')
 
     expect(wrapper.findAll('.split-section')).toHaveLength(4)
     expect(wrapper.find('.file-native').exists()).toBe(true)

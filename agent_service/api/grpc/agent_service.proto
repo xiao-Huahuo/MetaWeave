@@ -1,0 +1,725 @@
+// AgentService protocol. Keep typed business wire fields stable; authenticate RPCs with metadata Bearer.
+// Regenerate package bindings with python scripts/generate_grpc.py.
+syntax = "proto3";
+package agent_service;
+import "google/protobuf/struct.proto";
+message GitUserRequest {
+  string user_id = 1;
+}
+message GitInitRequest {
+  string user_id = 1;
+  string initial_branch = 2;
+}
+message GitHistoryRequest {
+  string user_id = 1;
+  int32 limit = 2;
+}
+message GitDiffRequest {
+  string user_id = 1;
+  string path = 2;
+  bool staged = 3;
+}
+message GitPathsRequest {
+  string user_id = 1;
+  repeated string paths = 2;
+}
+message GitCommitRequest {
+  string user_id = 1;
+  repeated string paths = 2;
+  string message = 3;
+}
+message GitPushRequest {
+  string user_id = 1;
+  string local_branch = 2;
+  string remote = 3;
+  string remote_branch = 4;
+  bool force_with_lease = 5;
+  bool set_upstream = 6;
+  bool all_branches = 7;
+}
+message GitBranchRequest {
+  string user_id = 1;
+  string name = 2;
+  bool checkout = 3;
+}
+message GitRemoteRequest {
+  string user_id = 1;
+  string name = 2;
+  string url = 3;
+}
+message GitPullRequest {
+  string user_id = 1;
+  string remote = 2;
+  string branch = 3;
+}
+message RunRequest {
+  string prompt = 1;
+  string user_id = 2;
+  string session_id = 3;
+  string reference = 4;
+  string agent_mode = 5;
+  string agent_access_mode = 6;
+}
+message RunResult {
+  string graph_diagram = 1;
+  string final_output = 2;
+  repeated google.protobuf.Struct events = 3;
+  string graph_diagram_path = 4;
+}
+message ToolCall {
+  string name = 1;
+  google.protobuf.Struct args = 2;
+  string id = 3;
+}
+message TraceEntry {
+  string node = 1;
+  string event = 2;
+  string error_type = 3;
+  string message = 4;
+}
+message ChunkMessage {
+  string node = 1;
+  string content = 2;
+  repeated agent_service.ToolCall tool_calls = 3;
+  repeated agent_service.TraceEntry trace = 4;
+  bool done = 5;
+  string model_name = 6;
+  string type = 7;
+  repeated google.protobuf.Struct context_messages = 8;
+  google.protobuf.Struct metadata = 9;
+  string error = 10;
+}
+message SessionCreateRequest {
+  string user_id = 1;
+  string session_name = 2;
+}
+message SessionIdRequest {
+  string session_id = 1;
+}
+message ListSessionsRequest {
+  string user_id = 1;
+}
+message SessionUpdateRequest {
+  string session_id = 1;
+  string session_name = 2;
+}
+message SessionResponse {
+  string session_id = 1;
+  string user_id = 2;
+  string session_name = 3;
+  string created_at = 4;
+  string updated_at = 5;
+}
+message ListSessionsResponse {
+  repeated agent_service.SessionResponse sessions = 1;
+}
+message DeleteResponse {
+  bool ok = 1;
+  int32 deleted_count = 2;
+}
+message DeleteAllSessionsRequest {
+  string user_id = 1;
+}
+message FavoriteListRequest {
+  string user_id = 1;
+  string target_type = 2;
+  string library_id = 3;
+  bool filter_library = 4;
+}
+message FavoriteCreateRequest {
+  string user_id = 1;
+  string library_id = 2;
+  string target_type = 3;
+  string target_id = 4;
+}
+message FavoriteDeleteRequest {
+  string user_id = 1;
+  string library_id = 2;
+  string target_type = 3;
+  string target_id = 4;
+}
+message FavoriteEntryResponse {
+  string favorite_id = 1;
+  string user_id = 2;
+  string library_id = 3;
+  string target_type = 4;
+  string target_id = 5;
+  string created_at = 6;
+}
+message FavoriteListResponse {
+  repeated agent_service.FavoriteEntryResponse favorites = 1;
+}
+message PrivacyListRequest {
+  string user_id = 1;
+  string target_type = 2;
+  string library_id = 3;
+  bool filter_library = 4;
+}
+message PrivacyCreateRequest {
+  string user_id = 1;
+  string library_id = 2;
+  string target_type = 3;
+  string target_id = 4;
+}
+message PrivacyDeleteRequest {
+  string user_id = 1;
+  string library_id = 2;
+  string target_type = 3;
+  string target_id = 4;
+}
+message PrivacyEntryResponse {
+  string privacy_id = 1;
+  string user_id = 2;
+  string library_id = 3;
+  string target_type = 4;
+  string target_id = 5;
+  string created_at = 6;
+}
+message PrivacyListResponse {
+  repeated agent_service.PrivacyEntryResponse privacy = 1;
+}
+message FeedbackCreateRequest {
+  string user_id = 1;
+  string content = 2;
+  string source = 3;
+  string page = 4;
+}
+message FeedbackListRequest {
+  string user_id = 1;
+}
+message FeedbackUpdateRequest {
+  string feedback_id = 1;
+  string content = 2;
+}
+message FeedbackDeleteRequest {
+  string feedback_id = 1;
+}
+message FeedbackEntryResponse {
+  string feedback_id = 1;
+  string user_id = 2;
+  string content = 3;
+  string source = 4;
+  string page = 5;
+  string created_at = 6;
+}
+message FeedbackListResponse {
+  repeated agent_service.FeedbackEntryResponse feedback = 1;
+}
+message ListMessagesRequest {
+  string user_id = 1;
+  string session_id = 2;
+  int32 limit = 3;
+}
+message MessageEntry {
+  string message_id = 1;
+  string session_id = 2;
+  string user_id = 3;
+  string role = 4;
+  string content = 5;
+  repeated agent_service.ToolCall tool_calls = 6;
+  google.protobuf.Struct metadata = 7;
+  string created_at = 8;
+}
+message ListMessagesResponse {
+  repeated agent_service.MessageEntry messages = 1;
+}
+message EventsRequest {
+  string user_id = 1;
+  string session_id = 2;
+}
+message EventEntry {
+  string message_id = 1;
+  string role = 2;
+  string node = 3;
+  string content = 4;
+  repeated agent_service.ToolCall tool_calls = 5;
+  string created_at = 6;
+  google.protobuf.Struct metadata = 7;
+}
+message EventsResponse {
+  string session_id = 1;
+  string user_id = 2;
+  int32 event_count = 3;
+  repeated agent_service.EventEntry events = 4;
+}
+message RecallDetailsRequest {
+  string user_id = 1;
+  string session_id = 2;
+}
+message RecallDetailsResponse {
+  string session_id = 1;
+  string user_id = 2;
+  string created_at = 3;
+  string query = 4;
+  google.protobuf.Struct rag_metrics = 5;
+  google.protobuf.Struct memory_recall = 6;
+  google.protobuf.Struct knowledge_recall = 7;
+}
+message TaskSuggestionsRequest {
+  string user_id = 1;
+  string session_id = 2;
+}
+message TaskSuggestionsResponse {
+  repeated string suggestions = 1;
+}
+message TokenUsageRequest {
+  string user_id = 1;
+  string session_id = 2;
+  string interval = 3;
+  int32 limit = 4;
+}
+message ActivityHeatmapRequest {
+  string user_id = 1;
+  int32 days = 2;
+  string timezone = 3;
+}
+message ToolListRequest {
+}
+message ToolInfo {
+  string name = 1;
+  string display_name = 2;
+  string description = 3;
+  google.protobuf.Struct args_schema = 4;
+  int32 argument_count = 5;
+}
+message ToolListResponse {
+  int32 tool_count = 1;
+  repeated agent_service.ToolInfo tools = 2;
+}
+message CancelRequest {
+  string session_id = 1;
+}
+message CancelResponse {
+  bool ok = 1;
+}
+message ChildAgentListRequest {
+  string session_id = 1;
+}
+message ChildAgentRecord {
+  string run_id = 1;
+  string parent_run_id = 2;
+  string goal = 3;
+  string mode = 4;
+  string status = 5;
+  string access_mode = 6;
+  repeated string allowed_tools = 7;
+  string summary = 8;
+  string result_json = 9;
+  string error = 10;
+  string category = 11;
+  string name = 12;
+}
+message ChildAgentListResponse {
+  string session_id = 1;
+  repeated agent_service.ChildAgentRecord children = 2;
+}
+message ChildAgentControlRequest {
+  string run_id = 1;
+}
+message ChildAgentUpdateRequest {
+  string run_id = 1;
+  google.protobuf.Struct update = 2;
+}
+message ChildAgentControlResponse {
+  bool ok = 1;
+  string run_id = 2;
+}
+message UserProfileRequest {
+  string user_id = 1;
+}
+message UserKnowledgeDirUpdateRequest {
+  string user_id = 1;
+  string knowledge_dir = 2;
+  string name = 3;
+}
+message UserProfileResponse {
+  string user_id = 1;
+  string knowledge_dir = 2;
+  string created_at = 3;
+  string updated_at = 4;
+  string active_library_id = 5;
+  agent_service.KnowledgeLibraryEntry active_knowledge_library = 6;
+  repeated agent_service.KnowledgeLibraryEntry knowledge_libraries = 7;
+  bool ocr_enabled = 8;
+  bool vision_understanding_enabled = 9;
+  bool auto_ingest_on_upload = 10;
+  bool vlm_enabled = 11;
+  string theme_mode = 12;
+  bool safety_enabled = 13;
+  bool sensitive_words_enabled = 14;
+}
+message AttachmentRawRequest {
+  string uri = 1;
+}
+message AttachmentRawResponse {
+  bytes content = 1;
+  string mime_type = 2;
+  string filename = 3;
+}
+message LLMConfigRequest {
+  string user_id = 1;
+}
+message LLMConfigSaveRequest {
+  string user_id = 1;
+  string api_key = 2;
+  string base_url = 3;
+  string model_name = 4;
+  string small_api_key = 5;
+  string small_base_url = 6;
+  string small_model_name = 7;
+  int64 model_context_window_tokens = 8;
+  int64 model_max_output_tokens = 9;
+  int64 small_model_context_window_tokens = 10;
+  int64 small_model_max_output_tokens = 11;
+  string vision_api_key = 12;
+  string vision_base_url = 13;
+  string vision_model_name = 14;
+}
+message LLMConfigResponse {
+  string user_id = 1;
+  string api_key = 2;
+  string base_url = 3;
+  string model_name = 4;
+  string small_api_key = 5;
+  string small_base_url = 6;
+  string small_model_name = 7;
+  string effective_small_api_key = 8;
+  string effective_small_base_url = 9;
+  string effective_small_model_name = 10;
+  string updated_at = 11;
+  string effective_api_key = 12;
+  string effective_base_url = 13;
+  string effective_model_name = 14;
+  string effective_model_source = 15;
+  string effective_small_model_source = 16;
+  int64 model_context_window_tokens = 17;
+  int64 model_max_output_tokens = 18;
+  int64 small_model_context_window_tokens = 19;
+  int64 small_model_max_output_tokens = 20;
+  string vision_api_key = 21;
+  string vision_base_url = 22;
+  string vision_model_name = 23;
+  string effective_vision_api_key = 24;
+  string effective_vision_base_url = 25;
+  string effective_vision_model_name = 26;
+  string effective_vision_model_source = 27;
+}
+message LLMConfigPresetSaveRequest {
+  string user_id = 1;
+  string label = 2;
+  string api_key = 3;
+  string base_url = 4;
+  string model_name = 5;
+}
+message LLMConfigPresetDeleteRequest {
+  string config_id = 1;
+}
+message LLMConfigPresetResponse {
+  string config_id = 1;
+  string user_id = 2;
+  string label = 3;
+  string api_key = 4;
+  string base_url = 5;
+  string model_name = 6;
+  string created_at = 7;
+  string updated_at = 8;
+}
+message LLMConfigPresetListResponse {
+  repeated agent_service.LLMConfigPresetResponse configs = 1;
+}
+message KnowledgeLibraryEntry {
+  string library_id = 1;
+  string user_id = 2;
+  string name = 3;
+  string knowledge_dir = 4;
+  bool is_active = 5;
+  string created_at = 6;
+  string updated_at = 7;
+}
+message KnowledgeRebuildRequest {
+  string user_id = 1;
+  string knowledge_dir = 2;
+}
+message KnowledgeFileUploadRequest {
+  string user_id = 1;
+  string filename = 2;
+  string relative_dir = 3;
+  bytes content = 4;
+}
+message KnowledgeRebuildResponse {
+  string user_id = 1;
+  string knowledge_dir = 2;
+  string frontmatter_dir = 3;
+  int32 frontmatter_files_seen = 4;
+  int32 frontmatter_files_written = 5;
+  int32 frontmatter_files_skipped = 6;
+  int32 files_seen = 7;
+  int32 files_ingested = 8;
+  int32 files_skipped = 9;
+  int32 chunks_created = 10;
+  int32 chunks_deleted = 11;
+  string uploaded_path = 12;
+  string library_id = 13;
+}
+message KnowledgeFileTreeRequest {
+  string user_id = 1;
+}
+message KnowledgeFileNode {
+  string name = 1;
+  string path = 2;
+  bool is_dir = 3;
+  string mtime = 4;
+  string index_status = 5;
+  int64 size = 6;
+  repeated agent_service.KnowledgeFileNode children = 7;
+  string graph_status = 8;
+  string created_at = 9;
+}
+message KnowledgeFileTreeResponse {
+  repeated agent_service.KnowledgeFileNode tree = 1;
+}
+message KnowledgeFileContentRequest {
+  string user_id = 1;
+  string path = 2;
+}
+message KnowledgeFileContentResponse {
+  string path = 1;
+  string content = 2;
+  string mtime = 3;
+  int64 size = 4;
+}
+message KnowledgePdfPageRequest {
+  string user_id = 1;
+  string path = 2;
+  int32 page = 3;
+}
+message KnowledgePdfPageResponse {
+  bytes content = 1;
+  string mime_type = 2;
+}
+message KnowledgeFileWriteRequest {
+  string user_id = 1;
+  string path = 2;
+  string content = 3;
+}
+message KnowledgeFileCreateRequest {
+  string user_id = 1;
+  string path = 2;
+  string content = 3;
+}
+message KnowledgeFolderCreateRequest {
+  string user_id = 1;
+  string path = 2;
+}
+message KnowledgePathCopyRequest {
+  string user_id = 1;
+  string source_path = 2;
+  string target_path = 3;
+}
+message KnowledgePathDeleteRequest {
+  string user_id = 1;
+  string path = 2;
+}
+message KnowledgePathRenameRequest {
+  string user_id = 1;
+  string source_path = 2;
+  string target_path = 3;
+}
+message SystemPromptRequest {
+  string user_id = 1;
+}
+message SystemPromptEntryResponse {
+  string prompt_id = 1;
+  string content = 2;
+  string created_at = 3;
+}
+message SystemPromptEntriesResponse {
+  repeated agent_service.SystemPromptEntryResponse entries = 1;
+}
+message SystemPromptAddRequest {
+  string user_id = 1;
+  string content = 2;
+}
+message SystemPromptDeleteRequest {
+  string prompt_id = 1;
+}
+message MemoryListRequest {
+  string user_id = 1;
+}
+message MemoryEntryResponse {
+  string memory_id = 1;
+  string content = 2;
+  double importance = 3;
+  string created_at = 4;
+}
+message MemoryListResponse {
+  repeated agent_service.MemoryEntryResponse entries = 1;
+}
+message MemoryAddRequest {
+  string user_id = 1;
+  string content = 2;
+  double importance = 3;
+}
+message MemoryDeleteRequest {
+  string memory_id = 1;
+}
+service AgentService {
+  rpc GetSafetyConfig (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc SaveSafetyConfig (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc GetMemoryConfig (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc SaveMemoryConfig (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc GetMcpClient (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc SaveMcpClient (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc CreateMcpConnection (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc UpdateMcpConnection (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc DeleteMcpConnection (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc ReconnectMcpConnection (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc TestMcpConnection (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc ExportMcpConnections (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc PreviewMcpImport (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc GetMcpServer (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc SaveMcpServer (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc CreateMcpCredential (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc RevokeMcpCredential (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc RotateMcpCredential (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc GetMcpAccessRecords (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc StreamRun (agent_service.RunRequest) returns (stream agent_service.ChunkMessage);
+  rpc RunOnce (agent_service.RunRequest) returns (agent_service.RunResult);
+  rpc StreamSessionPrompt (agent_service.RunRequest) returns (stream agent_service.ChunkMessage);
+  rpc RunSessionPrompt (agent_service.RunRequest) returns (agent_service.RunResult);
+  rpc CreateSession (agent_service.SessionCreateRequest) returns (agent_service.SessionResponse);
+  rpc GetSession (agent_service.SessionIdRequest) returns (agent_service.SessionResponse);
+  rpc ListUserSessions (agent_service.ListSessionsRequest) returns (agent_service.ListSessionsResponse);
+  rpc UpdateSessionName (agent_service.SessionUpdateRequest) returns (agent_service.SessionResponse);
+  rpc DeleteSession (agent_service.SessionIdRequest) returns (agent_service.DeleteResponse);
+  rpc DeleteAllSessions (agent_service.DeleteAllSessionsRequest) returns (agent_service.DeleteResponse);
+  rpc ListMessages (agent_service.ListMessagesRequest) returns (agent_service.ListMessagesResponse);
+  rpc CancelSession (agent_service.CancelRequest) returns (agent_service.CancelResponse);
+  rpc ListChildAgents (agent_service.ChildAgentListRequest) returns (agent_service.ChildAgentListResponse);
+  rpc StopChildAgent (agent_service.ChildAgentControlRequest) returns (agent_service.ChildAgentControlResponse);
+  rpc UpdateChildAgent (agent_service.ChildAgentUpdateRequest) returns (agent_service.ChildAgentControlResponse);
+  rpc GetEvents (agent_service.EventsRequest) returns (agent_service.EventsResponse);
+  rpc GetRecallDetails (agent_service.RecallDetailsRequest) returns (agent_service.RecallDetailsResponse);
+  rpc GetTaskSuggestions (agent_service.TaskSuggestionsRequest) returns (agent_service.TaskSuggestionsResponse);
+  rpc GetTokenUsage (agent_service.TokenUsageRequest) returns (google.protobuf.Struct);
+  rpc GetActivityHeatmap (agent_service.ActivityHeatmapRequest) returns (google.protobuf.Struct);
+  rpc GetRegisteredTools (agent_service.ToolListRequest) returns (agent_service.ToolListResponse);
+  rpc GetSessionAttachment (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc GetSessionAttachmentRaw (agent_service.AttachmentRawRequest) returns (agent_service.AttachmentRawResponse);
+  rpc EnsureUserProfile (agent_service.UserProfileRequest) returns (agent_service.UserProfileResponse);
+  rpc UpdateUserKnowledgeDir (agent_service.UserKnowledgeDirUpdateRequest) returns (agent_service.UserProfileResponse);
+  rpc GetLLMConfig (agent_service.LLMConfigRequest) returns (agent_service.LLMConfigResponse);
+  rpc SaveLLMConfig (agent_service.LLMConfigSaveRequest) returns (agent_service.LLMConfigResponse);
+  rpc ListLLMConfigPresets (agent_service.LLMConfigRequest) returns (agent_service.LLMConfigPresetListResponse);
+  rpc SaveLLMConfigPreset (agent_service.LLMConfigPresetSaveRequest) returns (agent_service.LLMConfigPresetResponse);
+  rpc DeleteLLMConfigPreset (agent_service.LLMConfigPresetDeleteRequest) returns (agent_service.DeleteResponse);
+  rpc GetWebSearchConfig (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc SaveWebSearchConfig (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc GetFontConfig (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc SaveFontConfig (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc GetAppearanceConfig (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc SaveAppearanceConfig (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc GetKnowledgeIngestionConfig (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc SaveKnowledgeIngestionConfig (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc GetVlmConfig (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc SaveVlmConfig (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc ListVlmConfigPresets (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc SaveVlmConfigPreset (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc DeleteVlmConfigPreset (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc RebuildKnowledge (agent_service.KnowledgeRebuildRequest) returns (agent_service.KnowledgeRebuildResponse);
+  rpc UploadKnowledgeFile (agent_service.KnowledgeFileUploadRequest) returns (agent_service.KnowledgeRebuildResponse);
+  rpc ListKnowledgeFiles (agent_service.KnowledgeFileTreeRequest) returns (agent_service.KnowledgeFileTreeResponse);
+  rpc ReadKnowledgeFile (agent_service.KnowledgeFileContentRequest) returns (agent_service.KnowledgeFileContentResponse);
+  rpc PreviewKnowledgePdfPage (agent_service.KnowledgePdfPageRequest) returns (agent_service.KnowledgePdfPageResponse);
+  rpc WriteKnowledgeFile (agent_service.KnowledgeFileWriteRequest) returns (agent_service.KnowledgeFileNode);
+  rpc CreateKnowledgeFile (agent_service.KnowledgeFileCreateRequest) returns (agent_service.KnowledgeFileNode);
+  rpc CreateKnowledgeFolder (agent_service.KnowledgeFolderCreateRequest) returns (agent_service.KnowledgeFileNode);
+  rpc CopyKnowledgePath (agent_service.KnowledgePathCopyRequest) returns (agent_service.KnowledgeFileNode);
+  rpc DeleteKnowledgePath (agent_service.KnowledgePathDeleteRequest) returns (agent_service.DeleteResponse);
+  rpc RenameKnowledgePath (agent_service.KnowledgePathRenameRequest) returns (agent_service.KnowledgeFileNode);
+  rpc CreateKnowledgeIngestionJobs (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc ListKnowledgeIngestionJobs (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc CancelKnowledgeIngestionJob (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc SearchAllLibraries (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc GetGitStatus (agent_service.GitUserRequest) returns (google.protobuf.Struct);
+  rpc InitGitRepository (agent_service.GitInitRequest) returns (google.protobuf.Struct);
+  rpc GetGitHistory (agent_service.GitHistoryRequest) returns (google.protobuf.Struct);
+  rpc GetGitDiff (agent_service.GitDiffRequest) returns (google.protobuf.Struct);
+  rpc RestoreGitPaths (agent_service.GitPathsRequest) returns (google.protobuf.Struct);
+  rpc CommitGitPaths (agent_service.GitCommitRequest) returns (google.protobuf.Struct);
+  rpc PushGitBranch (agent_service.GitPushRequest) returns (google.protobuf.Struct);
+  rpc CreateGitBranch (agent_service.GitBranchRequest) returns (google.protobuf.Struct);
+  rpc AddGitRemote (agent_service.GitRemoteRequest) returns (google.protobuf.Struct);
+  rpc SwitchGitBranch (agent_service.GitBranchRequest) returns (google.protobuf.Struct);
+  rpc PullGitBranch (agent_service.GitPullRequest) returns (google.protobuf.Struct);
+  rpc ListSystemPromptEntries (agent_service.SystemPromptRequest) returns (agent_service.SystemPromptEntriesResponse);
+  rpc AddSystemPromptEntry (agent_service.SystemPromptAddRequest) returns (agent_service.SystemPromptEntryResponse);
+  rpc DeleteSystemPromptEntry (agent_service.SystemPromptDeleteRequest) returns (agent_service.DeleteResponse);
+  rpc ListCustomMemories (agent_service.MemoryListRequest) returns (agent_service.MemoryListResponse);
+  rpc AddCustomMemory (agent_service.MemoryAddRequest) returns (agent_service.MemoryEntryResponse);
+  rpc DeleteCustomMemory (agent_service.MemoryDeleteRequest) returns (agent_service.DeleteResponse);
+  rpc ListFavorites (agent_service.FavoriteListRequest) returns (agent_service.FavoriteListResponse);
+  rpc AddFavorite (agent_service.FavoriteCreateRequest) returns (agent_service.FavoriteEntryResponse);
+  rpc DeleteFavorite (agent_service.FavoriteDeleteRequest) returns (agent_service.DeleteResponse);
+  rpc ListPrivacy (agent_service.PrivacyListRequest) returns (agent_service.PrivacyListResponse);
+  rpc AddPrivacy (agent_service.PrivacyCreateRequest) returns (agent_service.PrivacyEntryResponse);
+  rpc DeletePrivacy (agent_service.PrivacyDeleteRequest) returns (agent_service.DeleteResponse);
+  rpc ListFeedback (agent_service.FeedbackListRequest) returns (agent_service.FeedbackListResponse);
+  rpc AddFeedback (agent_service.FeedbackCreateRequest) returns (agent_service.FeedbackEntryResponse);
+  rpc UpdateFeedback (agent_service.FeedbackUpdateRequest) returns (agent_service.FeedbackEntryResponse);
+  rpc DeleteFeedback (agent_service.FeedbackDeleteRequest) returns (agent_service.DeleteResponse);
+  rpc VaultStatus (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc VaultListItems (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc VaultGetItem (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc VaultCreateItem (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc VaultUpdateItem (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc VaultMoveToTrash (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc VaultRestoreItems (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc VaultPurgeItems (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc VaultExportItems (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc VaultImportItems (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc VaultListTags (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc ListComponentLibraryComponents (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc CreateComponentLibraryComponent (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc RenameComponentLibraryComponent (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc DeleteComponentLibraryComponent (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc GetSessionChanges (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc UndoSessionChange (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc ListAgentQueueTasks (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc CreateAgentQueueTask (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc UpdateAgentQueueTask (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc ContinueAgentQueueTask (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc TransitionAgentQueueTask (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc DeleteAgentQueueTask (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc UpdateAgentQueueSettings (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc GetLatexStatus (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc StartLatexInstall (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc CancelLatexInstall (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc UninstallManagedLatex (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc CompileLatex (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc ClearLatexStorage (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc GetLatexManagement (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc GetModelManagement (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc GetModelPreferences (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc SaveModelPreferences (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc InitializeModels (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc StartModelDownload (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc DeleteManagedModel (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc ListAutomations (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc CreateAutomation (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc ToggleAutomation (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc ListAutomationRuns (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc DeleteAutomation (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc DeleteSmartForm (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc ListLiteratureEntries (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc TouchLiteratureEntry (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc PatchLiteratureRow (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc DuplicateLiteratureRow (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc DeleteLiteratureRow (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc AuthRegister (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc AuthLogin (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc AuthCurrent (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc AuthLogout (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc AuthChangePassword (google.protobuf.Struct) returns (google.protobuf.Struct);
+  rpc AuthAdvanceOnboarding (google.protobuf.Struct) returns (google.protobuf.Struct);
+}

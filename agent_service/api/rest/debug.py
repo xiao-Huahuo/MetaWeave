@@ -80,7 +80,7 @@ def _collect_agent_config_constants(config: AgentConfig) -> dict[str, Any]:
                 "type": _value_type_name(getattr(config_group, field_info.name)),
                 "value": (
                     "***"
-                    if any(secret in field_info.name.lower() for secret in ("api_key", "password", "token", "secret"))
+                    if any(secret in field_info.name.lower() for secret in ("api_key", "password", "token", "secret", "nonce"))
                     and bool(getattr(config_group, field_info.name))
                     else _to_json_value(getattr(config_group, field_info.name))
                 ),

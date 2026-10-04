@@ -10,8 +10,9 @@
  */
 /* eslint-disable @typescript-eslint/no-require-imports */
 
-const { app, BrowserWindow, clipboard, dialog, ipcMain, Menu, shell, Tray, nativeImage } = require('electron')
+const { app, BrowserWindow, clipboard, dialog, ipcMain, Menu, shell, Tray, nativeImage, safeStorage, session } = require('electron')
 const childProcess = require('node:child_process')
+const { randomBytes } = require('node:crypto')
 const fs = require('node:fs')
 const path = require('node:path')
 const { handleEditShortcut } = require('./edit-shortcuts.cjs')
@@ -19,10 +20,14 @@ const { boundsForMainDragRestore, finishMainWindowRestore } = require('./main-wi
 const { isMetaWeaveHealthResponse, waitForHttpReady, waitForManagedProcessReady } = require('./server-readiness.cjs')
 const { isAbortedNavigation, loadWindowContent, restoreExistingWindow } = require('./window-content-loader.cjs')
 const { registerBrowserViewIpc } = require('./browser-view.cjs')
+const { registerDesktopAuthIpc, assertTrustedDesktopSender } = require('./desktop-auth.cjs')
+const { packagedBackendEnvironment, verifyExistingBackendAuthorization } = require('./backend-runtime.cjs')
 
 const DEV_SERVER_URL = process.env.ELECTRON_RENDERER_URL || 'http://127.0.0.1:5173'
 const BACKEND_SERVER_URL = process.env.METAWEAVE_BACKEND_URL || 'http://127.0.0.1:8002'
 const BACKEND_HEALTH_URL = new URL('/health', BACKEND_SERVER_URL).toString()
+// Managed development shares this nonce with Python; a packaged launch owns it.
+const DESKTOP_AUTH_NONCE = process.env.AGENT_DESKTOP_AUTH_NONCE || (app.isPackaged ? randomBytes(32).toString('hex') : '')
 const APP_ICON_FILENAME = process.platform === 'darwin' ? 'app.icns' : 'app.ico'
 const APP_ICON_PATH = path.join(__dirname, '..', 'src', 'assets', 'icons', APP_ICON_FILENAME)
 
@@ -40,6 +45,7 @@ let floatingWindow = null
 let backendProcess = null
 let mainMoveSession = null
 let mainResizeSession = null
+let disposeDesktopAuth = null
 const disposeBrowserView = registerBrowserViewIpc(ipcMain, () => mainWindow)
 
 const MAIN_MIN_WIDTH = 320
@@ -261,6 +267,24 @@ function packagedDefaultResourcesPath() {
   return path.join(process.resourcesPath, 'default-resources')
 }
 
+/** Revoke the same DB grant without HTTP if the local service has stopped. */
+function forgetDeviceOffline(deviceId) {
+  const projectRoot = app.isPackaged ? userProjectRoot() : path.resolve(__dirname, '..', '..')
+  const candidate = path.join(projectRoot, '.venv', process.platform === 'win32' ? 'Scripts/python.exe' : 'bin/python')
+  const executable = app.isPackaged ? packagedBackendPath()
+    : process.env.METAWEAVE_PYTHON || (fs.existsSync(candidate) ? candidate : process.platform === 'win32' ? 'python' : 'python3')
+  const args = app.isPackaged ? ['--forget-device', deviceId]
+    : [path.join(projectRoot, 'main.py'), '--forget-device', deviceId]
+  const env = app.isPackaged
+    ? packagedBackendEnvironment(BACKEND_SERVER_URL, projectRoot, DESKTOP_AUTH_NONCE)
+    : { ...process.env }
+  return new Promise((resolve, reject) => {
+    childProcess.execFile(executable, args, {
+      cwd: projectRoot, env, windowsHide: true, timeout: 30_000, maxBuffer: 16 * 1024,
+    }, (error) => error ? reject(new Error('本机自动登录撤销失败')) : resolve())
+  })
+}
+
 function startupPage(title, message, isError = false) {
   const accent = isError ? '#ff6b7a' : '#8b7bff'
   return `<!doctype html><html><head><meta charset="utf-8"><style>
@@ -338,6 +362,7 @@ async function startPackagedBackend() {
     timeoutMs: 1_000,
     validateResponse: isMetaWeaveHealthResponse,
   })) {
+    await verifyExistingBackendAuthorization(BACKEND_SERVER_URL, DESKTOP_AUTH_NONCE)
     return
   }
   const backendExe = packagedBackendPath()
@@ -348,11 +373,7 @@ async function startPackagedBackend() {
   const spawnedProcess = childProcess.spawn(backendExe, [], {
     cwd: projectRoot,
     detached: false,
-    env: {
-      ...process.env,
-      AGENT_PROJECT_ROOT: projectRoot,
-      AGENT_BASE_DATA_DIR: path.join(projectRoot, 'runtime'),
-    },
+    env: packagedBackendEnvironment(BACKEND_SERVER_URL, projectRoot, DESKTOP_AUTH_NONCE),
     stdio: 'ignore',
     windowsHide: true,
   })
@@ -690,6 +711,12 @@ if (hasSingleInstanceLock) {
 }
 
 app.whenReady().then(async () => {
+  disposeDesktopAuth = registerDesktopAuthIpc(ipcMain, {
+    safeStorage, sessionCookies: session.defaultSession.cookies, webRequest: session.defaultSession.webRequest,
+    getMainWindow: () => mainWindow, getFloatingWindow: () => floatingWindow,
+    rendererOrigin: DEV_SERVER_URL, backendUrl: BACKEND_SERVER_URL, desktopNonce: DESKTOP_AUTH_NONCE,
+    forgetDeviceOffline,
+  })
   createMainWindow()
 
   if (!isDevelopment()) {
@@ -742,6 +769,7 @@ app.on('window-all-closed', () => {
 })
 
 app.on('will-quit', () => {
+  disposeDesktopAuth?.()
   disposeBrowserView()
   if (tray) {
     tray.destroy()
@@ -1073,14 +1101,21 @@ ipcMain.on('agent:window-sync', (event, payload) => {
     'chat-stream',
     'chat-sync-request',
     'chat-cancel',
+    'account-progress',
   ])
   if (!allowedTypes.has(type)) return
+  // Progress is an invalidation only: identity and tokens come from /auth/me.
+  if (type === 'account-progress') {
+    try {
+      assertTrustedDesktopSender(event, [mainWindow], new Set([new URL(DEV_SERVER_URL).origin, new URL(BACKEND_SERVER_URL).origin]))
+    } catch { return }
+  }
   for (const target of [mainWindow, floatingWindow]) {
     if (target && !target.isDestroyed() && target !== sender) {
       // Hidden windows receive the terminal snapshot but never pay for live
       // token painting; their state catches up when chat-state arrives.
       if (type === 'chat-stream' && !target.isVisible()) continue
-      target.webContents.send('agent:window-sync', { type, value })
+      target.webContents.send('agent:window-sync', { type, value: type === 'account-progress' ? null : value })
     }
   }
 })

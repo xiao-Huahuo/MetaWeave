@@ -162,56 +162,7 @@ class VaultGrpcHandlerMixin:
         """读取密码库设置状态。"""
 
         payload = MessageToDict(request)
-        return self._vault_struct(context, self._require_vault_service(context).status, user_id=str(payload.get("user_id", "")))
-    def VaultDebugMasterPassword(self, request: Struct, context: grpc.ServicerContext) -> Struct:  # noqa: N802
-        """读取密码库调试主密码。"""
-
-        payload = MessageToDict(request)
-        return self._vault_struct(
-            context,
-            self._require_vault_service(context).debug_master_password,
-            user_id=str(payload.get("user_id", "")),
-        )
-    def VaultSetup(self, request: Struct, context: grpc.ServicerContext) -> Struct:  # noqa: N802
-        """设置密码库主密码并返回独立 token。"""
-
-        payload = MessageToDict(request)
-        return self._vault_struct(
-            context,
-            self._require_vault_service(context).setup,
-            user_id=str(payload.get("user_id", "")),
-            master_password=str(payload.get("master_password", "")),
-        )
-    def VaultUnlock(self, request: Struct, context: grpc.ServicerContext) -> Struct:  # noqa: N802
-        """验证主密码并返回独立 token。"""
-
-        payload = MessageToDict(request)
-        return self._vault_struct(
-            context,
-            self._require_vault_service(context).unlock,
-            user_id=str(payload.get("user_id", "")),
-            master_password=str(payload.get("master_password", "")),
-        )
-    def VaultResetPassword(self, request: Struct, context: grpc.ServicerContext) -> Struct:  # noqa: N802
-        """重设密码库主密码并重新加密条目。"""
-
-        payload = MessageToDict(request)
-        return self._vault_struct(
-            context,
-            self._require_vault_service(context).reset_master_password,
-            user_id=str(payload.get("user_id", "")),
-            new_password=str(payload.get("new_password", "")),
-            old_password=str(payload.get("old_password", "")),
-        )
-    def VaultLock(self, request: Struct, context: grpc.ServicerContext) -> Struct:  # noqa: N802
-        """主动锁定一个密码库 token。"""
-
-        payload = MessageToDict(request)
-        return self._vault_struct(
-            context,
-            self._require_vault_service(context).lock,
-            token=str(payload.get("token", "")),
-        )
+        return self._vault_struct(context, self._require_vault_service(context).status, session=self._vault_session_from_payload(context, payload))
     def VaultListItems(self, request: Struct, context: grpc.ServicerContext) -> Struct:  # noqa: N802
         """列出密码库条目。"""
 

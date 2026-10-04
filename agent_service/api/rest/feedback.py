@@ -5,7 +5,7 @@ from __future__ import annotations
 from fastapi import APIRouter, HTTPException, Query
 from starlette.concurrency import run_in_threadpool
 
-from agent_service.api.rest.deps import _require_feedback_service
+from agent_service.api.rest.deps import _require_auth_session, _require_feedback_service
 from agent_service.schemas.feedback import FeedbackCreate, FeedbackListOut, FeedbackOut, FeedbackUpdate
 
 router = APIRouter()
@@ -22,11 +22,11 @@ async def add_feedback(payload: FeedbackCreate) -> FeedbackOut:
 
 
 @router.get("/feedback")
-async def list_feedback(user_id: str | None = Query(None, description="用户 ID;不传则读取全部反馈")) -> FeedbackListOut:
-    """读取反馈列表;传入用户 ID 时仅返回该用户反馈。"""
+async def list_feedback(user_id: str | None = Query(None, description="用户 ID")) -> FeedbackListOut:
+    """读取当前已验证用户的反馈，省略参数也不会扩大读取范围。"""
 
     try:
-        feedback = await run_in_threadpool(_require_feedback_service().list_feedback, user_id=user_id)
+        feedback = await run_in_threadpool(_require_feedback_service().list_feedback, user_id=_require_auth_session().user_id)
         return FeedbackListOut(feedback=feedback)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc

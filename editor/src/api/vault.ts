@@ -2,35 +2,13 @@
  * Password vault API.
  *
  * Usage:
- * VaultView stores the returned vault token in sessionStorage for the 30-minute
- * unlock window and passes it in Authorization headers for every vault call.
+ * Vault requests use the same in-memory application session as the global login.
  */
 
-import { apiGet, apiPatch, apiPost, apiPostForm, buildApiUrl } from '@/api/client'
+import { apiFetch, apiGet, apiPatch, apiPost, apiPostForm, buildApiUrl } from '@/api/client'
 import { API_ROUTES } from '@/router/api_routes'
 
 export type VaultItemType = 'login' | 'card' | 'identity' | 'secure_note'
-
-export interface VaultTokenResponse {
-  token: string
-  scope: 'vault'
-  expires_at: string
-  user_id: string
-}
-
-export interface VaultStatusResponse {
-  user_id: string
-  configured: boolean
-  item_count: number
-}
-
-export interface VaultDebugMasterPasswordResponse {
-  user_id: string
-  configured: boolean
-  available: boolean
-  master_password: string
-  message: string
-}
 
 export interface VaultItem {
   item_id: string
@@ -69,30 +47,6 @@ export interface VaultAsset {
 
 function auth(token: string): RequestInit {
   return { headers: { Authorization: `Bearer ${token}` } }
-}
-
-export function getVaultStatus(userId: string): Promise<VaultStatusResponse> {
-  return apiGet<VaultStatusResponse>(API_ROUTES.VAULT_STATUS, { user_id: userId })
-}
-
-export function getVaultDebugMasterPassword(userId: string): Promise<VaultDebugMasterPasswordResponse> {
-  return apiGet<VaultDebugMasterPasswordResponse>(API_ROUTES.VAULT_DEBUG_MASTER_PASSWORD, { user_id: userId })
-}
-
-export function setupVault(userId: string, masterPassword: string): Promise<VaultTokenResponse> {
-  return apiPost<VaultTokenResponse>(API_ROUTES.VAULT_SETUP, { user_id: userId, master_password: masterPassword })
-}
-
-export function unlockVault(userId: string, masterPassword: string): Promise<VaultTokenResponse> {
-  return apiPost<VaultTokenResponse>(API_ROUTES.VAULT_UNLOCK, { user_id: userId, master_password: masterPassword })
-}
-
-export function resetVaultPassword(userId: string, newPassword: string, oldPassword = ''): Promise<{ ok: boolean }> {
-  return apiPost<{ ok: boolean }>(API_ROUTES.VAULT_RESET_PASSWORD, { user_id: userId, new_password: newPassword, old_password: oldPassword })
-}
-
-export function lockVaultToken(token: string): Promise<{ ok: boolean }> {
-  return apiPost<{ ok: boolean }>(API_ROUTES.VAULT_LOCK, {}, auth(token))
 }
 
 export function listVaultItems(
@@ -157,7 +111,7 @@ export function uploadVaultAsset(token: string, file: File): Promise<{ asset: Va
 }
 
 export async function fetchVaultAssetUrl(token: string, assetId: string): Promise<string> {
-  const response = await fetch(buildApiUrl(`${API_ROUTES.VAULT_ASSETS}/${encodeURIComponent(assetId)}`), {
+  const response = await apiFetch(buildApiUrl(`${API_ROUTES.VAULT_ASSETS}/${encodeURIComponent(assetId)}`), {
     headers: { Authorization: `Bearer ${token}` },
   })
   if (!response.ok) {

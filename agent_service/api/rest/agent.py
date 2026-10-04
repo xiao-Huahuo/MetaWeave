@@ -17,7 +17,7 @@ from starlette.concurrency import run_in_threadpool
 
 from agent_service.api.recall_details import build_recall_details_payload
 from agent_service.api.rest.deps import (
-    _require_agent,
+    _require_agent, _require_auth_session,
     _require_attachment_service,
     _require_dsh_executor,
     _require_message_service,
@@ -28,6 +28,7 @@ from agent_service.core.agent_config import DEFAULT_BUSINESS_LIMITS
 from agent_service.services.editor_context.service import editor_context_service
 from agent_service.services.task_suggestion.service import TaskSuggestionService
 from agent_service.schemas.user_question import UserQuestionSubmission
+from agent_service.api.rest.file_security import untrusted_file_headers
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -107,6 +108,7 @@ async def get_agent_attachment_raw(
         media_type=mime_type or None,
         filename=filename,
         content_disposition_type="inline",
+        headers=untrusted_file_headers(),
     )
 
 
@@ -346,12 +348,16 @@ async def agent_stream_post(
 @router.get("/agent/stream-run")
 async def agent_stream_run(
     prompt: str = Query(..., min_length=DEFAULT_BUSINESS_LIMITS.nonempty_min_length, description="用户输入"),
-    user_id: str = Query(default="stream-run-user", description="用户 ID"),
-    session_id: str = Query(default="stream-run-session", description="会话 ID"),
+    user_id: str = Query(default="", description="用户 ID"),
+    session_id: str = Query(default="", description="会话 ID"),
 ) -> StreamingResponse:
     """
     无状态 SSE 流式对话(无上下文,无持久化)。
     """
+    # Omitted claims still belong to the verified account, including stateless calls.
+    from uuid import uuid4
+    user_id = _require_auth_session().user_id
+    session_id = session_id or str(uuid4())
     agent = _require_agent()
 
     def _event_generator():

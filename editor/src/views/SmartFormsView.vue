@@ -1283,7 +1283,7 @@ function pasteSelectionClipboard(cellsByKey: Record<string, SmartCell>): void {
         ...row.cells,
         ...Object.fromEntries(contextCells()
           .filter((cell) => cell.rowId === row.id && cellsByKey[cellKey(cell.rowId, cell.columnId)])
-          .map((cell) => [cell.columnId, { ...row.cells[cell.columnId], ...cellsByKey[cellKey(cell.rowId, cell.columnId)] }])),
+          .map((cell) => [cell.columnId, { ...row.cells[cell.columnId], ...cellsByKey[cellKey(cell.rowId, cell.columnId)]! }])),
       },
     })),
   })
@@ -1429,7 +1429,7 @@ async function generateSmartCellsForRows(rowIds: string[], columnIds?: string[],
   if (!Object.keys(tokensByCell).length) return result
   const results = await Promise.all(rowIds.map(async (rowId): Promise<SmartFillResult> => {
     const rowResult: SmartFillResult = { ready: 0, failed: 0 }
-    const currentRow = form.value.rows.find((item) => item.id === rowId)
+    const currentRow = currentForm.rows.find((item) => item.id === rowId)
     if (!currentRow) return rowResult
     const literatureContent = currentRow.cells.literature_content?.value.trim() ?? ''
     if (!literatureContent) {
@@ -1875,7 +1875,7 @@ function createZipBlob(files: ZipSourceFile[]): Blob {
   return new Blob([...locals, ...centrals, zipEndHeader(files.length, centralSize, offset)], { type: 'application/zip' })
 }
 
-function zipLocalHeader(fileName: Uint8Array, size: number, crc: number): Uint8Array {
+function zipLocalHeader(fileName: Uint8Array, size: number, crc: number): Uint8Array<ArrayBuffer> {
   const header = new Uint8Array(30)
   const view = new DataView(header.buffer)
   view.setUint32(0, 0x04034b50, true)
@@ -1891,7 +1891,7 @@ function zipLocalHeader(fileName: Uint8Array, size: number, crc: number): Uint8A
   return header
 }
 
-function zipCentralHeader(fileName: Uint8Array, size: number, crc: number, offset: number): Uint8Array {
+function zipCentralHeader(fileName: Uint8Array, size: number, crc: number, offset: number): Uint8Array<ArrayBuffer> {
   const header = new Uint8Array(46)
   const view = new DataView(header.buffer)
   view.setUint32(0, 0x02014b50, true)
@@ -1909,7 +1909,7 @@ function zipCentralHeader(fileName: Uint8Array, size: number, crc: number, offse
   return header
 }
 
-function zipEndHeader(fileCount: number, centralSize: number, centralOffset: number): Uint8Array {
+function zipEndHeader(fileCount: number, centralSize: number, centralOffset: number): Uint8Array<ArrayBuffer> {
   const header = new Uint8Array(22)
   const view = new DataView(header.buffer)
   view.setUint32(0, 0x06054b50, true)

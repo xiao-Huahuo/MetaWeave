@@ -6,10 +6,13 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from pathlib import Path
 
+import pytest
+
 from alembic import command
-from sqlalchemy import inspect, text
+from sqlalchemy import MetaData, Table, inspect, text
 from sqlmodel import SQLModel
 
 import agent_service.models  # noqa: F401
@@ -52,19 +55,25 @@ def test_empty_database_upgrades_to_complete_schema_and_is_idempotent(tmp_path: 
     assert second_tables == first_tables
 
 
-def test_supported_unversioned_database_is_backed_up_stamped_and_upgraded(tmp_path: Path) -> None:
-    """无版本旧库必须先备份，再补充历史缺失列并到达 head。"""
+def test_supported_unversioned_database_is_reset_without_retaining_old_credentials(tmp_path: Path) -> None:
+    """本次用户明确要求清空旧数据，无版本库升级不得保留旧凭据备份。"""
 
     config = _config(tmp_path)
     engine = create_database_engine(config)
     SQLModel.metadata.create_all(engine)
     with engine.begin() as connection:
+        connection.execute(text(
+            "CREATE TABLE vault_profiles (user_id VARCHAR(128) NOT NULL PRIMARY KEY, "
+            "password_hash VARCHAR(256) NOT NULL, password_salt VARCHAR(128) NOT NULL, "
+            "kdf_iterations INTEGER NOT NULL, created_at DATETIME NOT NULL, updated_at DATETIME NOT NULL)"
+        ))
         connection.execute(text("DROP TABLE knowledge_graph_dedup_decisions"))
         connection.execute(text("DROP TABLE knowledge_graph_section_cache"))
         connection.execute(text("DROP TABLE component_library_metadata"))
         connection.execute(text("DROP TABLE scanner_records"))
         connection.execute(text("DROP TABLE user_vlm_config_presets"))
-        for table in ("mcp_connections", "mcp_credentials", "mcp_access_records"):
+        for table in ("mcp_connections", "mcp_credentials", "mcp_access_records",
+                      "accounts", "auth_access_sessions", "auth_devices", "auth_attempts"):
             connection.execute(text(f"DROP TABLE {table}"))
         connection.execute(text("DROP TABLE user_llm_config"))
         connection.execute(text(
@@ -107,7 +116,7 @@ def test_supported_unversioned_database_is_backed_up_stamped_and_upgraded(tmp_pa
 
     with engine.connect() as connection:
         version = connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
-    assert version == "20261001_0019"
+    assert version == "20261004_0020"
     assert "component_library_metadata" in inspect(engine).get_table_names()
     assert {"knowledge_graph_section_cache", "knowledge_graph_dedup_decisions"} <= set(inspect(engine).get_table_names())
     assert {
@@ -150,14 +159,13 @@ def test_supported_unversioned_database_is_backed_up_stamped_and_upgraded(tmp_pa
         column["name"] for column in inspect(engine).get_columns("smart_form_columns")
     }
     with engine.connect() as connection:
-        sizes = connection.execute(text(
-            "SELECT ui_font_size_percent, text_font_size_percent FROM user_settings "
-            "WHERE user_id = 'legacy-user'"
-        )).one()
-    assert tuple(sizes) == (115, 115)
+        assert connection.execute(text("SELECT COUNT(*) FROM user_settings")).scalar_one() == 0
+    assert "vault_profiles" not in inspect(engine).get_table_names()
+    assert {"safety_enabled", "sensitive_words_enabled", "theme_mode"} <= {
+        column["name"] for column in inspect(engine).get_columns("user_settings")
+    }
     backups = list((config.storage.base_data_dir / "backups" / "db-migrations").glob("*.bak"))
-    assert len(backups) == 1
-    assert backups[0].stat().st_size > 0
+    assert backups == []
 
 
 def test_compatibility_revision_downgrade_and_upgrade_round_trip(tmp_path: Path) -> None:
@@ -165,15 +173,15 @@ def test_compatibility_revision_downgrade_and_upgrade_round_trip(tmp_path: Path)
 
     config = _config(tmp_path)
     engine = create_database_engine(config)
-    upgrade_database(config=config, engine=engine)
     alembic_config = build_alembic_config(config)
+    command.upgrade(alembic_config, "20261001_0019")
 
     command.downgrade(alembic_config, "20260829_0001")
-    command.upgrade(alembic_config, "head")
+    command.upgrade(alembic_config, "20261001_0019")
 
     with engine.connect() as connection:
         assert connection.execute(text("SELECT version_num FROM alembic_version")).scalar_one() == "20261001_0019"
-    assert set(SQLModel.metadata.tables) <= set(inspect(engine).get_table_names())
+    assert "vault_profiles" in inspect(engine).get_table_names()
 
 
 def test_vision_llm_columns_downgrade_and_upgrade_without_touching_existing_models(tmp_path: Path) -> None:
@@ -181,8 +189,8 @@ def test_vision_llm_columns_downgrade_and_upgrade_without_touching_existing_mode
 
     config = _config(tmp_path)
     engine = create_database_engine(config)
-    upgrade_database(config=config, engine=engine)
     alembic_config = build_alembic_config(config)
+    command.upgrade(alembic_config, "20261001_0019")
     with engine.begin() as connection:
         connection.execute(text(
             "INSERT INTO user_llm_config ("
@@ -201,7 +209,7 @@ def test_vision_llm_columns_downgrade_and_upgrade_without_touching_existing_mode
             "SELECT api_key, base_url, model_name, small_api_key, small_base_url, small_model_name "
             "FROM user_llm_config WHERE user_id = 'migration-user'"
         )).one()
-    command.upgrade(alembic_config, "head")
+    command.upgrade(alembic_config, "20261001_0019")
 
     assert tuple(existing) == (
         "large-key",
@@ -217,3 +225,33 @@ def test_vision_llm_columns_downgrade_and_upgrade_without_touching_existing_mode
             "FROM user_llm_config WHERE user_id = 'migration-user'"
         )).one()
     assert tuple(restored) == ("", "", "")
+
+
+def test_global_account_reset_is_one_time_and_removes_plaintext_profile(tmp_path: Path) -> None:
+    """The explicitly authorized reset clears user rows once, then preserves new accounts."""
+    config = _config(tmp_path)
+    engine = create_database_engine(config)
+    alembic_config = build_alembic_config(config)
+    command.upgrade(alembic_config, "20261001_0019")
+    with engine.begin() as connection:
+        connection.execute(text("INSERT INTO vault_profiles (user_id,password_hash,password_salt,debug_master_password,kdf_iterations,created_at,updated_at) VALUES ('old','hash','salt','plaintext',1,CURRENT_TIMESTAMP,CURRENT_TIMESTAMP)"))
+        historical_settings = Table("user_settings", MetaData(), autoload_with=connection)
+        old_values = {}
+        for column in historical_settings.columns:
+            value_type = column.type.python_type
+            old_values[column.name] = (datetime.now(timezone.utc) if value_type is datetime
+                                       else False if value_type is bool else 0 if value_type is int else "")
+        old_values.update(user_id="old", knowledge_dir="D:/old")
+        connection.execute(historical_settings.insert().values(**old_values))
+    upgrade_database(config=config, engine=engine)
+    assert "vault_profiles" not in inspect(engine).get_table_names()
+    with engine.connect() as connection:
+        assert connection.execute(text("SELECT COUNT(*) FROM user_settings")).scalar_one() == 0
+    from agent_service.services.auth.service import AuthService
+    service = AuthService(config=config, engine=engine)
+    registered = service.register(username="alice", password="correct horse")
+    upgrade_database(config=config, engine=engine)
+    with engine.connect() as connection:
+        assert connection.execute(text("SELECT user_id FROM accounts")).scalar_one() == registered["user_id"]
+    with pytest.raises(RuntimeError, match="irreversible"):
+        command.downgrade(alembic_config, "20261001_0019")

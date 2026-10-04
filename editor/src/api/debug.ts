@@ -6,7 +6,7 @@
  * without duplicating service addresses in front-end components.
  */
 
-import { ApiError, apiGet } from '@/api/client'
+import { apiFetch, ApiError, apiGet } from '@/api/client'
 import { API_ROUTES } from '@/router/api_routes'
 
 export type RuntimeApiKind = 'rest' | 'grpc'
@@ -189,7 +189,7 @@ export async function fetchGlobalConstants(): Promise<GlobalConstantsResponse> {
 /** 开发代理不可用时直连本地后端,与其他 debug 页面保持相同恢复策略。 */
 async function fetchGlobalConstantsFromBackendOrigin(): Promise<GlobalConstantsResponse> {
   const url = `http://127.0.0.1:8002${API_ROUTES.DEBUG_GLOBAL_CONSTANTS}`
-  const response = await fetch(url)
+  const response = await apiFetch(url)
   if (!response.ok) {
     throw new Error(`Request failed: ${response.status} ${response.statusText}`)
   }
@@ -197,7 +197,7 @@ async function fetchGlobalConstantsFromBackendOrigin(): Promise<GlobalConstantsR
 }
 
 async function fetchRuntimeApisFromBackendOrigin(): Promise<RuntimeApisResponse> {
-  const response = await fetch(`http://127.0.0.1:8002${API_ROUTES.DEBUG_RUNTIME_APIS}`)
+  const response = await apiFetch(`http://127.0.0.1:8002${API_ROUTES.DEBUG_RUNTIME_APIS}`)
   if (!response.ok) {
     throw new Error(`Request failed: ${response.status} ${response.statusText}`)
   }
@@ -232,7 +232,7 @@ async function fetchMultimodalIngestionObservationFromBackendOrigin(
   url.searchParams.set('user_id', userId)
   url.searchParams.set('path', path)
 
-  const response = await fetch(url, { signal })
+  const response = await apiFetch(url, { signal })
   if (!response.ok) {
     throw new Error(await readDebugError(response, `Request failed: ${response.status} ${response.statusText}`))
   }

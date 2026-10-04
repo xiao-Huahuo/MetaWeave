@@ -2,7 +2,7 @@
 密码库 REST 端点。
 
 功能说明:
-本模块提供密码库二次解锁、独立 JWT 鉴权、条目 CRUD、回收站、导入导出和
+本模块提供密码库共享登录会话鉴权、条目 CRUD、回收站、导入导出和
 图片资产访问接口。所有 /vault 条目接口均要求 Authorization Bearer token。
 
 使用说明:
@@ -19,8 +19,9 @@ from fastapi.responses import FileResponse
 from starlette.concurrency import run_in_threadpool
 
 from agent_service.core.agent_config import DEFAULT_BUSINESS_LIMITS
-from agent_service.api.rest.deps import _require_vault_service
-from agent_service.schemas.vault import VaultImportRequest, VaultItemCreate, VaultItemUpdate, VaultPasswordResetRequest, VaultUnlockRequest
+from agent_service.api.rest.deps import _require_vault_service, _require_auth_service, _require_auth_session
+from agent_service.schemas.vault import VaultImportRequest, VaultItemCreate, VaultItemUpdate
+from agent_service.api.rest.file_security import untrusted_file_headers
 
 router = APIRouter()
 
@@ -29,79 +30,17 @@ def _vault_session(authorization: str) -> Any:
     """从 Authorization 头解析密码库会话。"""
 
     try:
-        return _require_vault_service().verify_token(authorization)
+        from agent_service.services.vault.service import VaultSession
+        identity = _require_auth_service().verify_session(authorization) if authorization else _require_auth_session()
+        return VaultSession(user_id=identity.user_id, fernet_key=identity.fernet_key, password_version=identity.password_version)
     except ValueError as exc:
         raise HTTPException(status_code=401, detail=str(exc)) from exc
 
 
 @router.get("/vault/status")
-async def vault_status(user_id: str = Query(..., min_length=DEFAULT_BUSINESS_LIMITS.nonempty_min_length)) -> dict[str, Any]:
-    """读取当前用户是否已经设置密码库主密码。"""
-
-    try:
-        return await run_in_threadpool(_require_vault_service().status, user_id=user_id)
-    except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
-
-
-@router.get("/vault/debug/master-password")
-async def vault_debug_master_password(user_id: str = Query(..., min_length=DEFAULT_BUSINESS_LIMITS.nonempty_min_length)) -> dict[str, Any]:
-    """读取当前用户保存的密码库调试主密码。"""
-
-    try:
-        return await run_in_threadpool(_require_vault_service().debug_master_password, user_id=user_id)
-    except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
-
-
-@router.post("/vault/setup")
-async def vault_setup(body: VaultUnlockRequest) -> dict[str, Any]:
-    """首次设置主密码并返回 vault token。"""
-
-    try:
-        return await run_in_threadpool(
-            _require_vault_service().setup,
-            user_id=body.user_id,
-            master_password=body.master_password,
-        )
-    except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
-
-
-@router.post("/vault/unlock")
-async def vault_unlock(body: VaultUnlockRequest) -> dict[str, Any]:
-    """验证主密码并返回 vault token。"""
-
-    try:
-        return await run_in_threadpool(
-            _require_vault_service().unlock,
-            user_id=body.user_id,
-            master_password=body.master_password,
-        )
-    except ValueError as exc:
-        raise HTTPException(status_code=401, detail=str(exc)) from exc
-
-
-@router.post("/vault/reset-password")
-async def vault_reset_password(body: VaultPasswordResetRequest) -> dict[str, Any]:
-    """重设主密码并重加密全部密码库条目。"""
-
-    try:
-        return await run_in_threadpool(
-            _require_vault_service().reset_master_password,
-            user_id=body.user_id,
-            new_password=body.new_password,
-            old_password=body.old_password,
-        )
-    except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc)) from exc
-
-
-@router.post("/vault/lock")
-async def vault_lock(authorization: str = Header("", alias="Authorization")) -> dict[str, Any]:
-    """主动锁定当前密码库 token。"""
-
-    return await run_in_threadpool(_require_vault_service().lock, token=authorization)
+async def vault_status(authorization: str = Header("", alias="Authorization")) -> dict[str, Any]:
+    """The shared account session unlocks this account's existing encrypted vault."""
+    return await run_in_threadpool(_require_vault_service().status, session=_vault_session(authorization))
 
 
 @router.get("/vault/items")
@@ -274,4 +213,5 @@ async def get_vault_asset(asset_id: str, authorization: str = Header("", alias="
         asset = await run_in_threadpool(_require_vault_service().get_asset, session=_vault_session(authorization), asset_id=asset_id)
     except ValueError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
-    return FileResponse(asset.storage_path, media_type=asset.mime_type, filename=asset.file_name)
+    return FileResponse(asset.storage_path, media_type=asset.mime_type, filename=asset.file_name,
+                        headers=untrusted_file_headers())

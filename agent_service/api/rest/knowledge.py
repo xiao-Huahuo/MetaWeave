@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from agent_service.api.rest.deps import _require_auth_session
+
 import asyncio
 import contextlib
 import json
@@ -278,6 +280,7 @@ async def knowledge_preview_asset(path: str) -> FileResponse:
     try:
         file_path, media_type = await run_in_threadpool(
             svc.resolve_knowledge_asset_for_response,
+            user_id=_require_auth_session().user_id,
             path=path,
         )
     except ValueError as exc:

@@ -76,10 +76,10 @@ class SensitiveWordChecker:
             safety_disabled=raw.get("_safety_disabled", False),
         )
 
-    def check(self, text: str) -> SensitiveWordResult:
+    def check(self, text: str, *, enabled: bool | None = None) -> SensitiveWordResult:
         """对输入文本执行全量敏感词匹配。"""
 
-        if self.disabled or self.safety_disabled:
+        if enabled is False or (enabled is None and (self.disabled or self.safety_disabled)):
             return SensitiveWordResult(blocked=False)
 
         hits: list[SensitiveWordHit] = []

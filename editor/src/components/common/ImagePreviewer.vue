@@ -227,12 +227,12 @@ const filename = computed(() => {
   try {
     const url = new URL(src)
     const parts = url.pathname.split('/').filter(Boolean)
-    if (parts.length) return decodeURIComponent(parts[parts.length - 1])
+    if (parts.length) return decodeURIComponent(parts[parts.length - 1] || '')
   } catch { /* fall through */ }
 
   // fallback
   const parts = src.split('/').filter(Boolean)
-  return parts.length ? decodeURIComponent(parts[parts.length - 1]) : (alt || 'image')
+  return parts.length ? decodeURIComponent(parts[parts.length - 1] || '') : (alt || 'image')
 })
 
 /* ---------- watchers ---------- */
@@ -252,7 +252,7 @@ function watchToolbar(el: Element | null) {
   toolbarObserver = null
   if (!el) return
   toolbarObserver = new ResizeObserver(([entry]) => {
-    toolbarCompact.value = (entry.contentRect.width ?? 0) < 480
+    toolbarCompact.value = (entry?.contentRect.width ?? 0) < 480
   })
   toolbarObserver.observe(el)
 }

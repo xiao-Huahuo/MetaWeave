@@ -507,6 +507,9 @@ class SettingsService(McpSettingsMixin):
             "model_auto_download_enabled": bool(record.model_auto_download_enabled),
             "dsh_coding_agent_enabled": bool(record.dsh_coding_agent_enabled),
             "long_term_memory_enabled": bool(record.long_term_memory_enabled),
+            "sensitive_words_enabled": bool(record.sensitive_words_enabled),
+            "safety_enabled": bool(record.safety_enabled),
+            "theme_mode": record.theme_mode,
             "knowledge_ignore_patterns": _with_default_video_ignore_patterns(record.knowledge_ignore_patterns),
             "knowledge_supported_suffixes": list(self.config.constants.knowledge_supported_suffixes),
             "terminal_sandbox": self._load_terminal_sandbox_payload(record.terminal_sandbox_config),
@@ -690,6 +693,7 @@ class SettingsService(McpSettingsMixin):
         self,
         *,
         user_id: str,
+        theme_mode: str | None = None,
         theme_primary_color: str | None = None,
         theme_soft_color: str | None = None,
         tag_colors: list[str] | None = None,
@@ -713,6 +717,10 @@ class SettingsService(McpSettingsMixin):
                     created_at=now,
                     updated_at=now,
                 )
+            if theme_mode is not None:
+                if theme_mode not in {"light", "dark", "system"}:
+                    raise ValueError("theme_mode must be light, dark or system")
+                record.theme_mode = theme_mode
             if theme_primary_color is not None:
                 record.theme_primary_color = self._normalize_theme_color(theme_primary_color)
             if theme_soft_color is not None:
@@ -739,6 +747,7 @@ class SettingsService(McpSettingsMixin):
             db.refresh(record)
             return {
                 "user_id": record.user_id,
+                "theme_mode": record.theme_mode,
                 "theme_primary_color": record.theme_primary_color,
                 "theme_soft_color": record.theme_soft_color,
                 "tag_colors": self._effective_tag_colors(record.tag_colors),
@@ -806,6 +815,7 @@ class SettingsService(McpSettingsMixin):
         profile = self.ensure_user_profile(user_id=user_id)
         return {
             "user_id": profile["user_id"],
+            "theme_mode": profile["theme_mode"],
             "theme_primary_color": profile["theme_primary_color"],
             "theme_soft_color": profile["theme_soft_color"],
             "tag_colors": profile["tag_colors"],
@@ -1483,6 +1493,33 @@ class SettingsService(McpSettingsMixin):
             }
 
     # ---- 长期记忆配置 ----
+
+    def get_safety_config(self, *, user_id: str) -> dict[str, bool]:
+        """Read one account's audit policy without changing shared dictionaries."""
+        with Session(self.engine) as db:
+            record = db.get(UserSettingsRecord, user_id.strip())
+            return {
+                "sensitive_words_enabled": bool(record.sensitive_words_enabled) if record else True,
+                "safety_enabled": bool(record.safety_enabled) if record else True,
+            }
+
+    def save_safety_config(self, *, user_id: str, sensitive_words_enabled: bool | None = None, safety_enabled: bool | None = None) -> dict[str, bool]:
+        """Persist explicit per-user audit switches through the central settings service."""
+        if not user_id.strip():
+            raise ValueError("user_id is required")
+        self.ensure_user_profile(user_id=user_id)
+        with Session(self.engine) as db:
+            record = db.get(UserSettingsRecord, user_id.strip())
+            assert record is not None
+            for field, value in (("sensitive_words_enabled", sensitive_words_enabled), ("safety_enabled", safety_enabled)):
+                if value is not None:
+                    if not isinstance(value, bool):
+                        raise ValueError(field + " must be a boolean")
+                    setattr(record, field, value)
+            record.updated_at = self._utc_now()
+            db.add(record)
+            db.commit()
+        return self.get_safety_config(user_id=user_id)
 
     def get_memory_config(self, *, user_id: str) -> dict:
         """获取用户的长期记忆总开关。"""

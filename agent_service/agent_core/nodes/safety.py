@@ -54,7 +54,7 @@ class SafetyInputNode:
             return {}
 
         llm_config = state.get("llm_config")
-        result = self._safety_service.audit_input(user_input, llm_config=llm_config)
+        result = self._safety_service.audit_input(user_input, llm_config=llm_config, user_id=str(state.get("user_id") or ""))
         if result.blocked:
             block_message = self._safety_service.generate_block_message(
                 result,
@@ -125,7 +125,7 @@ class SafetyOutputNode:
         if not output_text:
             return {}
 
-        result = self._safety_service.audit_output(output_text, user_input=user_input)
+        result = self._safety_service.audit_output(output_text, user_input=user_input, user_id=str(state.get("user_id") or ""))
         if result.blocked or result.sanitized:
             safe_text = result.safe_output
             return {

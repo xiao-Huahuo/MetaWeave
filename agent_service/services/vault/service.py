@@ -1,38 +1,30 @@
-"""
-密码库业务服务。
+"""密码库加密条目、回收站、导入导出和图片资产业务服务。
 
-功能说明:
-本服务实现密码库的二次解锁、独立 JWT、加密条目 CRUD、搜索筛选、回收站、
-导入导出和受保护图片资产管理。普通软件功能仍直接使用 user_id,只有密码库
-接口需要调用 verify_token 获取 vault 作用域。
-
-使用说明:
-启动时由 main.py 创建 VaultService 并注入 REST/gRPC。API 层应先校验
-Authorization: Bearer <token>,再把返回的 VaultSession 传给业务方法。
+统一登录管理主密码与会话。REST/gRPC 验证 AuthSession 后将同一身份、直接
+派生 Fernet key 与 password_version 传入业务方法，密码库不再签发独立 JWT。
 """
 
 from __future__ import annotations
 
-import base64
-import hashlib
-import hmac
 import json
-import os
+import logging
 import shutil
-from dataclasses import dataclass
-from datetime import datetime, timedelta, timezone
+from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
-import jwt
 from cryptography.fernet import Fernet, InvalidToken
+from sqlalchemy import update
 from sqlmodel import Session, col, select
 
 from agent_service.core.agent_config import AgentConfig
-from agent_service.models.vault import VaultAsset, VaultItem, VaultItemTag, VaultProfile, VaultTag
+from agent_service.models.account import Account
+from agent_service.models.vault import VaultAsset, VaultItem, VaultItemTag, VaultTag
 
-VAULT_SCOPE = "vault"
+logger = logging.getLogger(__name__)
+
 VAULT_ITEM_TYPES = {"login", "card", "identity", "secure_note"}
 VAULT_CARD_BRANDS = {
     "UnionPay银联",
@@ -61,166 +53,28 @@ class VaultSession:
     """已解锁密码库会话。"""
 
     user_id: str
-    fernet_key: str
+    fernet_key: str = field(repr=False)
+    password_version: int
 
 
 class VaultService:
     """密码库服务。"""
 
     def __init__(self, *, config: AgentConfig, engine: Any) -> None:
-        """保存配置、创建表并确保运行时图片目录存在。"""
+        """保存统一配置与 engine，并确保运行时图片目录存在。"""
 
         self.config = config
         self.engine = engine
-        self._unlocked_keys: dict[str, tuple[str, str, datetime]] = {}
         self.assets_root = config.storage.assets_dir / "vault"
         self.assets_root.mkdir(parents=True, exist_ok=True)
+        self._retry_pending_asset_cleanup()
 
-    def status(self, *, user_id: str) -> dict[str, Any]:
-        """返回用户是否已经设置主密码。"""
+    def status(self, *, session: VaultSession) -> dict[str, Any]:
+        """Return vault availability for the already authenticated account."""
 
-        normalized_user_id = self._normalize_user_id(user_id)
         with Session(self.engine) as db:
-            profile = db.get(VaultProfile, normalized_user_id)
-            count = len(list(db.exec(select(VaultItem).where(VaultItem.user_id == normalized_user_id)).all()))
-        return {"user_id": normalized_user_id, "configured": profile is not None, "item_count": count}
-
-    def setup(self, *, user_id: str, master_password: str) -> dict[str, Any]:
-        """首次设置主密码并签发密码库 token。"""
-
-        normalized_user_id = self._normalize_user_id(user_id)
-        if len(master_password) < self.config.limits.vault_password_min_chars:
-            raise ValueError("master_password must be at least 8 characters")
-        now = self._now()
-        salt = os.urandom(self.config.limits.vault_salt_bytes)
-        password_hash = self._password_hash(master_password, salt)
-        with Session(self.engine) as db:
-            if db.get(VaultProfile, normalized_user_id) is not None:
-                raise ValueError("vault master password already configured")
-            db.add(VaultProfile(
-                user_id=normalized_user_id,
-                password_hash=password_hash,
-                password_salt=base64.urlsafe_b64encode(salt).decode("ascii"),
-                debug_master_password=master_password,
-                created_at=now,
-                updated_at=now,
-            ))
-            db.commit()
-        return self._token_payload(user_id=normalized_user_id, master_password=master_password, salt=salt)
-
-    def unlock(self, *, user_id: str, master_password: str) -> dict[str, Any]:
-        """验证主密码并签发密码库 token。"""
-
-        normalized_user_id = self._normalize_user_id(user_id)
-        with Session(self.engine) as db:
-            profile = db.get(VaultProfile, normalized_user_id)
-            if profile is None:
-                raise ValueError("vault master password is not configured")
-            salt = base64.urlsafe_b64decode(profile.password_salt.encode("ascii"))
-            if not hmac.compare_digest(profile.password_hash, self._password_hash(master_password, salt)):
-                raise ValueError("invalid master password")
-            profile.debug_master_password = master_password
-            profile.updated_at = self._now()
-            db.add(profile)
-            db.commit()
-        return self._token_payload(user_id=normalized_user_id, master_password=master_password, salt=salt)
-
-    def reset_master_password(self, *, user_id: str, new_password: str, old_password: str = "") -> dict[str, Any]:
-        """用新主密码重新加密用户全部条目，并失效该用户的已解锁会话。"""
-
-        normalized_user_id = self._normalize_user_id(user_id)
-        if len(new_password) < self.config.limits.vault_password_min_chars:
-            raise ValueError("master_password must be at least 8 characters")
-        with Session(self.engine) as db:
-            profile = db.get(VaultProfile, normalized_user_id)
-            if profile is None:
-                raise ValueError("vault master password is not configured")
-            old_salt = base64.urlsafe_b64decode(profile.password_salt.encode("ascii"))
-            if old_password and not hmac.compare_digest(profile.password_hash, self._password_hash(old_password, old_salt)):
-                raise ValueError("invalid master password")
-            source_password = old_password or str(profile.debug_master_password or "")
-            if not source_password:
-                raise ValueError("old master password is required")
-            source_session = VaultSession(user_id=normalized_user_id, fernet_key=self._fernet_key(source_password, old_salt))
-            target_salt = os.urandom(self.config.limits.vault_salt_bytes)
-            target_session = VaultSession(user_id=normalized_user_id, fernet_key=self._fernet_key(new_password, target_salt))
-            for item in db.exec(select(VaultItem).where(VaultItem.user_id == normalized_user_id)).all():
-                item.encrypted_payload = self._encrypt(target_session, self._decrypt(source_session, item.encrypted_payload))
-                item.updated_at = self._now()
-                db.add(item)
-            profile.password_hash = self._password_hash(new_password, target_salt)
-            profile.password_salt = base64.urlsafe_b64encode(target_salt).decode("ascii")
-            profile.debug_master_password = new_password
-            profile.updated_at = self._now()
-            db.add(profile)
-            db.commit()
-        self._unlocked_keys = {key: value for key, value in self._unlocked_keys.items() if value[0] != normalized_user_id}
-        return {"ok": True}
-
-    def debug_master_password(self, *, user_id: str) -> dict[str, Any]:
-        """Return the stored debug plaintext master password for a user."""
-
-        normalized_user_id = self._normalize_user_id(user_id)
-        with Session(self.engine) as db:
-            profile = db.get(VaultProfile, normalized_user_id)
-            if profile is None:
-                return {
-                    "user_id": normalized_user_id,
-                    "configured": False,
-                    "available": False,
-                    "master_password": "",
-                    "message": "该用户尚未设置密码库主密码。",
-                }
-            password = str(profile.debug_master_password or "")
-            return {
-                "user_id": normalized_user_id,
-                "configured": True,
-                "available": bool(password),
-                "master_password": password,
-                "message": "已读取调试主密码。" if password else "该密码库创建于调试字段加入前,请成功解锁一次后再读取。",
-            }
-
-    def verify_token(self, token: str) -> VaultSession:
-        """校验 HS256 密码库 JWT 并返回解密会话。"""
-
-        raw_token = token.strip()
-        if raw_token.lower().startswith("bearer "):
-            raw_token = raw_token[7:].strip()
-        if not raw_token:
-            raise ValueError("vault token is required")
-        try:
-            payload = jwt.decode(raw_token, self._jwt_secret(), algorithms=["HS256"])
-        except jwt.PyJWTError as exc:
-            raise ValueError("invalid or expired vault token") from exc
-        if payload.get("scope") != VAULT_SCOPE:
-            raise ValueError("invalid vault token scope")
-        user_id = str(payload.get("user_id") or "").strip()
-        session_id = str(payload.get("jti") or "").strip()
-        if not user_id or not session_id:
-            raise ValueError("invalid vault token payload")
-        self._purge_expired_sessions()
-        unlocked = self._unlocked_keys.get(session_id)
-        if unlocked is None or unlocked[0] != user_id:
-            raise ValueError("vault token is locked")
-        fernet_key = unlocked[1]
-        return VaultSession(user_id=user_id, fernet_key=fernet_key)
-
-    def lock(self, *, token: str) -> dict[str, Any]:
-        """Invalidate one unlocked vault token without touching global login."""
-
-        raw_token = token.strip()
-        if raw_token.lower().startswith("bearer "):
-            raw_token = raw_token[7:].strip()
-        if not raw_token:
-            return {"ok": True}
-        try:
-            payload = jwt.decode(raw_token, self._jwt_secret(), algorithms=["HS256"])
-        except jwt.PyJWTError:
-            return {"ok": True}
-        session_id = str(payload.get("jti") or "").strip()
-        if session_id:
-            self._unlocked_keys.pop(session_id, None)
-        return {"ok": True}
+            count = len(list(db.exec(select(VaultItem).where(VaultItem.user_id == session.user_id)).all()))
+        return {"user_id": session.user_id, "configured": True, "item_count": count}
 
     def list_items(
         self,
@@ -284,12 +138,14 @@ class VaultService:
             updated_at=now,
         )
         with Session(self.engine) as db:
+            self._begin_write(db=db, session=session)
             db.add(item)
-            db.commit()
+            db.flush()
             self._replace_tags(db=db, user_id=session.user_id, item_id=item.item_id, tag_names=tags)
             self._attach_assets(db=db, session=session, item_id=item.item_id, asset_ids=asset_ids)
-            db.refresh(item)
-            return {"item": self._serialize_item(item, self._tags_by_item(db=db, item_ids=[item.item_id]).get(item.item_id, []), session, reveal_sensitive=True)}
+            result = self._serialize_item(item, self._tags_by_item(db=db, item_ids=[item.item_id]).get(item.item_id, []), session, reveal_sensitive=True)
+            db.commit()
+            return {"item": result}
 
     def get_item(self, *, session: VaultSession, item_id: str) -> dict[str, Any]:
         """读取一个当前用户拥有的密码库条目。"""
@@ -309,6 +165,7 @@ class VaultService:
         """更新一个密码库条目,只有显式保存才写入数据库。"""
 
         with Session(self.engine) as db:
+            self._begin_write(db=db, session=session)
             item = self._get_owned_item(db=db, session=session, item_id=item_id)
             item_type = str(payload.get("item_type") or item.item_type)
             fields = payload.get("fields")
@@ -323,10 +180,10 @@ class VaultService:
                 self._replace_tags(db=db, user_id=session.user_id, item_id=item.item_id, tag_names=list(payload.get("tags") or []))
             if "asset_ids" in payload:
                 self._attach_assets(db=db, session=session, item_id=item.item_id, asset_ids=list(payload.get("asset_ids") or []))
-            db.commit()
-            db.refresh(item)
             tags = self._tags_by_item(db=db, item_ids=[item.item_id]).get(item.item_id, [])
-            return {"item": self._serialize_item(item, tags, session, reveal_sensitive=True)}
+            result = self._serialize_item(item, tags, session, reveal_sensitive=True)
+            db.commit()
+            return {"item": result}
 
     def move_to_trash(self, *, session: VaultSession, item_ids: list[str]) -> dict[str, Any]:
         """将条目移入密码库回收站。"""
@@ -341,20 +198,33 @@ class VaultService:
     def purge_items(self, *, session: VaultSession, item_ids: list[str]) -> dict[str, Any]:
         """永久删除条目并同步删除关联图片文件。"""
 
-        normalized_ids = [item_id.strip() for item_id in item_ids if item_id.strip()]
+        normalized_ids = list(dict.fromkeys(item_id.strip() for item_id in item_ids if item_id.strip()))
         deleted = 0
+        assets_to_clean: list[tuple[str, str]] = []
         with Session(self.engine) as db:
+            self._begin_write(db=db, session=session)
+            items = []
+            # Validate the whole request before any deletion. Missing items are
+            # retryable only when this owner has a formal pending asset record.
             for item_id in normalized_ids:
-                item = self._get_owned_item(db=db, session=session, item_id=item_id)
-                assets = list(db.exec(select(VaultAsset).where(VaultAsset.item_id == item.item_id)).all())
-                for asset in assets:
-                    self._delete_asset_file(asset.storage_path)
-                    db.delete(asset)
+                item = db.get(VaultItem, item_id)
+                assets = list(db.exec(select(VaultAsset).where(VaultAsset.item_id == item_id)
+                                      .where(VaultAsset.user_id == session.user_id)).all())
+                if (item is not None and item.user_id != session.user_id) or (item is None and not assets):
+                    raise ValueError("vault item not found")
+                if item is not None:
+                    items.append(item)
+                assets_to_clean.extend((asset.asset_id, asset.storage_path) for asset in assets)
+            for item in items:
                 for link in list(db.exec(select(VaultItemTag).where(VaultItemTag.item_id == item.item_id)).all()):
                     db.delete(link)
                 db.delete(item)
                 deleted += 1
             db.commit()
+        # Until cleanup succeeds, asset rows referencing the removed parent are
+        # durable tombstones. They cannot be served or attached to another item.
+        if not self._cleanup_purged_assets(assets_to_clean):
+            raise ValueError("vault items deleted; image cleanup is pending, close the file and retry")
         return {"ok": True, "deleted_count": deleted}
 
     def export_items(self, *, session: VaultSession, item_ids: list[str] | None = None) -> dict[str, Any]:
@@ -403,7 +273,6 @@ class VaultService:
         user_dir = self.assets_root / self._safe_filename(session.user_id)
         user_dir.mkdir(parents=True, exist_ok=True)
         storage_path = user_dir / f"{asset_id}_{safe_name}"
-        storage_path.write_bytes(content)
         asset = VaultAsset(
             asset_id=asset_id,
             user_id=session.user_id,
@@ -414,10 +283,17 @@ class VaultService:
             created_at=self._now(),
         )
         with Session(self.engine) as db:
-            db.add(asset)
-            db.commit()
-            db.refresh(asset)
-        return {"asset": self._serialize_asset(asset)}
+            self._begin_write(db=db, session=session)
+            try:
+                storage_path.write_bytes(content)
+                db.add(asset)
+                result = self._serialize_asset(asset)
+                db.commit()
+            except Exception:
+                # A failed insert/write never leaves unowned sensitive assets.
+                storage_path.unlink(missing_ok=True)
+                raise
+        return {"asset": result}
 
     def get_asset(self, *, session: VaultSession, asset_id: str) -> VaultAsset:
         """读取当前用户拥有的图片资产。"""
@@ -425,6 +301,8 @@ class VaultService:
         with Session(self.engine) as db:
             asset = db.get(VaultAsset, asset_id)
             if asset is None or asset.user_id != session.user_id:
+                raise ValueError("vault asset not found")
+            if asset.item_id and db.get(VaultItem, asset.item_id) is None:
                 raise ValueError("vault asset not found")
             return asset
 
@@ -434,6 +312,7 @@ class VaultService:
         normalized_ids = [item_id.strip() for item_id in item_ids if item_id.strip()]
         changed = 0
         with Session(self.engine) as db:
+            self._begin_write(db=db, session=session)
             for item_id in normalized_ids:
                 item = self._get_owned_item(db=db, session=session, item_id=item_id)
                 item.deleted_at = self._now() if deleted else None
@@ -588,7 +467,7 @@ class VaultService:
                 db.add(tag)
                 db.flush()
             db.add(VaultItemTag(item_id=item_id, tag_id=tag.tag_id))
-        db.commit()
+        db.flush()
 
     def _tags_by_item(self, *, db: Session, item_ids: list[str]) -> dict[str, list[str]]:
         """批量读取条目的标签名。"""
@@ -611,9 +490,43 @@ class VaultService:
         for asset_id in asset_ids:
             asset = db.get(VaultAsset, str(asset_id))
             if asset is not None and asset.user_id == session.user_id:
+                if asset.item_id and db.get(VaultItem, asset.item_id) is None:
+                    raise ValueError("vault asset not found")
                 asset.item_id = item_id
                 db.add(asset)
-        db.commit()
+        db.flush()
+
+    def _cleanup_purged_assets(self, assets: list[tuple[str, str]]) -> bool:
+        """Delete files after parent commit and retain failed cleanup in formal rows."""
+        cleaned = []
+        complete = True
+        for asset_id, storage_path in assets:
+            try:
+                self._delete_asset_file(storage_path)
+            except OSError as exc:
+                complete = False
+                logger.warning("Vault image cleanup pending | asset_id=%s error_type=%s", asset_id, type(exc).__name__)
+            else:
+                cleaned.append(asset_id)
+        if cleaned:
+            with Session(self.engine) as db:
+                for asset_id in cleaned:
+                    record = db.get(VaultAsset, asset_id)
+                    if record is not None and record.item_id and db.get(VaultItem, record.item_id) is None:
+                        db.delete(record)
+                db.commit()
+        return complete
+
+    def _retry_pending_asset_cleanup(self) -> None:
+        """Recover interrupted purges at application startup without a new worker."""
+        with Session(self.engine) as db:
+            records = db.exec(select(VaultAsset).where(VaultAsset.item_id != "")
+                .where(~select(VaultItem.item_id).where(VaultItem.item_id == VaultAsset.item_id).exists())).all()
+            assets = [(asset.asset_id, asset.storage_path) for asset in records]
+        try:
+            self._cleanup_purged_assets(assets)
+        except Exception as exc:
+            logger.warning("Vault pending cleanup deferred | error_type=%s", type(exc).__name__)
 
     def _serialize_asset(self, asset: VaultAsset) -> dict[str, Any]:
         """序列化图片资产元数据,不暴露真实磁盘路径。"""
@@ -635,69 +548,19 @@ class VaultService:
             raise ValueError("vault item not found")
         return item
 
-    def _token_payload(self, *, user_id: str, master_password: str, salt: bytes) -> dict[str, Any]:
-        """生成 30 分钟密码库 JWT。"""
-
-        fernet_key = self._fernet_key(master_password, salt)
-        expires_at = self._now() + timedelta(minutes=self.config.limits.vault_unlock_token_minutes)
-        session_id = self._new_id("vsession")
-        self._unlocked_keys[session_id] = (user_id, fernet_key, expires_at)
-        token = jwt.encode(
-            {
-                "user_id": user_id,
-                "scope": VAULT_SCOPE,
-                "jti": session_id,
-                "exp": expires_at,
-            },
-            self._jwt_secret(),
-            algorithm="HS256",
-        )
-        return {"token": token, "scope": VAULT_SCOPE, "expires_at": expires_at.isoformat(), "user_id": user_id}
-
-    def _purge_expired_sessions(self) -> None:
-        """Drop expired in-memory vault decryption keys."""
-
-        now = self._now()
-        for session_id, (_, _, expires_at) in list(self._unlocked_keys.items()):
-            if expires_at <= now:
-                self._unlocked_keys.pop(session_id, None)
-
-    def _jwt_secret(self) -> str:
-        """返回 HS256 签名密钥。"""
-
-        env_value = os.getenv("AGENT_VAULT_JWT_SECRET", "").strip()
-        if env_value:
-            return env_value
-        material = f"{self.config.storage.project_root}|{self.config.storage.sqlite_path}|metaweave-vault"
-        return hashlib.sha256(material.encode("utf-8")).hexdigest()
-
-    def _password_hash(self, master_password: str, salt: bytes) -> str:
-        """用 PBKDF2-HMAC-SHA256 保存主密码校验哈希。"""
-
-        iterations = self.config.limits.vault_password_kdf_iterations
-        digest = hashlib.pbkdf2_hmac("sha256", master_password.encode("utf-8"), salt, iterations)
-        return f"pbkdf2_sha256${iterations}${base64.urlsafe_b64encode(digest).decode('ascii')}"
-
-    def _fernet_key(self, master_password: str, salt: bytes) -> str:
-        """从主密码派生 Fernet 数据加密密钥。"""
-
-        digest = hashlib.pbkdf2_hmac(
-            "sha256",
-            master_password.encode("utf-8"),
-            salt + b":fernet",
-            self.config.limits.vault_encryption_kdf_iterations,
-            dklen=self.config.limits.vault_encryption_key_bytes,
-        )
-        return base64.urlsafe_b64encode(digest).decode("ascii")
-
     @staticmethod
-    def _normalize_user_id(user_id: str) -> str:
-        """校验并规范化 user_id。"""
+    def _begin_write(*, db: Session, session: VaultSession) -> None:
+        """Serialize vault writes with password changes and reject stale key versions.
 
-        normalized = user_id.strip()
-        if not normalized:
-            raise ValueError("user_id is required")
-        return normalized
+        The conditional no-op account write acquires the database writer slot;
+        password change cannot rotate keys between this check and item commit.
+        There is no Python lock around database I/O.
+        """
+        result = db.exec(update(Account).where(Account.user_id == session.user_id)
+                         .where(Account.password_version == session.password_version)
+                         .values(password_version=session.password_version))
+        if result.rowcount != 1:
+            raise ValueError("login session is invalid or expired")
 
     @staticmethod
     def _now() -> datetime:
@@ -721,8 +584,7 @@ class VaultService:
         """删除图片文件或目录,忽略已经不存在的路径。"""
 
         path = Path(storage_path)
-        if path.is_file():
+        if path.is_dir():
+            shutil.rmtree(path)
+        else:
             path.unlink(missing_ok=True)
-        elif path.is_dir():
-            shutil.rmtree(path, ignore_errors=True)
-

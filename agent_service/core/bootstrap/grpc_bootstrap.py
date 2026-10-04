@@ -32,6 +32,8 @@ class GrpcRuntime:
     def start(self, services: ApplicationServices) -> None:
         """使用应用服务容器构造 servicer 并启动 gRPC server。"""
 
+        if services.auth_service is None:
+            raise RuntimeError("AuthService is required before starting gRPC")
         self.servicer = AgentServiceServicer(
             agent=services.agent,
             session_service=services.session_service,
@@ -44,6 +46,7 @@ class GrpcRuntime:
             privacy_service=services.privacy_service,
             feedback_service=services.feedback_service,
             vault_service=services.vault_service,
+            auth_service=services.auth_service,
             agent_change_service=services.agent_change_service,
             agent_queue_service=services.agent_queue_service,
             automation_service=services.automation_service,

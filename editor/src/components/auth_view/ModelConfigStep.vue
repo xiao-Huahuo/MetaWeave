@@ -5,7 +5,7 @@ import AuthField from './AuthField.vue'
 import AuthToggle from './AuthToggle.vue'
 import type { AuthDraft } from './authTypes'
 const draft = defineModel<AuthDraft>('draft', { required: true })
-const emit = defineEmits<{ save: [section: string] }>()
+const emit = defineEmits<{ save: [section: 'large' | 'small' | 'vision' | 'mineru'] }>()
 const models = [
   { key: 'large', label: '大模型 · 建议 DeepSeek', open: true },
   { key: 'small', label: '小模型', open: false },
@@ -31,7 +31,7 @@ const models = [
           placeholder="API Key"
         />
         <div class="auth-block-actions">
-          <button class="auth-button" type="button" @click="emit('save', model.label)">
+          <button class="auth-button" type="button" @click="emit('save', model.key)">
             保存配置
           </button>
         </div>
@@ -55,7 +55,7 @@ const models = [
           </select></label
         >
         <div class="auth-block-actions">
-          <button class="auth-button" type="button" @click="emit('save', 'MinerU')">
+          <button class="auth-button" type="button" @click="emit('save', 'mineru')">
             保存配置
           </button>
         </div>

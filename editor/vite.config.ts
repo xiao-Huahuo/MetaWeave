@@ -45,6 +45,7 @@ export default defineConfig({
     port: DEV_SERVER_PORT,
     strictPort: true,
     proxy: {
+      '/auth': DEV_PROXY_TARGET,
       '/agent': {
         // Includes synchronous /agent/questions recovery and answer requests.
         target: DEV_PROXY_TARGET,

@@ -292,7 +292,7 @@ def show_markdown_html(title: str, html: str, source_path: str = "", filename: s
         return "Markdown-HTML visualization failed: html is empty."
 
     runtime = get_tool_runtime()
-    output_dir = (runtime.config.storage.base_data_dir / "visualizations").resolve()
+    output_dir = (runtime.config.storage.base_data_dir / "visualizations" / runtime.user_id).resolve()
     output_dir.mkdir(parents=True, exist_ok=True)
     safe_name = _safe_visualization_filename(title, source_path, filename)
     output_path = (output_dir / safe_name).resolve()
@@ -309,7 +309,7 @@ def show_markdown_html(title: str, html: str, source_path: str = "", filename: s
         "title": display_title,
         "filename": safe_name,
         "path": str(output_path),
-        "url": f"/visualizations/{safe_name}",
+        "url": f"/visualizations/{runtime.user_id}/{safe_name}",
         "source_path": source_path,
         "created_at": datetime.now().isoformat(),
     }

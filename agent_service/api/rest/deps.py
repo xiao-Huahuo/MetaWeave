@@ -8,7 +8,7 @@ FastAPI 在每个请求开始时通过 ``bind_application_services`` 从
 from __future__ import annotations
 
 from contextvars import ContextVar
-from typing import AsyncIterator, TypeVar, cast
+from typing import Any, AsyncIterator, TypeVar, cast
 
 from fastapi import HTTPException, Request
 
@@ -46,6 +46,7 @@ from agent_service.services.unified_search import UnifiedSearchService
 from agent_service.services.vault.service import VaultService
 
 ServiceT = TypeVar("ServiceT")
+from agent_service.services.auth.context import current_identity as _current_identity
 _current_services: ContextVar[ApplicationServices | None] = ContextVar(
     "agent_service_rest_services",
     default=None,
@@ -66,9 +67,50 @@ async def bind_application_services(request: Request) -> AsyncIterator[Applicati
 
     services = get_application_services(request)
     token = _current_services.set(services)
+    identity_token = None
     try:
+        from agent_service.api.rest.auth import request_token, check_cookie_origin
+        from agent_service.services.auth.service import AuthError
+        from agent_service.services.auth.access import verify_claims
+        from starlette.concurrency import run_in_threadpool
+        public = {"/health", "/settings/onboarding/defaults", "/auth/register", "/auth/login", "/auth/restore", "/auth/device/remembered"}
+        if request.method != "OPTIONS" and request.url.path not in public:
+            check_cookie_origin(request)
+            try:
+                identity = await run_in_threadpool(services.auth_service.verify_session, request_token(request))
+                request.state.identity = identity
+                identity_token = _current_identity.set(identity)
+                await run_in_threadpool(verify_claims, services.database_engine, user_id=identity.user_id, payload=dict(request.query_params), path=request.url.path)
+                for name, value in request.query_params.multi_items():
+                    if name == "user_id" and value != identity.user_id:
+                        raise AuthError("Account identity mismatch", 403)
+                claims = {}
+                if "application/json" in request.headers.get("content-type", ""):
+                    try:
+                        body = await request.json()
+                        if isinstance(body, dict):
+                            claims.update(body)
+                    except ValueError:
+                        pass
+                elif "multipart/form-data" in request.headers.get("content-type", ""):
+                    form = await request.form()
+                    for name, value in form.multi_items():
+                        if name == "user_id" and value != identity.user_id:
+                            raise AuthError("Account identity mismatch", 403)
+                    claims.update({key: value for key, value in form.items() if isinstance(value, str)})
+                await run_in_threadpool(verify_claims, services.database_engine, user_id=identity.user_id, payload=claims, path=request.url.path, required_resources=request.url.path == "/agent/cancel")
+                await run_in_threadpool(verify_claims, services.database_engine, user_id=identity.user_id, payload=request.path_params, path=request.url.path, required_resources=True)
+                run_id = request.path_params.get("run_id")
+                if run_id and request.url.path.startswith("/agent/children/") and request.url.path.endswith(("/stop", "/update")):
+                    record = services.agent.child_agent_manager.get(run_id)
+                    if record is None or record.contract.user_id != identity.user_id:
+                        raise HTTPException(status_code=404, detail="Child task not found")
+            except AuthError as exc:
+                raise HTTPException(status_code=exc.status_code, detail=str(exc)) from exc
         yield services
     finally:
+        if identity_token is not None:
+            _current_identity.reset(identity_token)
         _current_services.reset(token)
 
 
@@ -154,6 +196,11 @@ def _require_vault_service() -> VaultService:
     """返回当前请求的 VaultService。"""
 
     return _require("vault_service", "VaultService")
+
+
+def _require_auth_service():
+    """Return the application-owned authentication service for this request."""
+    return _require("auth_service", "AuthService")
 
 
 def _require_retrieval_service() -> MemoryRetrievalService:
@@ -274,3 +321,11 @@ def _require_dsh_executor() -> DshChildAgentExecutor:
     """返回当前应用拥有的 DSH Child Agent执行器。"""
 
     return _require("dsh_executor", "DshChildAgentExecutor")
+
+
+def _require_auth_session():
+    """Return the validated account already bound to this request, including cookie sessions."""
+    identity = _current_identity.get()
+    if identity is None:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    return identity
