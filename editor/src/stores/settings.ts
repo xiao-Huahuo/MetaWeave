@@ -679,7 +679,10 @@ export const useSettingsStore = defineStore('settings', () => {
     if (!hasUserId.value) {
       return null
     }
-    const nextProfile = await ensureSettingsProfile(profile.value.userId)
+    const requestedUserId = profile.value.userId
+    const nextProfile = await ensureSettingsProfile(requestedUserId)
+    // A refresh started before logout must not reopen the authenticated shell.
+    if (profile.value.userId !== requestedUserId) return null
     applyBackendProfile(nextProfile)
     return nextProfile
   }

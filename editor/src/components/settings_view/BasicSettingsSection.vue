@@ -155,7 +155,7 @@ async function appendBlockedFileType(suffix: string): Promise<void> {
     <section class="logout-section">
       <div>
         <h3>当前身份</h3>
-        <p class="setting-hint">退出后会回到 user_id 输入入口,本地知识库和用户配置不会被删除。</p>
+        <p class="setting-hint">退出后会回到登录表单，本地知识库和用户配置不会被删除。</p>
       </div>
       <button class="logout-btn" type="button" @click="$emit('logout')">
         <div class="logout-sign">

@@ -72,6 +72,10 @@ class SettingsService(McpSettingsMixin):
 
     # ---- 用户设置档案 ----
 
+    def get_onboarding_defaults(self) -> dict[str, str]:
+        """Return the effective default knowledge path without creating a user profile."""
+        return {"knowledge_dir": str(self.config.storage.knowledge_dir.resolve())}
+
     def ensure_user_profile(self, *, user_id: str) -> dict:
         """确保用户设置档案存在,并返回 editor/console 可共享的基础设置。"""
         normalized_user_id = user_id.strip()

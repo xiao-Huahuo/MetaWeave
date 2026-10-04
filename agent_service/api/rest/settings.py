@@ -381,6 +381,12 @@ async def check_model_disk() -> dict[str, Any]:
     return get_model_status().to_dict()
 
 
+@router.get("/settings/onboarding/defaults")
+def get_onboarding_defaults() -> dict[str, str]:
+    """Expose the resolved default knowledge directory before account registration."""
+    return _require_settings_service().get_onboarding_defaults()
+
+
 @router.get("/settings/profile")
 async def get_user_profile(user_id: str = Query(..., min_length=DEFAULT_BUSINESS_LIMITS.nonempty_min_length, description="用户 ID")) -> dict[str, Any]:
     """获取或初始化用户设置档案。"""

@@ -21,6 +21,7 @@ export const API_ROUTES = {
   MCP_RECORDS: '/settings/mcp/server/records',
   MCP_VERIFY: '/settings/mcp/server/verify',
   SETTINGS_PROFILE: '/settings/profile',
+  SETTINGS_ONBOARDING_DEFAULTS: '/settings/onboarding/defaults',
   SETTINGS_KNOWLEDGE_DIR: '/settings/profile/knowledge-dir',
   SETTINGS_FONT_CONFIG: '/settings/appearance/font',
   SETTINGS_APPEARANCE_CONFIG: '/settings/appearance/config',

@@ -2,9 +2,17 @@
 
 import { afterEach, describe, expect, it, vi } from 'vitest'
 
-import { saveLLMConfig } from '@/api/settings'
+import { saveLLMConfig, fetchOnboardingDefaults } from '@/api/settings'
 
 describe('LLM settings API client', () => {
+  it('reads onboarding defaults without supplying or creating a user identity', async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(new Response(JSON.stringify({ knowledge_dir: 'D:/Knowledge' }), { status: 200, headers: { 'content-type': 'application/json' } }))
+    vi.stubGlobal('fetch', fetchMock)
+    expect(await fetchOnboardingDefaults()).toEqual({ knowledge_dir: 'D:/Knowledge' })
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('/settings/onboarding/defaults')
+    expect(fetchMock.mock.calls[0]?.[1]?.method ?? 'GET').toBe('GET')
+  })
+
   afterEach(() => {
     vi.unstubAllGlobals()
   })

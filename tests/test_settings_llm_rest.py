@@ -123,3 +123,21 @@ def test_llm_rest_disables_dsh_after_backbone_change(monkeypatch: Any) -> None:
         denied = client.put("/settings/profile/ingestion", json={"user_id": "dsh-rest", "dsh_coding_agent_enabled": True})
         assert denied.json()["dsh_coding_agent_enabled"] is False
         assert len(installs) == 1
+
+
+def test_onboarding_defaults_return_absolute_path_without_creating_user(monkeypatch: Any, tmp_path: Any) -> None:
+    """Pre-login defaults must use backend configuration and never initialize profiles."""
+    from sqlmodel import Session, select
+    from agent_service.models.user_settings import UserSettingsRecord
+    service = _settings_service()
+    service.config.storage.knowledge_dir = tmp_path / "knowledge"
+    monkeypatch.setattr(settings_rest, "_require_settings_service", lambda: service)
+    app = FastAPI()
+    app.include_router(settings_rest.router)
+    with TestClient(app) as client:
+        response = client.get("/settings/onboarding/defaults")
+    assert response.status_code == 200
+    assert response.json() == {"knowledge_dir": str((tmp_path / "knowledge").resolve())}
+    with Session(service.engine) as db:
+        assert db.exec(select(UserSettingsRecord)).all() == []
+    assert not (tmp_path / "knowledge").exists()

@@ -449,7 +449,8 @@ button.v1-icon-button:disabled {
   --home-card-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
 }
 
-:root[data-theme="light"] {
+:root[data-theme="light"],
+.auth-form[data-theme="light"] {
   --color-graph-edge: rgba(63, 66, 82, 0.18);
   --color-message-bubble-bg: #f4f4f4;
   --color-message-bubble-text: #171721;

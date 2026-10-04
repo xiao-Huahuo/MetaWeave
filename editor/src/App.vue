@@ -10,7 +10,7 @@ import { onMounted, ref, watch } from 'vue'
 import { RouterView } from 'vue-router'
 
 import WifiLoader from '@/components/common/WifiLoader.vue'
-import UserIdGate from '@/components/common/UserIdGate.vue'
+import AuthView from '@/views/AuthView.vue'
 import FloatingAgentRoot from '@/components/floating/FloatingAgentRoot.vue'
 import ModelLifecycleOverlay from '@/components/common/ModelLifecycleOverlay.vue'
 import { initializeManagedModels } from '@/api/settings'
@@ -38,7 +38,11 @@ async function initializeUserModels(userId: string) {
   if (!userId || initializedUsers.has(userId) || isFloatingWindow) return
   initializedUsers.add(userId)
   try {
-    await settingsStore.refreshUserProfile()
+    const profile = await settingsStore.refreshUserProfile()
+    if (!profile || settingsStore.profile.userId !== userId) {
+      initializedUsers.delete(userId)
+      return
+    }
     await Promise.allSettled([
       initializeManagedModels(userId),
       initializeDshCodingAgent(userId),
@@ -73,7 +77,7 @@ watch(
     <RouterView />
     <ModelLifecycleOverlay :user-id="settingsStore.profile.userId" />
   </template>
-  <UserIdGate v-else />
+  <AuthView v-else />
 </template>
 
 <style scoped>

@@ -102,6 +102,11 @@ export function ensureSettingsProfile(userId: string): Promise<SettingsProfileRe
   return apiPost<SettingsProfileResponse>(API_ROUTES.SETTINGS_PROFILE, { user_id: userId })
 }
 
+/** Read the backend's absolute default path without creating a user or saving settings. */
+export function fetchOnboardingDefaults(): Promise<{ knowledge_dir: string }> {
+  return apiGet(API_ROUTES.SETTINGS_ONBOARDING_DEFAULTS)
+}
+
 export function updateSettingsKnowledgeDir(
   userId: string,
   knowledgeDir: string,
