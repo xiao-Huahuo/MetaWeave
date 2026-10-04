@@ -20,6 +20,7 @@ function mountSection(ignorePatterns = '*.md') {
       autoIngestOnUploadDraft: false,
       visionUnderstandingEnabledDraft: false,
       dshCodingAgentEnabledDraft: false,
+      dshModelAvailable: false,
       knowledgeIgnorePatternsDraft: ignorePatterns,
       supportedFileTypes: ['.md', '.pdf'],
       hasChanges: false,
@@ -47,6 +48,19 @@ describe('BasicSettingsSection blocked file types', () => {
     expect(wrapper.get('.vision-privacy-hint').text()).toContain('仅保留 OCR 结果')
     expect(labels.indexOf('启用 DSH coding agent')).toBe(labels.indexOf('识图') + 1)
     expect((wrapper.get('input[aria-label="启用 DSH（deepseek-harness）作为 coding agent"]').element as HTMLInputElement).checked).toBe(false)
+  })
+
+  it('disables and displays DSH as off when the effective main model becomes incompatible', async () => {
+    wrapper = mountSection()
+    const toggle = wrapper.get('input[aria-label="启用 DSH（deepseek-harness）作为 coding agent"]')
+    expect((toggle.element as HTMLInputElement).disabled).toBe(true)
+    await wrapper.setProps({ dshModelAvailable: true, dshCodingAgentEnabledDraft: true })
+    expect((toggle.element as HTMLInputElement).disabled).toBe(false)
+    expect((toggle.element as HTMLInputElement).checked).toBe(true)
+    await wrapper.setProps({ dshModelAvailable: false })
+    expect((toggle.element as HTMLInputElement).disabled).toBe(true)
+    expect((toggle.element as HTMLInputElement).checked).toBe(false)
+    expect(wrapper.get('.dsh-setting-row').classes()).toContain('unavailable')
   })
 
   it('renders below the ignore area and appends each supported extension only once', async () => {

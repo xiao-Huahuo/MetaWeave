@@ -100,3 +100,26 @@ def test_llm_rest_rejects_unsafe_vision_endpoint_and_negative_capacity(monkeypat
     assert unsafe_endpoint.status_code == 422
     assert "vision_api_key" in unsafe_endpoint.json()["detail"]
     assert negative_capacity.status_code == 422
+
+
+def test_llm_rest_disables_dsh_after_backbone_change(monkeypatch: Any) -> None:
+    """The production LLM endpoint persists DSH disabling in the same save."""
+    from types import SimpleNamespace
+
+    service = _settings_service()
+    installs: list[bool] = []
+    monkeypatch.setattr(settings_rest, "_require_settings_service", lambda: service)
+    monkeypatch.setattr(settings_rest, "_require_dsh_runtime_manager", lambda: SimpleNamespace(start_install=lambda: installs.append(True)))
+    app = FastAPI()
+    app.include_router(settings_rest.router)
+    with TestClient(app) as client:
+        model = {"user_id": "dsh-rest", "api_key": "key", "base_url": "https://example.test/v1", "model_name": "deepseek-chat"}
+        assert client.put("/settings/llm/config", json=model).status_code == 200
+        enabled = client.put("/settings/profile/ingestion", json={"user_id": "dsh-rest", "dsh_coding_agent_enabled": True})
+        assert enabled.json()["dsh_coding_agent_enabled"] is True
+        assert len(installs) == 1
+        assert client.put("/settings/llm/config", json={"user_id": "dsh-rest", "model_name": "gpt-test"}).status_code == 200
+        assert client.get("/settings/profile/ingestion", params={"user_id": "dsh-rest"}).json()["dsh_coding_agent_enabled"] is False
+        denied = client.put("/settings/profile/ingestion", json={"user_id": "dsh-rest", "dsh_coding_agent_enabled": True})
+        assert denied.json()["dsh_coding_agent_enabled"] is False
+        assert len(installs) == 1

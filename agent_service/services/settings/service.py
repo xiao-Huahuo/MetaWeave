@@ -92,6 +92,8 @@ class SettingsService(McpSettingsMixin):
                 db.commit()
                 db.refresh(record)
             active_library = self._ensure_active_library(db=db, record=record)
+            if self._disable_ineligible_dsh(db=db, record=record):
+                db.commit()
             self._migrate_managed_directories(db=db, user_id=normalized_user_id, library=active_library)
             profile = self._serialize_user_profile(record)
             selection = selected_library.get()
@@ -1305,6 +1307,10 @@ class SettingsService(McpSettingsMixin):
                 if small_model_max_output_tokens is not None:
                     config.small_model_max_output_tokens = max(int(small_model_max_output_tokens), 0)
                 config.updated_at = now
+            payload = self._serialize_llm_config(config)
+            record = db.get(UserSettingsRecord, normalized_user_id)
+            if record is not None:
+                self._disable_ineligible_dsh(db=db, record=record, llm_config=payload)
             db.add(config)
             db.commit()
             db.refresh(config)
@@ -1739,6 +1745,31 @@ class SettingsService(McpSettingsMixin):
 
     # ---- 知识库灌库配置 ----
 
+    @staticmethod
+    def supports_dsh_model(llm_config: dict) -> bool:
+        """DSH requires a configured DeepSeek main model, endpoint and credential."""
+        model_name = str(llm_config.get("effective_model_name") or "").strip().lower().replace(":", "/")
+        return bool(
+            llm_config.get("effective_model_source") == "remote"
+            and str(llm_config.get("effective_api_key") or "").strip()
+            and str(llm_config.get("effective_base_url") or "").strip()
+            and any(part.startswith("deepseek") for part in model_name.split("/"))
+        )
+
+    def _disable_ineligible_dsh(self, *, db: Session, record: UserSettingsRecord, llm_config: dict | None = None) -> bool:
+        """Clear an incompatible DSH flag inside the caller's database transaction."""
+        if not record.dsh_coding_agent_enabled:
+            return False
+        if llm_config is None:
+            model = db.get(UserLLMConfig, record.user_id)
+            llm_config = self._serialize_llm_config(model) if model else self._build_default_llm_config(record.user_id)
+        if self.supports_dsh_model(llm_config):
+            return False
+        record.dsh_coding_agent_enabled = False
+        record.updated_at = self._utc_now()
+        db.add(record)
+        return True
+
     def get_knowledge_ingestion_config(self, *, user_id: str) -> dict:
         """获取用户知识库灌库配置。默认上传不自动灌库。"""
 
@@ -1755,6 +1786,8 @@ class SettingsService(McpSettingsMixin):
                     "dsh_coding_agent_enabled": False,
                     "knowledge_ignore_patterns": DEFAULT_VIDEO_IGNORE_PATTERNS,
                 }
+            if self._disable_ineligible_dsh(db=db, record=record):
+                db.commit()
             return {
                 "auto_ingest_on_upload": bool(record.auto_ingest_on_upload),
                 "ocr_enabled": bool(record.ocr_enabled),
@@ -1812,6 +1845,7 @@ class SettingsService(McpSettingsMixin):
                 if knowledge_ignore_patterns is not None:
                     record.knowledge_ignore_patterns = _with_default_video_ignore_patterns(knowledge_ignore_patterns)
                 record.updated_at = now
+            self._disable_ineligible_dsh(db=db, record=record)
             db.add(record)
             db.commit()
             db.refresh(record)
@@ -2150,7 +2184,7 @@ class SettingsService(McpSettingsMixin):
                         UserSettingsRecord.user_id == normalized_user_id
                     )
                 ).first()
-                return bool(value)
+                return bool(value) and self.supports_dsh_model(self.get_llm_config(user_id=normalized_user_id))
         except Exception:  # noqa: BLE001
             logger.warning("读取 DSH coding agent设置失败，安全回退为关闭 | user=%s", normalized_user_id, exc_info=True)
             return False

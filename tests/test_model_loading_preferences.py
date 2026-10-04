@@ -62,6 +62,7 @@ def test_dsh_coding_agent_defaults_to_false_and_persists() -> None:
     assert service.ensure_user_profile(user_id="u1")["dsh_coding_agent_enabled"] is False
     assert service.is_dsh_coding_agent_enabled_for_user(user_id="u1") is False
 
+    service.save_llm_config(user_id="u1", model_name="deepseek-chat", api_key="key", base_url="https://example.test/v1")
     saved = service.save_knowledge_ingestion_config(user_id="u1", dsh_coding_agent_enabled=True)
 
     assert saved["dsh_coding_agent_enabled"] is True

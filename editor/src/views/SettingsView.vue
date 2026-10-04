@@ -373,7 +373,7 @@ async function saveProfile() {
       const result = await settingsStore.saveKnowledgeIngestionSettings({
         autoIngestOnUpload: autoIngestOnUploadDraft.value,
         visionUnderstandingEnabled: visionUnderstandingEnabledDraft.value,
-        dshCodingAgentEnabled: dshCodingAgentEnabledDraft.value,
+        dshCodingAgentEnabled: dshModelAvailable.value && dshCodingAgentEnabledDraft.value,
         knowledgeIgnorePatterns: knowledgeIgnorePatternsDraft.value,
       })
     }
@@ -615,6 +615,8 @@ const modelSaving = ref(false)
 const modelMsg = ref('')
 const modelEditing = ref(false)
 const modelConfigLoaded = ref(false)
+/** DSH eligibility tracks saved effective configuration, never unsaved model drafts. */
+const dshModelAvailable = ref(false)
 const effectiveLargeModelName = ref('')
 const effectiveLargeModelSource = ref<EffectiveLLMModelSource | ''>('')
 const effectiveSmallModelName = ref('')
@@ -631,6 +633,16 @@ const savedModelConfigs = ref<SavedLLMConfig[]>([])
 
 /** Store only backend-resolved values so unsaved drafts are never shown as active models. */
 function applyEffectiveModelConfig(config: LLMConfigResponse) {
+  const modelName = (config.effective_model_name || '').trim().toLowerCase().replaceAll(':', '/')
+  dshModelAvailable.value = Boolean(
+    config.effective_model_source === 'remote' &&
+    config.effective_api_key?.trim() && config.effective_base_url?.trim() &&
+    modelName.split('/').some((part) => part.startsWith('deepseek')),
+  )
+  if (!dshModelAvailable.value) {
+    dshCodingAgentEnabledDraft.value = false
+    settingsStore.updateProfile({ dshCodingAgentEnabled: false })
+  }
   effectiveLargeModelName.value = config.effective_model_name || ''
   effectiveLargeModelSource.value = config.effective_model_source || ''
   effectiveSmallModelName.value = config.effective_small_model_name || ''
@@ -840,6 +852,7 @@ onBeforeUnmount(() => {
         v-model:dsh-coding-agent-enabled-draft="dshCodingAgentEnabledDraft"
         v-model:watch-enabled-draft="watchEnabledDraft"
         :supported-file-types="settingsStore.profile.knowledgeSupportedSuffixes ?? []"
+        :dsh-model-available="modelConfigLoaded && dshModelAvailable"
         :has-changes="hasChanges"
         :save-error="saveError"
         :save-message="saveMessage"

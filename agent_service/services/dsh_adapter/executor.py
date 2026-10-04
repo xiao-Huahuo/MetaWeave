@@ -591,7 +591,7 @@ class DshChildAgentExecutor:
         model_name = str(configured.get("effective_model_name") or "").strip()
         base_url = str(configured.get("effective_base_url") or "").strip()
         api_key = str(configured.get("effective_api_key") or "").strip()
-        if configured.get("effective_model_source") != "remote" or not model_name or not base_url:
+        if not SettingsService.supports_dsh_model(configured):
             raise ValueError("DSH 子 Agent需要已配置的远程 DeepSeek模型、Base URL和凭据")
         return {"model_name": model_name, "base_url": base_url, "api_key": api_key}
 

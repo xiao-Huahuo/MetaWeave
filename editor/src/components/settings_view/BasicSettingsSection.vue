@@ -6,7 +6,7 @@
   persistence and side effects.
 -->
 <script setup lang="ts">
-import { nextTick } from 'vue'
+import { computed, nextTick } from 'vue'
 import IcIcon from '@/components/common/IcIcon.vue'
 
 const libraryNameDraft = defineModel<string>('libraryNameDraft', { required: true })
@@ -19,6 +19,8 @@ const dshCodingAgentEnabledDraft = defineModel<boolean>('dshCodingAgentEnabledDr
 const knowledgeIgnorePatternsDraft = defineModel<string>('knowledgeIgnorePatternsDraft', { required: true })
 
 const props = defineProps<{
+  /** Whether the effective main model satisfies DSH's DeepSeek requirements. */
+  dshModelAvailable: boolean
   supportedFileTypes: string[]
   hasChanges: boolean
   saving: boolean
@@ -26,6 +28,12 @@ const props = defineProps<{
   saveError: string
   switchingKnowledgeRoot: boolean
 }>()
+
+/** Keep the switch visibly off while its main-model prerequisite is unavailable. */
+const dshEnabled = computed({
+  get: () => props.dshModelAvailable && dshCodingAgentEnabledDraft.value,
+  set: (value: boolean) => { dshCodingAgentEnabledDraft.value = value },
+})
 
 const emit = defineEmits<{
   save: []
@@ -102,15 +110,16 @@ async function appendBlockedFileType(suffix: string): Promise<void> {
       <input v-model="visionUnderstandingEnabledDraft" type="checkbox" @change="$emit('save')" />
       <span class="vision-privacy-hint">开启后会将图片、OCR 文本和问题发送至已配置的远程视觉模型，可能产生 API 费用；关闭时仅保留 OCR 结果。</span>
     </div>
-    <div class="setting-row toggle-row">
+    <div class="setting-row toggle-row dsh-setting-row" :class="{ unavailable: !dshModelAvailable }">
       <label>启用 DSH coding agent</label>
       <input
-        v-model="dshCodingAgentEnabledDraft"
+        v-model="dshEnabled"
+        :disabled="!dshModelAvailable"
         type="checkbox"
         aria-label="启用 DSH（deepseek-harness）作为 coding agent"
         @change="$emit('save')"
       />
-      <span class="hint-text">使用 deepseek-harness 作为 coding agent；开启后在应用启动完成时后台加载</span>
+      <span class="hint-text">{{ dshModelAvailable ? '使用 deepseek-harness 作为 coding agent；开启后在应用启动完成时后台加载' : '需要先配置 DeepSeek 大模型、Base URL 和 API Key' }}</span>
     </div>
     <div class="setting-row ignore-row">
       <label>屏蔽区</label>
@@ -182,6 +191,11 @@ async function appendBlockedFileType(suffix: string): Promise<void> {
 </template>
 
 <style scoped>
+/* Disabled DSH controls use the existing muted palette and reject pointer input. */
+.dsh-setting-row.unavailable { color: var(--color-text-muted); }
+.dsh-setting-row.unavailable > label { color: var(--color-text-muted); }
+.dsh-setting-row input:disabled { opacity: 0.45; cursor: not-allowed; }
+
 .knowledge-dir-control {
   display: flex;
   flex: 1;

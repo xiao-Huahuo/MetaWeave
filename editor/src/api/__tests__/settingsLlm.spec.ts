@@ -9,6 +9,14 @@ describe('LLM settings API client', () => {
     vi.unstubAllGlobals()
   })
 
+  it('sends main-model changes and explicit clearing to the backend that enforces DSH eligibility', async () => {
+    const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(new Response('{}', { status: 200, headers: { 'content-type': 'application/json' } }))
+    vi.stubGlobal('fetch', fetchMock)
+    await saveLLMConfig('u1', { modelName: 'gpt-test', baseUrl: '', apiKey: '' })
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('/settings/llm/config')
+    expect(JSON.parse(String(fetchMock.mock.calls[0]?.[1]?.body))).toEqual({ user_id: 'u1', model_name: 'gpt-test', base_url: '', api_key: '' })
+  })
+
   it('persists explicit text capacities and visual-model overrides', async () => {
     const fetchMock = vi.fn<typeof fetch>().mockResolvedValue(
       new Response(JSON.stringify({ user_id: 'u1', updated_at: '2026-08-31T00:00:00Z' }), {

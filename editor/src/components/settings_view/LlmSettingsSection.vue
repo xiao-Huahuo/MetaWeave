@@ -130,14 +130,17 @@ function clearModelDraft(target: 'large' | 'small' | 'vision') {
         </button>
       </div>
       <div class="model-block">
-        <input v-model="largeModelName" placeholder="模型名称" spellcheck="false" :readonly="!modelEditing" :class="{ readonly: !modelEditing }" />
-        <input v-model="largeBaseUrl" placeholder="Base URL" spellcheck="false" :readonly="!modelEditing" :class="{ readonly: !modelEditing }" />
+        <label for="llm-large-model-name">模型名称</label>
+        <input id="llm-large-model-name" v-model="largeModelName" placeholder="模型名称" spellcheck="false" :readonly="!modelEditing" :class="{ readonly: !modelEditing }" />
+        <label for="llm-large-base-url">Base URL</label>
+        <input id="llm-large-base-url" v-model="largeBaseUrl" placeholder="Base URL" spellcheck="false" :readonly="!modelEditing" :class="{ readonly: !modelEditing }" />
         <div class="capacity-row">
           <label class="capacity-field"><span>上下文窗口</span><input v-model.number="largeContextWindowTokens" type="number" min="0" :readonly="!modelEditing" :class="{ readonly: !modelEditing }" /><span class="capacity-unit">Token</span></label>
           <label class="capacity-field"><span>最大输出</span><input v-model.number="largeMaxOutputTokens" type="number" min="0" :readonly="!modelEditing" :class="{ readonly: !modelEditing }" /><span class="capacity-unit">Token（0=继承）</span></label>
         </div>
+        <label for="llm-large-api-key">API Key</label>
         <div class="key-row">
-          <input v-model="largeApiKey" :type="showLargeKey ? 'text' : 'password'" placeholder="API Key" spellcheck="false" :readonly="!modelEditing" :class="{ readonly: !modelEditing }" />
+          <input id="llm-large-api-key" v-model="largeApiKey" :type="showLargeKey ? 'text' : 'password'" placeholder="API Key" spellcheck="false" :readonly="!modelEditing" :class="{ readonly: !modelEditing }" />
           <button class="toggle-key" @click="showLargeKey = !showLargeKey">{{ showLargeKey ? '隐藏' : '显示' }}</button>
         </div>
       </div>
@@ -150,14 +153,17 @@ function clearModelDraft(target: 'large' | 'small' | 'vision') {
         </button>
       </div>
       <div class="model-block">
-        <input v-model="smallModelName" placeholder="模型名称（留空继承大模型）" spellcheck="false" :readonly="!modelEditing" :class="{ readonly: !modelEditing }" />
-        <input v-model="smallBaseUrl" placeholder="Base URL（留空继承大模型）" spellcheck="false" :readonly="!modelEditing" :class="{ readonly: !modelEditing }" />
+        <label for="llm-small-model-name">模型名称</label>
+        <input id="llm-small-model-name" v-model="smallModelName" placeholder="模型名称（留空继承大模型）" spellcheck="false" :readonly="!modelEditing" :class="{ readonly: !modelEditing }" />
+        <label for="llm-small-base-url">Base URL</label>
+        <input id="llm-small-base-url" v-model="smallBaseUrl" placeholder="Base URL（留空继承大模型）" spellcheck="false" :readonly="!modelEditing" :class="{ readonly: !modelEditing }" />
         <div class="capacity-row">
           <label class="capacity-field"><span>上下文窗口</span><input v-model.number="smallContextWindowTokens" type="number" min="0" :readonly="!modelEditing" :class="{ readonly: !modelEditing }" /><span class="capacity-unit">Token</span></label>
           <label class="capacity-field"><span>最大输出</span><input v-model.number="smallMaxOutputTokens" type="number" min="0" :readonly="!modelEditing" :class="{ readonly: !modelEditing }" /><span class="capacity-unit">Token（0=继承）</span></label>
         </div>
+        <label for="llm-small-api-key">API Key</label>
         <div class="key-row">
-          <input v-model="smallApiKey" :type="showSmallKey ? 'text' : 'password'" placeholder="API Key" spellcheck="false" :readonly="!modelEditing" :class="{ readonly: !modelEditing }" />
+          <input id="llm-small-api-key" v-model="smallApiKey" :type="showSmallKey ? 'text' : 'password'" placeholder="API Key" spellcheck="false" :readonly="!modelEditing" :class="{ readonly: !modelEditing }" />
           <button class="toggle-key" @click="showSmallKey = !showSmallKey">{{ showSmallKey ? '隐藏' : '显示' }}</button>
         </div>
       </div>
@@ -170,10 +176,13 @@ function clearModelDraft(target: 'large' | 'small' | 'vision') {
         </button>
       </div>
       <div class="model-block">
-        <input v-model="visionModelName" aria-label="视觉模型名称" placeholder="模型名称（留空继承大模型）" spellcheck="false" :readonly="!modelEditing" :class="{ readonly: !modelEditing }" />
-        <input v-model="visionBaseUrl" aria-label="视觉模型 Base URL" placeholder="Base URL（留空继承大模型）" spellcheck="false" :readonly="!modelEditing" :class="{ readonly: !modelEditing }" />
+        <label for="llm-vision-model-name">模型名称</label>
+        <input id="llm-vision-model-name" v-model="visionModelName" aria-label="视觉模型名称" placeholder="模型名称（留空继承大模型）" spellcheck="false" :readonly="!modelEditing" :class="{ readonly: !modelEditing }" />
+        <label for="llm-vision-base-url">Base URL</label>
+        <input id="llm-vision-base-url" v-model="visionBaseUrl" aria-label="视觉模型 Base URL" placeholder="Base URL（留空继承大模型）" spellcheck="false" :readonly="!modelEditing" :class="{ readonly: !modelEditing }" />
+        <label for="llm-vision-api-key">API Key</label>
         <div class="key-row">
-          <input v-model="visionApiKey" :type="showVisionKey ? 'text' : 'password'" aria-label="视觉模型 API Key" placeholder="API Key（留空继承大模型）" autocomplete="off" spellcheck="false" :readonly="!modelEditing" :class="{ readonly: !modelEditing }" />
+          <input id="llm-vision-api-key" v-model="visionApiKey" :type="showVisionKey ? 'text' : 'password'" aria-label="视觉模型 API Key" placeholder="API Key（留空继承大模型）" autocomplete="off" spellcheck="false" :readonly="!modelEditing" :class="{ readonly: !modelEditing }" />
           <button class="toggle-key" type="button" @click="showVisionKey = !showVisionKey">{{ showVisionKey ? '隐藏' : '显示' }}</button>
         </div>
         <p class="model-inheritance-hint">供识图工具调用；三项留空时继承大模型。使用不同 Base URL 时需填写该服务的 API Key。</p>
@@ -215,6 +224,33 @@ function clearModelDraft(target: 'large' | 'small' | 'vision') {
 </template>
 
 <style scoped>
+/* Keep credential labels aligned with the shared settings form label column. */
+.model-block {
+  display: grid;
+  grid-template-columns: var(--settings-label-width, 112px) minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-8) var(--space-10);
+}
+
+.model-block > label {
+  white-space: nowrap;
+  color: var(--color-text);
+  font-size: calc(13px * var(--font-scale));
+}
+
+.model-block > input {
+  margin-bottom: 0;
+}
+
+.model-block > .capacity-row,
+.model-inheritance-hint {
+  grid-column: 1 / -1;
+}
+
+.key-row {
+  min-width: 0;
+}
+
 .saved-model-section.settings-module :deep(.saved-config-row) {
   border: 0;
 }
@@ -266,6 +302,11 @@ function clearModelDraft(target: 'large' | 'small' | 'vision') {
 }
 
 @media (max-width: 480px) {
+  .model-block {
+    grid-template-columns: 72px minmax(0, 1fr);
+    column-gap: var(--space-6);
+  }
+
   .capacity-field {
     grid-template-columns: 92px minmax(0, 1fr) auto;
   }
@@ -273,6 +314,12 @@ function clearModelDraft(target: 'large' | 'small' | 'vision') {
   .capacity-field input {
     width: 100%;
   }
+}
+
+/* Move token units below the input when the workspace leaves very little width. */
+@media (max-width: 360px) {
+  .capacity-field { grid-template-columns: 72px minmax(0, 1fr); }
+  .capacity-unit { grid-column: 2; white-space: normal; }
 }
 
 .model-heading h3 {
